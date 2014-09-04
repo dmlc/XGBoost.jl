@@ -1,4 +1,4 @@
-JuliaLearn
+XGBoost.jl
 ==========
 
-Implement some learning algorithm by using Julia 
+eXtreme Gradient Boosting interface for Julia
