@@ -1,0 +1,3 @@
+module XGBoost
+
+using XGBase
