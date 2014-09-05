@@ -1,3 +1,3 @@
 module XGBoost
 
-using XGBase
+include("XGBase.jl")
