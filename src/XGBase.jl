@@ -10,8 +10,7 @@ type DMatrix
         new(handle)
     end
     function DMatrix(data::SparseMatrixCSC{Float32, Int64})
-        csr = transpose(data)
-        handle = ccall((:XGDMatrixCreateFromCSR,
+        handle = ccall((:XGDMatrixCreateFromCSC,
                         "../xgboost/wrapper/libxgboostwrapper.so"),
                        Ptr{Void},
                        (Ptr{Uint64}, Ptr{Uint32}, Ptr{Float32}, Uint64, Uint64),
