@@ -1,38 +1,24 @@
 module XGBoost
 
-### CSRMatrix ###
-type SparseMatrixCSR
-    indptr::Array{Uint64, 1}
-    indices::Array{Uint32, 1}
-    data::Array{Float32, 1}
-    nindptr::Uint64
-    nelem::Uint64
-    function SparseMatrixCSR(smat::SparseMatrixCSC{Float32, Int64})
-        nelem = nnz(smat)
-        
-    end
-end
-    
-
 
 ### DMatrix ###
 type DMatrix
     handle::Ptr{Void}
     function DMatrix(fname::ASCIIString, slient::Int32)
         handle = ccall((:XGDMatrixCreateFromFile,
-                    "../xgboost/wrapper/libxgboostwrapper.so"),
-                    Ptr{Void},
-                    (Ptr{Uint8}, Int32),
-                    fname, slient)
+                        "../xgboost/wrapper/libxgboostwrapper.so"),
+                       Ptr{Void},
+                       (Ptr{Uint8}, Int32),
+                       fname, slient)
         new(handle)
     end
     function DMatrix(data::SparseMatrixCSC{Float32, Int64})
-        csr = SparseMatrixCSR(data)
+        csr = transpose(data)
         handle = ccall((:XGDMatrixCreateFromCSR,
                         "../xgboost/wrapper/libxgboostwrapper.so"),
                        Ptr{Void},
                        (Ptr{Uint64}, Ptr{Uint32}, Ptr{Float32}, Uint64, Uint64),
-                       csr.indptr, csr.indices, csr.data, csr.nindptr, csr.nelem)
+                       csr.colptr - 1, csr.rowval - 1, csr.nzval, size(csr.colptr)[1], nnz(csr))
         new(handle)
     end
     function DMatrix(data::Array{Float32, 2}, missing::Float32)
@@ -129,25 +115,25 @@ type Booster
     handle::Ptr{Void}
     function Booster(dmats::Array{DMatrix, 1}, len::Int64)
         handle = ccall((:XGBoosterCreate,
-                    "../xgboost/wrapper/libxgboostwrapper.so"),
-                    Ptr{Void},
-                    (Ptr{Ptr{Void}}, Culong),
-                    [itm.handle for itm in dmats], len)
+                        "../xgboost/wrapper/libxgboostwrapper.so"),
+                       Ptr{Void},
+                       (Ptr{Ptr{Void}}, Culong),
+                       [itm.handle for itm in dmats], len)
         new(handle)
     end
 end
 
 function XGBoosterFree(bst::Booster)
     ccall((:XGBoosterFree,
-        "../xgboost/wrapper/libxgboostwrapper.so"),
-        Void,
-        (Ptr{Void}, ),
-        bst.handle)
+           "../xgboost/wrapper/libxgboostwrapper.so"),
+          Void,
+          (Ptr{Void}, ),
+          bst.handle)
 end
 
 function XGBoosterSetParam(bst::Booster, key::ASCIIString, value::ASCIIString)
     ccall((:XGBoosterSetParam,
-            "../xgboost/wrapper/libxgboostwrapper.so"),
+           "../xgboost/wrapper/libxgboostwrapper.so"),
           Void,
           (Ptr{Void}, Ptr{Uint8}, Ptr{Uint8}),
           bst.handle, key, value)
