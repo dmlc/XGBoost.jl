@@ -1,6 +1,3 @@
-module XGBoost
-
-
 ### DMatrix ###
 type DMatrix
     handle::Ptr{Void}
@@ -59,7 +56,7 @@ function XGDMatrixSaveBinary(dmat::DMatrix, fname::ASCIIString, slient::Int32)
           dmat.handle, fname, slient)
 end
 
-function XGDMatrixSetFloatInfo(dmat::DMatrix, field::ASCIIString, 
+function XGDMatrixSetFloatInfo(dmat::DMatrix, field::ASCIIString,
                                array::Array{Float32, 1}, len::Uint64)
     ccall((:XGDMatrixSetFloatInfo,
            "../xgboost/wrapper/libxgboostwrapper.so"),
@@ -148,7 +145,7 @@ function XGBoosterUpdateOneIter(bst::Booster, iter::Int32, dtrain::DMatrix)
 end
 
 
-function XGBoosterBoostOneIter(bst::Booster, iter::Int32, 
+function XGBoosterBoostOneIter(bst::Booster, iter::Int32,
                                grad::Array{Float32, 1},
                                hess::Array{Float32, 1},
                                len::Uint64)
@@ -159,7 +156,7 @@ function XGBoosterBoostOneIter(bst::Booster, iter::Int32,
           bst.handle, iter, grad, hess, len)
 end
 
-function XGBoosterEvalOneIter(bst::Booster, iter::Int32, dmats::Array{DMatrix, 1}, 
+function XGBoosterEvalOneIter(bst::Booster, iter::Int32, dmats::Array{DMatrix, 1},
                               evnames::Array{ASCIIString, 1}, len::Uint64)
     msg = ccall((:XGBoosterEvalOneIter,
                  "../xgboost/wrapper/libxgboostwrapper.so"),
@@ -169,7 +166,7 @@ function XGBoosterEvalOneIter(bst::Booster, iter::Int32, dmats::Array{DMatrix, 1
     return msg
 end
 
-function XGBoosterPredict(bst::Booster, dmat::DMatrix, output_margin::Int32, 
+function XGBoosterPredict(bst::Booster, dmat::DMatrix, output_margin::Int32,
                           ntree_limit::Uint32, len::Array{Uint64, 1})
     pred = ccall((:XGBoosterPredict,
                   "../xgboost/wrapper/libxgboostwrapper.so"),
