@@ -101,7 +101,7 @@ function XGDMatrixNumRow(handle::Ptr{Void})
     return ccall((:XGDMatrixNumRow,
                   "../xgboost/wrapper/libxgboostwrapper.so"),
                  Uint64,
-                 (Ptr{Ptr{Void}},)
+                 (Ptr{Void},),
                  handle)
 end
 
@@ -117,10 +117,8 @@ function JLGetUintInfo(handle::Ptr{Void}, field::ASCIIString)
     return pointer_to_array(ptr, len[1])
 end
 
-immutable type DMatrix
+type DMatrix
     handle::Ptr{Void}
-    label::Array{Float32, 1}
-    weight::Array{Float32, 1}
     function _SetMeta(handle::Ptr{Void}, weight, group, label)
         if typeof(weight) == Array{Float64, 1} || typeof(weight) == Array{Float32, 1}
             @assert XGDMatrixNumRow(handle) == size(weight)[1]
@@ -136,41 +134,31 @@ immutable type DMatrix
         end
     end
     function DMatrix(handle::Ptr{Void})
-        label = JLGetFloatInfo(handle, "label")
-        weight = JLGetFloatInfo(handle, "weight")
-        new(handle, label, weight)
+        sp = new(handle)
+        finalizer(sp, JLFree)
+        sp
     end
     function DMatrix(fname::ASCIIString; slient::Integer=0, weight=None, group=None)
         handle = XGDMatrixCreateFromFile(fname, convert(Int32, slient))
-        label = JLGetFloatInfo(handle, "label")
         _SetMeta(handle, weight, group, None)
-        if weight == None
-            weight = Float32[]
-        end
-        new(handle, label, convert(Array{Float32, 1}, weight))
+        sp = new(handle)
+        finalizer(sp, JLFree)
+        sp
     end
     function DMatrix(data::SparseMatrixCSC{Float32, Int64}; label=None, weight=None, group=None)
         handle = XGDMatrixCreateFromCSC(data)
         _SetMeta(handle, weight, group, label)
-        if label == None
-            label = Float32[]
-        end
-        if weight == None
-            weight = Float32[]
-        end
-        new(handle, convert(Array{Float32, 1}, label), convert(Array{Float32, 1}, weight))
+        sp = new(handle)
+        finalizer(sp, JLFree)
+        sp
     end
     function DMatrix(data::Array{Float32, 2}; missing::Float32=0,
                      label=None, weight=None, group=None)
         handle = XGDMatrixCreateFromMat(data)
         _SetMeta(handle, weight, group, label)
-        if label == None
-            label = Float32[]
-        end
-        if weight == None
-            weight = Float32[]
-        end
-        new(handle, convert(Array{Float32, 1}, label), convert(Array{Float32, 1}, weight))
+        sp = new(handle)
+        finalizer(sp, JLFree)
+        sp
     end
 end
 
@@ -219,12 +207,13 @@ function XGBoosterBoostOneIter(handle::Ptr{Void}, iter::Int32,
           handle, iter, grad, hess, len)
 end
 
-function XGBoosterEvalOneIter(handle::Ptr{Void}, iter::Int32, dmats::Array{DMatrix, 1},
+function XGBoosterEvalOneIter(handle::Ptr{Void}, iter::Int32,
+                              dmats::Array{DMatrix, 1},
                               evnames::Array{ASCIIString, 1}, len::Uint64)
     msg = ccall((:XGBoosterEvalOneIter,
                  "../xgboost/wrapper/libxgboostwrapper.so"),
                 Ptr{Uint8},
-                (Ptr{Void}, Int32, Ptr{Ptr{Void}}, Ptr{Uint8}, Uint64),
+                (Ptr{Void}, Int32, Ptr{Ptr{Void}}, Ptr{Ptr{Uint8}}, Uint64),
                 handle, iter, [itm.handle for itm in dmats], evnames, len)
     return bytestring(msg)
 end
@@ -252,6 +241,7 @@ end
 function XGBoosterSaveModel(handle::Ptr{Void}, fname::ASCIIString)
     ccall((:XGBoosterSaveModel,
            "../xgboost/wrapper/libxgboostwrapper.so"),
+           Void,
           (Ptr{Void}, Ptr{Uint8}),
           handle, fname)
 end
@@ -261,6 +251,7 @@ end
 function XGBoosterDumpModel(handle::Ptr{Void}, fmap::ASCIIString, out_len::Array{Uint64, 1})
     data = ccall((:XGBoosterDumpModel,
                   "../xgboost/wrapper/libxgboostwrapper.so"),
+                  Void,
                  (Ptr{Void}, Ptr{Uint8}, Ptr{Uint64}),
                  handle, fmap, out_len)
     return data
@@ -276,7 +267,17 @@ type Booster
     function Booster(fname::ASCIIString)
         handle = XGBoosterCreate(DMatrix[], 0)
         XGBoosterLoadModel(handle, fname)
-        new(handle)
+        sp = new(handle)
+        finalizer(sp, JLFree)
+        sp
     end
 end
 
+function JLFree(bst::Booster)
+    XGBoosterFree(bst.handle)
+end
+
+function JLFree(dmat::DMatrix)
+    XGDMatrixFree(dmat.handle)
+end
+    

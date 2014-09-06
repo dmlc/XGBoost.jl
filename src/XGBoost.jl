@@ -6,22 +6,35 @@ export xgboost, predict, save, nfold_cv, slice, Booster, DMatrix
 
 
 ### train ###
-function xgboost(param::Dict{ASCIIString, Any}, dtrain::DMatrix, nrounds::Integer,
-               watchlist::Array{DMatrix, 1}=[], obj=None, feval=None)
-    plst = [(k, param[k]) for k in keys(param)]
-    return xgboost(convert(Array{(ASCIIString, Any), 1}, plst), dtrain, watchlist, obj, feval)
+function xgboost(param::Dict{ASCIIString, Any}, dtrain::DMatrix, nrounds::Int64;
+                 evals::Array{(DMatrix, ASCIIString), 1}=[], obj=None, feval=None)
+    plst = (ASCIIString, ASCIIString)[]
+    for k in keys(param)
+        push!(plst, (k, string(param[k])))
+    end
+    return xgboost(plst, dtrain, nrounds, evals=evals, obj=obj, feval=feval)
 end
 
-function xgboost(param::Array{(ASCIIString, Any), 1}, dtrain::DMatrix, nrounds::Integer,
-               watchlist::Array{DMatrix, 1}=[], obj=None, feval=None)
-    push!(watchlist, dtrain)
-    bst = Booster(watchlist, size(watchlist)[1])
+function xgboost(param::Array{(ASCIIString, ASCIIString), 1},
+                 dtrain::DMatrix, nrounds::Int64;
+                 evals::Array{(DMatrix, ASCIIString), 1}=[], obj=None, feval=None)
+    cache = [dtrain]
+    for itm in evals
+        push!(cache, itm[1])
+    end
+    bst = Booster(cache, size(cache)[1])
     for itm in param
-        set_param(bst, itm[1], string(itm[2])
+        XGBoosterSetParam(bst.handle, itm[1], string(itm[2]))
+    end
+    dmats = DMatrix[]
+    evnames = ASCIIString[]
+    for itm in evals
+        push!(dmats, itm[1])
+        push!(evnames, itm[2])
     end
     for i = 1:nrounds
-        update(bst, dtrain, obj, feval)
-        XGBoosterEvalOneIter
+        XGBoosterUpdateOneIter(bst.handle, convert(Int32, 1), dtrain)
+        print(XGBoosterEvalOneIter(bst.handle, convert(Int32, i), dmats, evnames, convert(Uint64, size(dmats)[1])))
     end
     return bst
 end
@@ -29,10 +42,10 @@ end
 
 
 function predict(bst::Booster, dmat::DMatrix,
-                output_margin::Signed=0, ntree_limit::Integer=0)
-    len = [1]
+                 output_margin::Signed=0, ntree_limit::Integer=0)
+    len = Uint64[1]
     ptr = XGBoosterPredict(bst.handle, dmat, convert(Int32, output_margin),
-                            convert(Uint32, ntree_limit), length)
+                            convert(Uint32, ntree_limit), len)
     return deepcopy(pointer_to_array(ptr, len[1]))
 end
 
