@@ -33,7 +33,17 @@ function xgboost(param::Array{(ASCIIString, ASCIIString), 1},
         push!(evnames, itm[2])
     end
     for i = 1:nrounds
-        XGBoosterUpdateOneIter(bst.handle, convert(Int32, 1), dtrain)
+        if typeof(obj) == Function
+            pred = predict(bst, dtrain)
+            grad, hess = obj(pred, dtrain)
+            @assert size(grad) == size(hess)
+            XGBoosterBoostOneIter(bst.handle, convert(Int32, 1),
+                                  convert(Array{Float32, 1}, grad),
+                                  convert(Array{Float32, 1}, hess),
+                                  convert(Uint64, size(hess)[1]))
+        else
+            XGBoosterUpdateOneIter(bst.handle, convert(Int32, 1), dtrain)
+        end
         print(XGBoosterEvalOneIter(bst.handle, convert(Int32, i), dmats, evnames, convert(Uint64, size(dmats)[1])))
     end
     return bst
@@ -41,7 +51,7 @@ end
 
 
 
-function predict(bst::Booster, dmat::DMatrix,
+function predict(bst::Booster, dmat::DMatrix;
                  output_margin::Signed=0, ntree_limit::Integer=0)
     len = Uint64[1]
     ptr = XGBoosterPredict(bst.handle, dmat, convert(Int32, output_margin),
@@ -60,7 +70,7 @@ function save(bst::Booster, fname::ASCIIString)
 end
 
 function save(dmat::DMatrix, fname::ASCIIString; slient::Signed=1)
-    XGDMatrixSaveBinary(dmat.hanle, fname, convert(Int32, slient))
+    XGDMatrixSaveBinary(dmat.handle, fname, convert(Int32, slient))
 end
 
 ### dump model ###
@@ -73,6 +83,18 @@ function slice(dmat::DMatrix, idxset::Array{Signed, 1})
     handle = XGDMatrixSliceDMatrix(dmat.handle, convert(Array{Int32, 1}, idxset),
                                     size(idxset)[1])
     return DMatrix(handle)
+end
+
+function get_label(dmat::DMatrix)
+    JLGetFloatInfo(dmat.handle, "label")
+end
+
+function get_weight(dmat::DMatrix)
+    JLGetFloatInfo(dmat.handle, "weight")
+end
+
+function get_margin(dmat::DMatrix)
+    JLGetFloatInfo(dmat.handle, "base_margin")
 end
 
 end # module

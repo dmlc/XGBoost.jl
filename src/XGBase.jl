@@ -119,10 +119,13 @@ end
 
 type DMatrix
     handle::Ptr{Void}
-    function _SetMeta(handle::Ptr{Void}, weight, group, label)
-        if typeof(weight) == Array{Float64, 1} || typeof(weight) == Array{Float32, 1}
+    function _SetMeta(handle::Ptr{Void}, weight, group, label, margin)
+        if typeof(weight) == Array{Float64, 1} ||
+            typeof(weight) == Array{Float32, 1}
             @assert XGDMatrixNumRow(handle) == size(weight)[1]
-            XGDMatrixGetFloatInfo(ptr, "weight", convert(Array{Float32, 1}, weight), size(weight)[1])
+            XGDMatrixGetFloatInfo(ptr, "weight",
+                                  convert(Array{Float32, 1}, weight),
+                                  size(weight)[1])
         end
         if typeof(group) == Array{Int64, 1} || typeof(weight) == Array{Int32, 1}
             @assert XGDMatrixNumRow(handle) == size(group)[1]
@@ -130,7 +133,15 @@ type DMatrix
         end
         if typeof(label) == Array{Float64, 1} || typeof(label) == Array{Float32, 1}
             @assert XGDMatrixNumRow(handle) == size(label)[1]
-            XGDMatrixGetFloatInfo(ptr, "label", convert(Array{Float32, 1}, label), size(label)[1])
+            XGDMatrixGetFloatInfo(ptr, "label",
+                                  convert(Array{Float32, 1}, label),
+                                  size(label)[1])
+        end
+        if typeof(margin) == Array{Float64, 1} || typeof(margin) == Array{Float32, 1}
+            @assert XGDMatrixNumRow(handle) == size(margin)[1]
+            XGDMatrixGetFloatInfo(ptr, "base_margin",
+                                  convert(Array{Float32, 1}, margin),
+                                  size(margin)[1])
         end
     end
     function DMatrix(handle::Ptr{Void})
@@ -138,24 +149,24 @@ type DMatrix
         finalizer(sp, JLFree)
         sp
     end
-    function DMatrix(fname::ASCIIString; slient::Integer=0, weight=None, group=None)
+    function DMatrix(fname::ASCIIString; slient::Integer=0, weight=None, group=None, margin=None)
         handle = XGDMatrixCreateFromFile(fname, convert(Int32, slient))
-        _SetMeta(handle, weight, group, None)
+        _SetMeta(handle, weight, group, None, margin)
         sp = new(handle)
         finalizer(sp, JLFree)
         sp
     end
-    function DMatrix(data::SparseMatrixCSC{Float32, Int64}; label=None, weight=None, group=None)
+    function DMatrix(data::SparseMatrixCSC{Float32, Int64}; label=None, weight=None, group=None, margin=None)
         handle = XGDMatrixCreateFromCSC(data)
-        _SetMeta(handle, weight, group, label)
+        _SetMeta(handle, weight, group, label, margin)
         sp = new(handle)
         finalizer(sp, JLFree)
         sp
     end
     function DMatrix(data::Array{Float32, 2}; missing::Float32=0,
-                     label=None, weight=None, group=None)
+                     label=None, weight=None, group=None, margin=None)
         handle = XGDMatrixCreateFromMat(data)
-        _SetMeta(handle, weight, group, label)
+        _SetMeta(handle, weight, group, label, margin)
         sp = new(handle)
         finalizer(sp, JLFree)
         sp
@@ -280,4 +291,3 @@ end
 function JLFree(dmat::DMatrix)
     XGDMatrixFree(dmat.handle)
 end
-    
