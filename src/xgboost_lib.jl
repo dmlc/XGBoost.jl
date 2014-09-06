@@ -1,30 +1,21 @@
 include("xgboost_wrapper_h.jl")
 
-
 ### train ###
-function xgboost(param::Dict{ASCIIString, Any}, dtrain::DMatrix, nrounds::Integer;
-                 evals::Array{(DMatrix, ASCIIString), 1}=[], obj=None, feval=None)
-    plst = (ASCIIString, ASCIIString)[]
-    for k in keys(param)
-        push!(plst, (k, string(param[k])))
-    end
-    return xgboost(plst, dtrain, nrounds, evals=evals, obj=obj, feval=feval)
-end
-
-function xgboost(param::Array{(ASCIIString, ASCIIString), 1},
-                 dtrain::DMatrix, nrounds::Integer;
-                 evals::Array{(DMatrix, ASCIIString), 1}=[], obj=None, feval=None)
+function xgboost(dtrain::DMatrix, nrounds::Integer;
+                 param=[], watchlist=[],
+                 obj=None, feval=None,
+                 kwargs...)
     cache = [dtrain]
-    for itm in evals
+    for itm in watchlist
         push!(cache, itm[1])
     end
     bst = Booster(cache, size(cache)[1])
-    for itm in param
-        XGBoosterSetParam(bst.handle, itm[1], string(itm[2]))
+    for itm in kwargs
+        XGBoosterSetParam(bst.handle, string(itm[1]), string(itm[2]))
     end
     dmats = DMatrix[]
     evnames = ASCIIString[]
-    for itm in evals
+    for itm in watchlist
         push!(dmats, itm[1])
         push!(evnames, itm[2])
     end
