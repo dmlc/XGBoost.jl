@@ -135,6 +135,11 @@ immutable type DMatrix
             XGDMatrixGetFloatInfo(ptr, "label", convert(Array{Float32, 1}, label), size(label)[1])
         end
     end
+    function DMatrix(handle::Ptr{Void})
+        label = JLGetFloatInfo(handle, "label")
+        weight = JLGetFloatInfo(handle, "weight")
+        new(handle, label, weight)
+    end
     function DMatrix(fname::ASCIIString; slient::Integer=0, weight=None, group=None)
         handle = XGDMatrixCreateFromFile(fname, convert(Int32, slient))
         label = JLGetFloatInfo(handle, "label")
