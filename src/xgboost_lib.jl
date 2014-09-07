@@ -18,7 +18,6 @@ type DMatrix
             error("unknown information name")
         end
     end
-    function DMatrix(data)
     function DMatrix(handle::Ptr{Void})
         sp = new(handle, _setinfo)
         finalizer(sp, JLFree)
@@ -30,8 +29,8 @@ type DMatrix
         finalizer(sp, JLFree)
         sp
     end
-    function DMatrix(data::SparseMatrixCSC{Float32, Int64}; kwargs...)
-        handle = XGDMatrixCreateFromCSC(data)
+    function DMatrix{K<:Real, V<:Integer}(data::SparseMatrixCSC{K, V}; kwargs...)
+        handle = XGDMatrixCreateFromCSC(convert(SparseMatrixCSC{Float32, Int64}, data))
         sp = new(handle,  _setinfo)
         for itm in kwargs
             _setinfo(handle, string(itm[1]), itm[2])
@@ -39,8 +38,9 @@ type DMatrix
         finalizer(sp, JLFree)
         sp
     end
-    function DMatrix(data::Array{Float32, 2}, missing = 0;kwargs...)
-        handle = XGDMatrixCreateFromMat(data, convert(Float32, missing))
+    function DMatrix{T<:Real}(data::Array{T, 2}, missing = 0;kwargs...)
+        handle = XGDMatrixCreateFromMat(convert(Array{Float32, 2}, data),
+                                        convert(Float32, missing))
         for itm in kwargs
             _setinfo(handle, string(itm[1]), itm[2])
         end
@@ -66,11 +66,7 @@ function save(dmat::DMatrix, fname::ASCIIString; slient=true)
 end
 
 ### slice ###
-function slice(dmat::DMatrix, idxset)
-    @assert typeof(idxset) == Array{Int32, 1} ||
-    typeof(idxset) == Array{Int64, 1} ||
-    typeof(idxset) == Array{Uint32, 1} ||
-    typeof(idxset) == Array{Uint64, 1} ||
+function slice{T<:Integer}(dmat::DMatrix, idxset::Array{T, 1})
     handle = XGDMatrixSliceDMatrix(dmat.handle, convert(Array{Int32, 1}, idxset),
                                    size(idxset)[1])
     return DMatrix(handle)
@@ -167,7 +163,7 @@ function eval_set(bst::Booster, watchlist::Array{(DMatrix, ASCIIString), 1},
     end
 
     if typeof(feval) == Function
-        @printf(STDERR, "[%d]", i)
+        @printf(STDERR, "[%d]", iter)
         for j=1:size(dmats)[1]
             pred = predict(bst, dmats[j])
             name, val = feval(pred, dmats[j])
@@ -202,8 +198,7 @@ type CVPack
     end
 end
 
-
-function mknfold(dall:DMatrix, nfold::Integer, param,
+function mknfold(dall::DMatrix, nfold::Integer, param,
                  seed::Integer, evals=[]; fpreproc = None)
     srand(seed)
     randidx = randperm(XGDMatrixNumRow(dall.handle))
@@ -211,21 +206,50 @@ function mknfold(dall:DMatrix, nfold::Integer, param,
     idset = [randidx[ ((i - 1)*kstep) + 1 : min(size(randidx)[1],(i)*kstep + 1) ] for i=1:nfold]
     ret = []
     for k=1:nfold
-        dtrain = slice(dall, vcat([idset[i] for i=1:nfold if k != i]))
+        selected = []
+        for i=1:nfold
+            if k != i
+                selected = vcat(selected, idset[i])
+            end
+        end
         dtest = slice(dall, idset[k])
         if typeof(fprepproc) == Function
             dtrain, dtest, tparam = fpreproc(dtrain, dtest, deepcopy(param))
         else
             tparam = param
         end
-        plst = vcat([itm for itm in param], [('eval_metric', itm) for itm in evals])
+        plst = vcat([itm for itm in param], [("eval_metric", itm) for itm in evals])
         push!(ret, CVPack(dtrain, dtest, plst))
     end
     return ret
 end
 
 function aggcv(rlist; show_stdv=true)
-
+    cvmap = Dict()
+    ret = split(rlist[1])[1]
+    for line in rlist
+        arr = split(line)
+        @assert ret == arr[1]
+        for it in arr[2:end]
+            k, v  = split(it, ":")
+            if k in cvmap == false
+                cvmap[k] = []
+            end
+            push!(cvmap[k], float(v))
+        end
+    end
+    itms = [itm for itm in cvmap]
+    sort!(itms)
+    for itm in itms
+        k = itm[1]
+        v = itm[2]
+        if show_stdv == true
+            ret *= @sprintf("\tcv-%s:%f+%f", k, mean(v), std(v))
+        else
+            ret *= @sprintf("\tcv-%s:%f", k, mean(v))
+        end
+    end
+    return ret
 end
 
 function nfold_cv(params, dtrain::DMatrix, num_boost_round::Integer=10,

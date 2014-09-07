@@ -12,7 +12,7 @@ dtest = DMatrix("../data/agaricus.txt.test")
 # note: what we are getting is margin value in prediction
 # you must know what you are doing
 
-param = ["max_depth"=>2, "eta"=>1, "silent"=>0, "objective"=>"binary:logistic"]
+param = ["max_depth"=>2, "eta"=>1, "silent"=>1]
 watchlist  = [(dtest,"eval"), (dtrain,"train")]
 num_round = 2
 
@@ -34,10 +34,16 @@ function evalerror(preds::Array{Float32, 1}, dtrain::DMatrix)
     labels = get_info(dtrain, "label")
     # return a pair metric_name, result
     # since preds are margin(before logistic transformation, cutoff at 0)
-    return ("self-error", float(sum(labels != (preds .> 0.0))) / size(labels)[1])
+    tmp = zip(preds, labels)
+    cnt = 0
+    for itm in tmp
+        if convert(Integer, itm[1] > 0.0) != itm[2]
+            cnt += 1
+        end
+    end
+    return ("self-error", float(cnt / convert(Real, size(labels)[1])))
 end
 
 bst = xgboost(dtrain, num_round, param=param, watchlist=watchlist,
               obj=logregobj, feval=evalerror)
 
-#### Not passed !!!!
