@@ -1,10 +1,7 @@
 using BinDeps
 @BinDeps.setup
 
-deps = [
-        libxgboostwrapper = library_dependency("xgboostwrapper", aliases = ["libxgboostwrapper.so"]) 
-]
-
+deps = [ libxgboostwrapper = library_dependency("xgboostwrapper", aliases = ["libxgboostwrapper.so"]) ]
 
 prefix=joinpath(BinDeps.depsdir(libxgboostwrapper),"usr")
 provides(BuildProcess,
@@ -22,6 +19,5 @@ provides(BuildProcess,
                end
             end),
          libxgboostwrapper)
-
 
 @BinDeps.install [:xgboostwrapper => :_xgboost]
