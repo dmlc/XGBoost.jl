@@ -13,7 +13,7 @@ provides(BuildProcess,
                @build_steps begin
                    ChangeDirectory("xgboost")
                    FileRule(joinpath(prefix,"lib","libxgboostwrapper.so"), @build_steps begin
-                       `make wrapper/libxgboostwrapper.so`
+                       `bash build.sh`
                        `cp wrapper/libxgboostwrapper.so $prefix/lib`               
                    end)
                end
