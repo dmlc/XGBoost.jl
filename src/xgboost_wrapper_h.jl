@@ -1,17 +1,18 @@
+include("../deps/deps.jl")
+
 # xgboost_wrapper.h
 #
 function XGDMatrixCreateFromFile(fname::ASCIIString, slient::Int32)
     handle = ccall((:XGDMatrixCreateFromFile,
-                    "../xgboost/wrapper/libxgboostwrapper.so"),
-                   Ptr{Void},
-                   (Ptr{Uint8}, Int32),
+                    libxgboostwrapper
+                    ), 
+                   Ptr{Void}, (Ptr{Uint8}, Int32),
                    fname, slient)
     return handle
 end
 
 function XGDMatrixCreateFromCSC(data::SparseMatrixCSC{Float32, Int64})
-    handle = ccall((:XGDMatrixCreateFromCSC,
-                    "../xgboost/wrapper/libxgboostwrapper.so"),
+    handle = ccall((:XGDMatrixCreateFromCSC, libxgboostwrapper),
                    Ptr{Void},
                    (Ptr{Uint64}, Ptr{Uint32}, Ptr{Float32}, Uint64, Uint64),
                    data.colptr - 1, data.rowval - 1, data.nzval, size(data.colptr)[1], nnz(data))
@@ -21,8 +22,7 @@ end
 function XGDMatrixCreateFromMat(data::Array{Float32, 2}, missing::Float32)
     nrow = size(data)[1]
     ncol = size(data)[2]
-    handle = ccall((:XGDMatrixCreateFromMat,
-                    "../xgboost/wrapper/libxgboostwrapper.so"),
+    handle = ccall((:XGDMatrixCreateFromMat, libxgboostwrapper),
                    Ptr{Void},
                    (Ptr{Float32}, Uint64, Uint64, Float32),
                    data, nrow, ncol, missing)
@@ -30,8 +30,7 @@ function XGDMatrixCreateFromMat(data::Array{Float32, 2}, missing::Float32)
 end
 
 function XGDMatrixSliceDMatrix(handle::Ptr{Void}, idxset::Array{Int32, 1}, len::Uint64)
-    handle = ccall((:XGDMatrixSliceDMatrix,
-                    "../xgboost/wrapper/libxgboostwrapper.so"),
+    handle = ccall((:XGDMatrixSliceDMatrix, libxgboostwrapper),
                    Ptr{Void},
                    (Ptr{Void}, Ptr{Int32}, Uint64),
                    dmat.handle, idxset, len)
@@ -39,16 +38,14 @@ function XGDMatrixSliceDMatrix(handle::Ptr{Void}, idxset::Array{Int32, 1}, len::
 end
 
 function XGDMatrixFree(handle::Ptr{Void})
-    ccall((:XGDMatrixFree,
-           "../xgboost/wrapper/libxgboostwrapper.so"),
+    ccall((:XGDMatrixFree, libxgboostwrapper),
           Void,
           (Ptr{Void}, ),
           handle)
 end
 
 function XGDMatrixSaveBinary(handle::Ptr{Void}, fname::ASCIIString, slient::Int32)
-    ccall((:XGDMatrixSaveBinary,
-           "../xgboost/wrapper/libxgboostwrapper.so"),
+    ccall((:XGDMatrixSaveBinary, libxgboostwrapper),
           Void,
           (Ptr{Void}, Ptr{Uint8}, Int32),
           handle, fname, slient)
@@ -56,8 +53,7 @@ end
 
 function XGDMatrixSetFloatInfo(handle::Ptr{Void}, field::ASCIIString,
                                array::Array{Float32, 1}, len::Uint64)
-    ccall((:XGDMatrixSetFloatInfo,
-           "../xgboost/wrapper/libxgboostwrapper.so"),
+    ccall((:XGDMatrixSetFloatInfo, libxgboostwrapper),
           Void,
           (Ptr{Void}, Ptr{Uint8}, Ptr{Float32}, Uint64),
           handle, field, array, len)
@@ -65,32 +61,28 @@ end
 
 function XGDMatrixSetUIntInfo(handle::Ptr{Void}, field::ASCIIString,
                               array::Array{Uint32, 1}, len::Uint64)
-    ccall((:XGDMatrixSetUIntInfo,
-           "../xgboost/wrapper/libxgboostwrapper.so"),
+    ccall((:XGDMatrixSetUIntInfo, libxgboostwrapper),
     Void,
     (Ptr{Void}, Ptr{Uint8}, Ptr{Uint32}, Uint64),
     handle, field, array, len)
 end
 
 function XGDMatrixSetGroup(handle::Ptr{Void}, array::Array{Uint32, 1}, len::Uint64)
-    ccall((:XGDMatrixSetGroup,
-           "../xgboost/wrapper/libxgboostwrapper.so"),
+    ccall((:XGDMatrixSetGroup, libxgboostwrapper),
           Void,
           (Ptr{Void}, Ptr{Uint32}, Uint64),
           handle, array, len)
 end
 
 function XGDMatrixGetFloatInfo(handle::Ptr{Void}, field::ASCIIString, outlen::Array{Uint64, 1})
-    return ccall((:XGDMatrixGetFloatInfo,
-                  "../xgboost/wrapper/libxgboostwrapper.so"),
+    return ccall((:XGDMatrixGetFloatInfo, libxgboostwrapper),
                  Ptr{Float32},
                  (Ptr{Void}, Ptr{Uint8}, Ptr{Uint64}),
                  handle, field, outlen)
 end
 
 function XGDMatrixGetUIntInfo(handle::Ptr{Void}, field::ASCIIString, outlen::Array{Uint64, 1})
-    return ccall((:XGDMatrixGetUIntInfo,
-                  "../xgboost/wrapper/libxgboostwrapper.so"),
+    return ccall((:XGDMatrixGetUIntInfo, libxgboostwrapper),
                  Ptr{Uint32},
                  (Ptr{Void}, Ptr{Uint8}, Ptr{Uint64}),
                  handle, field, outlen)
@@ -99,8 +91,7 @@ end
 
 
 function XGDMatrixNumRow(handle::Ptr{Void})
-    return ccall((:XGDMatrixNumRow,
-                  "../xgboost/wrapper/libxgboostwrapper.so"),
+    return ccall((:XGDMatrixNumRow, libxgboostwrapper),
                  Uint64,
                  (Ptr{Void},),
                  handle)
@@ -176,8 +167,7 @@ end
 
 
 function XGBoosterCreate(dmats::Array{DMatrix, 1}, len::Int64)
-    handle = ccall((:XGBoosterCreate,
-                    "../xgboost/wrapper/libxgboostwrapper.so"),
+    handle = ccall((:XGBoosterCreate, libxgboostwrapper),
                    Ptr{Void},
                    (Ptr{Ptr{Void}}, Uint64),
                    [itm.handle for itm in dmats], len)
@@ -185,24 +175,21 @@ function XGBoosterCreate(dmats::Array{DMatrix, 1}, len::Int64)
 end
 
 function XGBoosterFree(handle::Ptr{Void})
-    ccall((:XGBoosterFree,
-           "../xgboost/wrapper/libxgboostwrapper.so"),
+    ccall((:XGBoosterFree, libxgboostwrapper),
           Void,
           (Ptr{Void}, ),
           handle)
 end
 
 function XGBoosterSetParam(handle::Ptr{Void}, key::ASCIIString, value::ASCIIString)
-    ccall((:XGBoosterSetParam,
-           "../xgboost/wrapper/libxgboostwrapper.so"),
+    ccall((:XGBoosterSetParam, libxgboostwrapper),
           Void,
           (Ptr{Void}, Ptr{Uint8}, Ptr{Uint8}),
           handle, key, value)
 end
 
 function XGBoosterUpdateOneIter(handle::Ptr{Void}, iter::Int32, dtrain::DMatrix)
-    ccall((:XGBoosterUpdateOneIter,
-           "../xgboost/wrapper/libxgboostwrapper.so"),
+    ccall((:XGBoosterUpdateOneIter, libxgboostwrapper),
           Void,
           (Ptr{Void}, Int32, Ptr{Void}),
           handle, iter, dtrain.handle)
@@ -212,8 +199,7 @@ function XGBoosterBoostOneIter(handle::Ptr{Void}, iter::Int32,
                                grad::Array{Float32, 1},
                                hess::Array{Float32, 1},
                                len::Uint64)
-    ccall((:XGBoosterBoostOneIter,
-           "../xgboost/wrapper/libxgboostwrapper.so"),
+    ccall((:XGBoosterBoostOneIter, libxgboostwrapper),
           Void,
           (Ptr{Void}, Int32, Ptr{Float32}, Ptr{Float32}, Uint64),
           handle, iter, grad, hess, len)
@@ -222,8 +208,7 @@ end
 function XGBoosterEvalOneIter(handle::Ptr{Void}, iter::Int32,
                               dmats::Array{DMatrix, 1},
                               evnames::Array{ASCIIString, 1}, len::Uint64)
-    msg = ccall((:XGBoosterEvalOneIter,
-                 "../xgboost/wrapper/libxgboostwrapper.so"),
+    msg = ccall((:XGBoosterEvalOneIter, libxgboostwrapper),
                 Ptr{Uint8},
                 (Ptr{Void}, Int32, Ptr{Ptr{Void}}, Ptr{Ptr{Uint8}}, Uint64),
                 handle, iter, [itm.handle for itm in dmats], evnames, len)
@@ -233,8 +218,7 @@ end
 
 function XGBoosterPredict(handle::Ptr{Void}, dmat::DMatrix, output_margin::Int32,
                           ntree_limit::Uint32, len::Array{Uint64, 1})
-    ptr = ccall((:XGBoosterPredict,
-                  "../xgboost/wrapper/libxgboostwrapper.so"),
+    ptr = ccall((:XGBoosterPredict, libxgboostwrapper),
                  Ptr{Float32},
                  (Ptr{Void}, Ptr{Void}, Int32, Uint32, Ptr{Uint64}),
                  handle, dmat.handle, output_margin, ntree_limit, len)
@@ -243,16 +227,14 @@ end
 
 
 function XGBoosterLoadModel(handle::Ptr{Void}, fname::ASCIIString)
-    ccall((:XGBoosterLoadModel,
-           "../xgboost/wrapper/libxgboostwrapper.so"),
+    ccall((:XGBoosterLoadModel, libxgboostwrapper),
           Void,
           (Ptr{Void}, Ptr{Uint8}),
           handle, fname)
 end
 
 function XGBoosterSaveModel(handle::Ptr{Void}, fname::ASCIIString)
-    ccall((:XGBoosterSaveModel,
-           "../xgboost/wrapper/libxgboostwrapper.so"),
+    ccall((:XGBoosterSaveModel, libxgboostwrapper),
            Void,
           (Ptr{Void}, Ptr{Uint8}),
           handle, fname)
@@ -261,8 +243,7 @@ end
 
 ### Check later
 function XGBoosterDumpModel(handle::Ptr{Void}, fmap::ASCIIString, out_len::Array{Uint64, 1})
-    data = ccall((:XGBoosterDumpModel,
-                  "../xgboost/wrapper/libxgboostwrapper.so"),
+    data = ccall((:XGBoosterDumpModel, libxgboostwrapper),
                   Void,
                  (Ptr{Void}, Ptr{Uint8}, Ptr{Uint64}),
                  handle, fmap, out_len)

@@ -1,4 +1,8 @@
 using XGBoost
+data = XGDMatrixCreateFromFile("../data/agaricus.txt.train", convert(Int32,0))
+
+return
+
 dtrain = DMatrix("../data/agaricus.txt.train")
 dtest = DMatrix("../data/agaricus.txt.test")
 param = ["max_depth"=>2, "eta"=>1, "silent"=>0, "objective"=>"binary:logistic"]
