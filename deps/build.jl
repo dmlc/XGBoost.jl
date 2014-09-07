@@ -22,5 +22,6 @@ provides(BuildProcess,
                end
             end),
          libxgboostwrapper)
-@BinDeps.install 
-         
+
+
+@BinDeps.install [:xgboostwrapper => :_xgboost]
