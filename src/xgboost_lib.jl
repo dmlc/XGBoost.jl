@@ -20,7 +20,7 @@ type DMatrix
         finalizer(sp, JLFree)
         sp
     end
-    function DMatrix(fname::ASCIIString; silent = 0)
+    function DMatrix(fname::ASCIIString; silent = false)
         handle = XGDMatrixCreateFromFile(fname, convert(Int32, silent))
         sp = new(handle)
         finalizer(sp, JLFree)
@@ -35,9 +35,9 @@ type DMatrix
         finalizer(sp, JLFree)
         sp
     end
-    function DMatrix(data::Array{Float32, 2}; missing::Float32=0,
+    function DMatrix(data::Array{Float32, 2}; missing = 0,
                      kwargs...)
-        handle = XGDMatrixCreateFromMat(data)
+        handle = XGDMatrixCreateFromMat(data, convert(Float32, missing))
         for itm in kwargs
             _setinfo(handle, itm[1], itm[2])
         end
@@ -62,7 +62,7 @@ function get_margin(dmat::DMatrix)
     JLGetFloatInfo(dmat.handle, "base_margin")
 end
 
-function save(dmat::DMatrix, fname::ASCIIString; slient::Signed=1)
+function save(dmat::DMatrix, fname::ASCIIString; slient=true)
     XGDMatrixSaveBinary(dmat.handle, fname, convert(Int32, slient))
 end
 
@@ -103,7 +103,6 @@ end
 function dump(bst::Booster, fmap::ASCIIString, out_len::Array{Integer, 1})
     XGBoosterDumpModel(bst.handle, fmap, convert(Array{Uint64, 1}, out_len))
 end
-
 
 ### train ###
 function xgboost(dtrain::DMatrix, nrounds::Integer;

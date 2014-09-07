@@ -7,7 +7,7 @@ watchlist  = [(dtest,"eval"), (dtrain,"train")]
 num_round = 2
 bst = xgboost(dtrain, num_round, watchlist=watchlist,
               max_depth=3, eta=1, silent=0, objective = "binary:logistic")
-preds = predict(bst, dtest)
+preds = predict(bst, dtest, ntree_limit=10)
 save(bst, "0001.model")
 save(dtrain, "dtrain.buffer")
 save(dtest, "dtest.buffer")
