@@ -30,11 +30,11 @@ function XGDMatrixCreateFromMat(data::Array{Float32, 2}, missing::Float32)
 end
 
 function XGDMatrixSliceDMatrix(handle::Ptr{Void}, idxset::Array{Int32, 1}, len::Uint64)
-    handle = ccall((:XGDMatrixSliceDMatrix, _xgboost),
-                   Ptr{Void},
-                   (Ptr{Void}, Ptr{Int32}, Uint64),
-                   dmat.handle, idxset, len)
-    return handle
+    ret = ccall((:XGDMatrixSliceDMatrix, _xgboost),
+                Ptr{Void},
+                (Ptr{Void}, Ptr{Int32}, Uint64),
+                handle, idxset, len)
+    return ret
 end
 
 function XGDMatrixFree(handle::Ptr{Void})
@@ -88,8 +88,6 @@ function XGDMatrixGetUIntInfo(handle::Ptr{Void}, field::ASCIIString, outlen::Arr
                  handle, field, outlen)
 end
 
-
-
 function XGDMatrixNumRow(handle::Ptr{Void})
     return ccall((:XGDMatrixNumRow, _xgboost),
                  Uint64,
@@ -109,68 +107,11 @@ function JLGetUintInfo(handle::Ptr{Void}, field::ASCIIString)
     return pointer_to_array(ptr, len[1])
 end
 
-type DMatrix
-    handle::Ptr{Void}
-    function _SetMeta(handle::Ptr{Void}, weight, group, label, margin)
-        if typeof(weight) == Array{Float64, 1} ||
-            typeof(weight) == Array{Float32, 1}
-            @assert XGDMatrixNumRow(handle) == size(weight)[1]
-            XGDMatrixGetFloatInfo(ptr, "weight",
-                                  convert(Array{Float32, 1}, weight),
-                                  size(weight)[1])
-        end
-        if typeof(group) == Array{Int64, 1} || typeof(weight) == Array{Int32, 1}
-            @assert XGDMatrixNumRow(handle) == size(group)[1]
-            XGDMatrixSetGroup(handle, convert(Array{Uint32, 1}, group, size(group)[1]))
-        end
-        if typeof(label) == Array{Float64, 1} || typeof(label) == Array{Float32, 1}
-            @assert XGDMatrixNumRow(handle) == size(label)[1]
-            XGDMatrixGetFloatInfo(ptr, "label",
-                                  convert(Array{Float32, 1}, label),
-                                  size(label)[1])
-        end
-        if typeof(margin) == Array{Float64, 1} || typeof(margin) == Array{Float32, 1}
-            @assert XGDMatrixNumRow(handle) == size(margin)[1]
-            XGDMatrixGetFloatInfo(ptr, "base_margin",
-                                  convert(Array{Float32, 1}, margin),
-                                  size(margin)[1])
-        end
-    end
-    function DMatrix(handle::Ptr{Void})
-        sp = new(handle)
-        finalizer(sp, JLFree)
-        sp
-    end
-    function DMatrix(fname::ASCIIString; slient::Integer=0, weight=None, group=None, margin=None)
-        handle = XGDMatrixCreateFromFile(fname, convert(Int32, slient))
-        _SetMeta(handle, weight, group, None, margin)
-        sp = new(handle)
-        finalizer(sp, JLFree)
-        sp
-    end
-    function DMatrix(data::SparseMatrixCSC{Float32, Int64}; label=None, weight=None, group=None, margin=None)
-        handle = XGDMatrixCreateFromCSC(data)
-        _SetMeta(handle, weight, group, label, margin)
-        sp = new(handle)
-        finalizer(sp, JLFree)
-        sp
-    end
-    function DMatrix(data::Array{Float32, 2}; missing::Float32=0,
-                     label=None, weight=None, group=None, margin=None)
-        handle = XGDMatrixCreateFromMat(data)
-        _SetMeta(handle, weight, group, label, margin)
-        sp = new(handle)
-        finalizer(sp, JLFree)
-        sp
-    end
-end
-
-
-function XGBoosterCreate(dmats::Array{DMatrix, 1}, len::Int64)
+function XGBoosterCreate(cachelist::Array{Ptr{Void}, 1}, len::Int64)
     handle = ccall((:XGBoosterCreate, _xgboost),
                    Ptr{Void},
                    (Ptr{Ptr{Void}}, Uint64),
-                   [itm.handle for itm in dmats], len)
+                   cachelist, len)
     return handle
 end
 
@@ -188,11 +129,11 @@ function XGBoosterSetParam(handle::Ptr{Void}, key::ASCIIString, value::ASCIIStri
           handle, key, value)
 end
 
-function XGBoosterUpdateOneIter(handle::Ptr{Void}, iter::Int32, dtrain::DMatrix)
+function XGBoosterUpdateOneIter(handle::Ptr{Void}, iter::Int32, dtrain::Ptr{Void})
     ccall((:XGBoosterUpdateOneIter, _xgboost),
           Void,
           (Ptr{Void}, Int32, Ptr{Void}),
-          handle, iter, dtrain.handle)
+          handle, iter, dtrain)
 end
 
 function XGBoosterBoostOneIter(handle::Ptr{Void}, iter::Int32,
@@ -206,22 +147,22 @@ function XGBoosterBoostOneIter(handle::Ptr{Void}, iter::Int32,
 end
 
 function XGBoosterEvalOneIter(handle::Ptr{Void}, iter::Int32,
-                              dmats::Array{DMatrix, 1},
+                              dmats::Array{Ptr{Void}, 1},
                               evnames::Array{ASCIIString, 1}, len::Uint64)
     msg = ccall((:XGBoosterEvalOneIter, _xgboost),
                 Ptr{Uint8},
                 (Ptr{Void}, Int32, Ptr{Ptr{Void}}, Ptr{Ptr{Uint8}}, Uint64),
-                handle, iter, [itm.handle for itm in dmats], evnames, len)
+                handle, iter, dmats, evnames, len)
     return bytestring(msg)
 end
 
 
-function XGBoosterPredict(handle::Ptr{Void}, dmat::DMatrix, output_margin::Int32,
+function XGBoosterPredict(handle::Ptr{Void}, dmat::Ptr{Void}, output_margin::Int32,
                           ntree_limit::Uint32, len::Array{Uint64, 1})
     ptr = ccall((:XGBoosterPredict, _xgboost),
                  Ptr{Float32},
                  (Ptr{Void}, Ptr{Void}, Int32, Uint32, Ptr{Uint64}),
-                 handle, dmat.handle, output_margin, ntree_limit, len)
+                 handle, dmat, output_margin, ntree_limit, len)
     return ptr
 end
 
@@ -240,7 +181,6 @@ function XGBoosterSaveModel(handle::Ptr{Void}, fname::ASCIIString)
           handle, fname)
 end
 
-
 ### Check later
 function XGBoosterDumpModel(handle::Ptr{Void}, fmap::ASCIIString, out_len::Array{Uint64, 1})
     data = ccall((:XGBoosterDumpModel, _xgboost),
@@ -250,26 +190,3 @@ function XGBoosterDumpModel(handle::Ptr{Void}, fmap::ASCIIString, out_len::Array
     return data
 end
 
-
-type Booster
-    handle::Ptr{Void}
-    function Booster(dmats::Array{DMatrix, 1}, len::Int64)
-        handle = XGBoosterCreate(dmats::Array{DMatrix, 1}, len::Int64)
-        new(handle)
-    end
-    function Booster(fname::ASCIIString)
-        handle = XGBoosterCreate(DMatrix[], 0)
-        XGBoosterLoadModel(handle, fname)
-        sp = new(handle)
-        finalizer(sp, JLFree)
-        sp
-    end
-end
-
-function JLFree(bst::Booster)
-    XGBoosterFree(bst.handle)
-end
-
-function JLFree(dmat::DMatrix)
-    XGDMatrixFree(dmat.handle)
-end
