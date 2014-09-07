@@ -139,14 +139,14 @@ function XGBoosterUpdateOneIter(handle::Ptr{Void}, iter::Int32, dtrain::Ptr{Void
           handle, iter, dtrain)
 end
 
-function XGBoosterBoostOneIter(handle::Ptr{Void}, iter::Int32,
+function XGBoosterBoostOneIter(handle::Ptr{Void}, dtrain::Ptr{Void},
                                grad::Array{Float32, 1},
                                hess::Array{Float32, 1},
                                len::Uint64)
     ccall((:XGBoosterBoostOneIter, _xgboost),
           Void,
-          (Ptr{Void}, Int32, Ptr{Float32}, Ptr{Float32}, Uint64),
-          handle, iter, grad, hess, len)
+          (Ptr{Void}, Ptr{Void}, Ptr{Float32}, Ptr{Float32}, Uint64),
+          handle, dtrain, grad, hess, len)
 end
 
 function XGBoosterEvalOneIter(handle::Ptr{Void}, iter::Int32,

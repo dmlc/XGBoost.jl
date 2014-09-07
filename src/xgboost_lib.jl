@@ -22,8 +22,11 @@ type DMatrix
         finalizer(sp, JLFree)
         sp
     end
-    function DMatrix(fname::ASCIIString; silent = false)
+    function DMatrix(fname::ASCIIString; silent = false, kwargs...)
         handle = XGDMatrixCreateFromFile(fname, convert(Int32, silent))
+        for itm in kwargs
+            _setinfo(handle, string(itm[1]), itm[2])
+        end
         sp = new(handle)
         finalizer(sp, JLFree)
         sp
@@ -132,10 +135,10 @@ function xgboost(dtrain::DMatrix, nrounds::Integer;
     end
     for i = 1:nrounds
         if typeof(obj) == Function
-            pred = predict(bst.handle, dtrain)
+            pred = predict(bst, dtrain)
             grad, hess = obj(pred, dtrain)
             @assert size(grad) == size(hess)
-            XGBoosterBoostOneIter(bst.handle, convert(Int32, 1),
+            XGBoosterBoostOneIter(bst.handle, dtrain.handle,
                                   convert(Array{Float32, 1}, grad),
                                   convert(Array{Float32, 1}, hess),
                                   convert(Uint64, size(hess)[1]))
@@ -145,6 +148,15 @@ function xgboost(dtrain::DMatrix, nrounds::Integer;
         print(XGBoosterEvalOneIter(bst.handle, convert(Int32, i), [mt.handle for mt in dmats],
                                    evnames, convert(Uint64, size(dmats)[1])))
         print("\n")
+        if typeof(feval) == Function
+            @printf(STDERR, "[%d]", i)
+            for j=1:size(dmats)[1]
+                pred = predict(bst, dmats[j])
+                name, val = feval(pred, dmats[j])
+                @printf(STDERR, "\t%s-%s:%f", evnames[j], name, val)
+            end
+            @printf(STDERR, "\n")
+        end
     end
     return bst
 end
