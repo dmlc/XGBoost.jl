@@ -15,7 +15,10 @@ function XGDMatrixCreateFromCSC(data::SparseMatrixCSC{Float32, Int64})
     handle = ccall((:XGDMatrixCreateFromCSC, _xgboost),
                    Ptr{Void},
                    (Ptr{Uint64}, Ptr{Uint32}, Ptr{Float32}, Uint64, Uint64),
-                   data.colptr - 1, data.rowval - 1, data.nzval, size(data.colptr)[1], nnz(data))
+                   convert(Array{Uint64, 1}, data.colptr - 1),
+                   convert(Array{Uint32, 1}, data.rowval - 1), data.nzval,
+                   convert(Uint64, size(data.colptr)[1]),
+                   convert(Uint64, nnz(data)))
     return handle
 end
 
@@ -181,12 +184,13 @@ function XGBoosterSaveModel(handle::Ptr{Void}, fname::ASCIIString)
           handle, fname)
 end
 
-### Check later
+
 function XGBoosterDumpModel(handle::Ptr{Void}, fmap::ASCIIString, out_len::Array{Uint64, 1})
     data = ccall((:XGBoosterDumpModel, _xgboost),
-                  Void,
+                  Ptr{Ptr{Uint8}},
                  (Ptr{Void}, Ptr{Uint8}, Ptr{Uint64}),
                  handle, fmap, out_len)
+    
     return data
 end
 

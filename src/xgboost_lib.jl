@@ -1,16 +1,18 @@
 include("xgboost_wrapper_h.jl")
 
+# TODO: Use reference instead of array for length
+
 type DMatrix
     handle::Ptr{Void}
-    function _setinfo(ptr::Ptr{Void}, name::ASCIIString, array::Array{Any,1})
+    function _setinfo(ptr::Ptr{Void}, name::ASCIIString, array)
         if name == "label" || name == "weight" || name == "base_margin"
             XGDMatrixSetFloatInfo(ptr, name,
                                   convert(Array{Float32, 1}, array),
-                                  size(array)[1])
+                                  convert(Uint64, size(array)[1]))
         elseif name == "group"
             XGDMatrixSetGroup(ptr, name,
                               convert(Array{Uint32, 1}, label),
-                              size(array)[1])
+                              convert(Uint64, size(array)[1]))
         else
             error("unknown information name") 
         end
@@ -30,7 +32,7 @@ type DMatrix
         handle = XGDMatrixCreateFromCSC(data)
         sp = new(handle)
         for itm in kwargs
-            _setinfo(handle, itm[1], itm[2])
+            _setinfo(handle, string(itm[1]), itm[2])
         end
         finalizer(sp, JLFree)
         sp
@@ -39,7 +41,7 @@ type DMatrix
                      kwargs...)
         handle = XGDMatrixCreateFromMat(data, convert(Float32, missing))
         for itm in kwargs
-            _setinfo(handle, itm[1], itm[2])
+            _setinfo(handle, string(itm[1]), itm[2])
         end
         sp = new(handle)
         finalizer(sp, JLFree)
@@ -50,16 +52,8 @@ type DMatrix
     end    
 end
 
-function get_label(dmat::DMatrix)
-    JLGetFloatInfo(dmat.handle, "label")
-end
-
-function get_weight(dmat::DMatrix)
-    JLGetFloatInfo(dmat.handle, "weight")
-end
-
-function get_margin(dmat::DMatrix)
-    JLGetFloatInfo(dmat.handle, "base_margin")
+function get_info(dmat::DMatrix, field::ASCIIString)
+    JLGetFloatInfo(dmat.handle, field)
 end
 
 function save(dmat::DMatrix, fname::ASCIIString; slient=true)
@@ -100,13 +94,21 @@ function save(bst::Booster, fname::ASCIIString)
 end
 
 ### dump model ###
-function dump(bst::Booster, fmap::ASCIIString, out_len::Array{Integer, 1})
-    XGBoosterDumpModel(bst.handle, fmap, convert(Array{Uint64, 1}, out_len))
+function dump_model(bst::Booster, fname::ASCIIString; fmap::ASCIIString="")
+    out_len = Uint64[1]
+    ptr = XGBoosterDumpModel(bst.handle, fmap, out_len)
+    data = pointer_to_array(ptr, out_len[1])
+    fo = open(fname, "w")
+    for i=1:out_len[1]
+        @printf(fo, "booster[%d]:\n", i)
+        @printf(fo, "%s", bytestring(data[i]))
+    end
+    close(fo)
 end
 
 ### train ###
 function xgboost(dtrain::DMatrix, nrounds::Integer;
-                 param=[], watchlist=[],
+                 param=Any, watchlist=[],
                  obj=None, feval=None,
                  kwargs...)
     cache = [dtrain]
@@ -115,8 +117,13 @@ function xgboost(dtrain::DMatrix, nrounds::Integer;
     end
     bst = Booster(cache, size(cache)[1])
     for itm in kwargs
+        print(itm, "\n")
         XGBoosterSetParam(bst.handle, string(itm[1]), string(itm[2]))
     end
+    for itm in param
+        XGBoosterSetParam(bst.handle, string(itm[1]), string(itm[2]))
+    end
+            
     dmats = DMatrix[]
     evnames = ASCIIString[]
     for itm in watchlist
