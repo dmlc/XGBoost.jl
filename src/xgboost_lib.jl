@@ -67,8 +67,8 @@ end
 
 ### slice ###
 function slice{T<:Integer}(dmat::DMatrix, idxset::Array{T, 1})
-    handle = XGDMatrixSliceDMatrix(dmat.handle, convert(Array{Int32, 1}, idxset),
-                                   size(idxset)[1])
+    handle = XGDMatrixSliceDMatrix(dmat.handle, convert(Array{Int32, 1}, idxset) - 1,
+                                   convert(Uint64, size(idxset)[1]))
     return DMatrix(handle)
 end
 
@@ -192,7 +192,10 @@ type CVPack
     watchlist::Array{(DMatrix, ASCIIString), 1}
     bst::Booster
     function CVPack(dtrain::DMatrix, dtest::DMatrix, param)
-        bst = Booster(param, [dtrain,dtest])
+        bst = Booster([dtrain,dtest])
+        for itm in param
+            XGBoosterSetParam(bst.handle, string(itm[1]), string(itm[2]))
+        end
         watchlist = [ (dtrain,"train"), (dtest, "test") ]
         new(dtrain, dtest, watchlist, bst)
     end
@@ -202,9 +205,9 @@ function mknfold(dall::DMatrix, nfold::Integer, param,
                  seed::Integer, evals=[]; fpreproc = None)
     srand(seed)
     randidx = randperm(XGDMatrixNumRow(dall.handle))
-    kstep = size(randidx)[1] / nfold
+    kstep = int(size(randidx)[1] / nfold)
     idset = [randidx[ ((i - 1)*kstep) + 1 : min(size(randidx)[1],(i)*kstep + 1) ] for i=1:nfold]
-    ret = []
+    ret = CVPack[]
     for k=1:nfold
         selected = []
         for i=1:nfold
@@ -212,8 +215,9 @@ function mknfold(dall::DMatrix, nfold::Integer, param,
                 selected = vcat(selected, idset[i])
             end
         end
+        dtrain = slice(dall, selected)
         dtest = slice(dall, idset[k])
-        if typeof(fprepproc) == Function
+        if typeof(fpreproc) == Function
             dtrain, dtest, tparam = fpreproc(dtrain, dtest, deepcopy(param))
         else
             tparam = param
@@ -256,12 +260,12 @@ function nfold_cv(params, dtrain::DMatrix, num_boost_round::Integer=10,
                   nfold::Integer=3; metrics=[], obj = None, feval = None,
                   fpreproc = None, show_stdv=true, seed::Integer=0)
     results = []
-    cvfolds = mknfold(dtrain, nfold, params, seed, metrics, fpreproc)
+    cvfolds = mknfold(dtrain, nfold, params, seed, metrics, fpreproc=fpreproc)
     for i=1:num_boost_round
         for f in cvfolds
-            update(f.bst, 1, f.train, obj)
+            update(f.bst, 1, f.dtrain, obj=obj)
         end
-        res = aggcv([eval_set(f.bst, f.watchlist, i, feval) for f in cvfolds], show_stdv)
+        res = aggcv([eval_set(f.bst, f.watchlist, i, feval=feval) for f in cvfolds], show_stdv)
         push!(results, res)
         @printf(STDERR, "%s", res)
     end
