@@ -5,7 +5,7 @@ include("../deps/deps.jl")
 function XGDMatrixCreateFromFile(fname::ASCIIString, slient::Int32)
     handle = ccall((:XGDMatrixCreateFromFile,
                     _xgboost
-                    ), 
+                    ),
                    Ptr{Void}, (Ptr{Uint8}, Int32),
                    fname, slient)
     return handle
@@ -23,8 +23,9 @@ function XGDMatrixCreateFromCSC(data::SparseMatrixCSC{Float32, Int64})
 end
 
 function XGDMatrixCreateFromMat(data::Array{Float32, 2}, missing::Float32)
-    nrow = size(data)[1]
-    ncol = size(data)[2]
+    data = transpose(data)
+    nrow = size(data)[2]
+    ncol = size(data)[1]
     handle = ccall((:XGDMatrixCreateFromMat, _xgboost),
                    Ptr{Void},
                    (Ptr{Float32}, Uint64, Uint64, Float32),
@@ -190,7 +191,7 @@ function XGBoosterDumpModel(handle::Ptr{Void}, fmap::ASCIIString, out_len::Array
                   Ptr{Ptr{Uint8}},
                  (Ptr{Void}, Ptr{Uint8}, Ptr{Uint64}),
                  handle, fmap, out_len)
-    
+
     return data
 end
 

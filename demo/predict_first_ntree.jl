@@ -11,14 +11,27 @@ bst = xgboost(dtrain, num_round, param=param, watchlist=watchlist)
 
 
 print ("start testing prediction from first n trees\n")
-label = get_info(dtest, "label")
+labels = get_info(dtest, "label")
 
 ### predict using first 1 tree
-ypred1 = predict(bst, dtest, ntree_limit=1)
+pred1 = predict(bst, dtest, ntree_limit=1)
 # by default, we predict using all the trees
-ypred2 = predict(bst, dtest)
+pred2 = predict(bst, dtest)
 
-print ("error of ypred1=" , sum((ypred1 .> 0.5)!=label) /float(size(label)[1]), "\n")
-print ("error of ypred2=" , sum((ypred2 .> 0.5)!=label) /float(size(label)[1]), "\n")
+tmp = zip(pred1, labels)
+cnt = 0
+for itm in tmp
+    if convert(Integer, itm[1] > 0.5) != itm[2]
+        cnt += 1
+    end
+end
+print("error of pred1=", string(cnt / convert(Real, size(labels)[1])), "\n")
 
-# Not Pass!
+tmp = zip(pred2, labels)
+cnt = 0
+for itm in tmp
+    if convert(Integer, itm[1] > 0.5) != itm[2]
+        cnt += 1
+    end
+end
+print("error of pred2=", string(cnt / convert(Real, size(labels)[1])), "\n")

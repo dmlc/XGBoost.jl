@@ -19,9 +19,10 @@ bst = xgboost(dtrain, 1, param=param, watchlist=watchlist)
 ptrain = predict(bst, dtrain, output_margin=true)
 ptest  = predict(bst, dtest, output_margin=true)
 
-dtrain2 = DMatrix("../data/agaricus.txt.train", base_margin=ptrain)
-dtest2 = DMatrix("../data/agaricus.txt.test", base_margin=ptest)
-watchlist  = [(dtest2,"eval2"), (dtrain2,"train2")]
+set_info(dtrain, "base_margin", ptrain)
+set_info(dtest, "base_margin", ptest)
+
+watchlist  = [(dtest,"eval2"), (dtrain,"train2")]
 print ("this is result of running from initial prediction\n")
 
-bst = xgboost(dtrain2, 1, param=param, watchlist=watchlist)
+bst = xgboost(dtrain, 1, param=param, watchlist=watchlist)

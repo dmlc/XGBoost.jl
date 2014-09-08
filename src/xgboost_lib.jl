@@ -4,7 +4,8 @@ include("xgboost_wrapper_h.jl")
 
 type DMatrix
     handle::Ptr{Void}
-    function _setinfo(ptr::Ptr{Void}, name::ASCIIString, array)
+    _set_info::Function
+    function _setinfo{T<:Number}(ptr::Ptr{Void}, name::ASCIIString, array::Array{T, 1})
         if name == "label" || name == "weight" || name == "base_margin"
             XGDMatrixSetFloatInfo(ptr, name,
                                   convert(Array{Float32, 1}, array),
@@ -14,49 +15,50 @@ type DMatrix
                               convert(Array{Uint32, 1}, label),
                               convert(Uint64, size(array)[1]))
         else
-            error("unknown information name") 
+            error("unknown information name")
         end
     end
     function DMatrix(handle::Ptr{Void})
-        sp = new(handle)
+        sp = new(handle, _setinfo)
         finalizer(sp, JLFree)
         sp
     end
-    function DMatrix(fname::ASCIIString; silent = false, kwargs...)
+    function DMatrix(fname::ASCIIString; silent = false)
         handle = XGDMatrixCreateFromFile(fname, convert(Int32, silent))
-        for itm in kwargs
-            _setinfo(handle, string(itm[1]), itm[2])
-        end
-        sp = new(handle)
+        sp = new(handle, _setinfo)
         finalizer(sp, JLFree)
         sp
     end
-    function DMatrix(data::SparseMatrixCSC{Float32, Int64}; kwargs...)
-        handle = XGDMatrixCreateFromCSC(data)
-        sp = new(handle)
+    function DMatrix{K<:Real, V<:Integer}(data::SparseMatrixCSC{K, V}; kwargs...)
+        handle = XGDMatrixCreateFromCSC(convert(SparseMatrixCSC{Float32, Int64}, data))
+        sp = new(handle,  _setinfo)
         for itm in kwargs
             _setinfo(handle, string(itm[1]), itm[2])
         end
         finalizer(sp, JLFree)
         sp
     end
-    function DMatrix(data::Array{Float32, 2}; missing = 0,
-                     kwargs...)
-        handle = XGDMatrixCreateFromMat(data, convert(Float32, missing))
+    function DMatrix{T<:Real}(data::Array{T, 2}, missing = 0;kwargs...)
+        handle = XGDMatrixCreateFromMat(convert(Array{Float32, 2}, data),
+                                        convert(Float32, missing))
         for itm in kwargs
             _setinfo(handle, string(itm[1]), itm[2])
         end
-        sp = new(handle)
+        sp = new(handle, _setinfo)
         finalizer(sp, JLFree)
         sp
     end
     function JLFree(dmat::DMatrix)
         XGDMatrixFree(dmat.handle)
-    end    
+    end
 end
 
 function get_info(dmat::DMatrix, field::ASCIIString)
     JLGetFloatInfo(dmat.handle, field)
+end
+
+function set_info(dmat::DMatrix, field::ASCIIString, array)
+    dmat._set_info(dmat.handle, field, array)
 end
 
 function save(dmat::DMatrix, fname::ASCIIString; slient=true)
@@ -64,9 +66,9 @@ function save(dmat::DMatrix, fname::ASCIIString; slient=true)
 end
 
 ### slice ###
-function slice(dmat::DMatrix, idxset::Array{Signed, 1})
-    handle = XGDMatrixSliceDMatrix(dmat.handle, convert(Array{Int32, 1}, idxset),
-                                   size(idxset)[1])
+function slice{T<:Integer}(dmat::DMatrix, idxset::Array{T, 1})
+    handle = XGDMatrixSliceDMatrix(dmat.handle, convert(Array{Int32, 1}, idxset) - 1,
+                                   convert(Uint64, size(idxset)[1]))
     return DMatrix(handle)
 end
 
@@ -97,7 +99,7 @@ type Booster
     end
     function JLFree(bst::Booster)
         XGBoosterFree(bst.handle)
-    end    
+    end
 end
 
 ### save ###
@@ -127,7 +129,7 @@ function xgboost(dtrain::DMatrix, nrounds::Integer;
     for itm in watchlist
         push!(cache, itm[1])
     end
-    bst = Booster(cache, size(cache)[1])
+    bst = Booster(cache)
     for itm in kwargs
         print(itm, "\n")
         XGBoosterSetParam(bst.handle, string(itm[1]), string(itm[2]))
@@ -135,41 +137,56 @@ function xgboost(dtrain::DMatrix, nrounds::Integer;
     for itm in param
         XGBoosterSetParam(bst.handle, string(itm[1]), string(itm[2]))
     end
-            
+
+    for i = 1:nrounds
+        update(bst, 1, dtrain, obj=obj)
+        eval_set(bst, watchlist, i, feval=feval)
+    end
+    return bst
+end
+
+### update ###
+function update(bst::Booster, nrounds::Integer, dtrain::DMatrix; obj=None)
+    if typeof(obj) == Function
+        pred = predict(bst, dtrain)
+        grad, hess = obj(pred, dtrain)
+        @assert size(grad) == size(hess)
+        XGBoosterBoostOneIter(bst.handle, dtrain.handle,
+                              convert(Array{Float32, 1}, grad),
+                              convert(Array{Float32, 1}, hess),
+                              convert(Uint64, size(hess)[1]))
+    else
+        XGBoosterUpdateOneIter(bst.handle, convert(Int32, nrounds), dtrain.handle)
+    end
+end
+
+
+### eval_set ###
+function eval_set(bst::Booster, watchlist::Array{(DMatrix, ASCIIString), 1},
+                  iter::Integer; feval=None)
     dmats = DMatrix[]
     evnames = ASCIIString[]
     for itm in watchlist
         push!(dmats, itm[1])
         push!(evnames, itm[2])
     end
-    for i = 1:nrounds
-        if typeof(obj) == Function
-            pred = predict(bst, dtrain)
-            grad, hess = obj(pred, dtrain)
-            @assert size(grad) == size(hess)
-            XGBoosterBoostOneIter(bst.handle, dtrain.handle,
-                                  convert(Array{Float32, 1}, grad),
-                                  convert(Array{Float32, 1}, hess),
-                                  convert(Uint64, size(hess)[1]))
-        else
-            XGBoosterUpdateOneIter(bst.handle, convert(Int32, 1), dtrain.handle)
+
+    if typeof(feval) == Function
+        @printf(STDERR, "[%d]", iter)
+        for j=1:size(dmats)[1]
+            pred = predict(bst, dmats[j])
+            name, val = feval(pred, dmats[j])
+            @printf(STDERR, "\t%s-%s:%f", evnames[j], name, val)
         end
-        print(XGBoosterEvalOneIter(bst.handle, convert(Int32, i), [mt.handle for mt in dmats],
-                                   evnames, convert(Uint64, size(dmats)[1])))
-        print("\n")
-        if typeof(feval) == Function
-            @printf(STDERR, "[%d]", i)
-            for j=1:size(dmats)[1]
-                pred = predict(bst, dmats[j])
-                name, val = feval(pred, dmats[j])
-                @printf(STDERR, "\t%s-%s:%f", evnames[j], name, val)
-            end
-            @printf(STDERR, "\n")
-        end
+        @printf(STDERR, "\n")
+    else
+        @printf(STDERR, "%s\n", XGBoosterEvalOneIter(bst.handle, convert(Int32, iter),
+                                                     [mt.handle for mt in dmats],
+                                                     evnames, convert(Uint64, size(dmats)[1])))
     end
-    return bst
 end
 
+### predict ###
 function predict(bst::Booster, dmat::DMatrix;
                  output_margin::Bool = false, ntree_limit::Integer=0)
     len = Uint64[1]
@@ -178,8 +195,88 @@ function predict(bst::Booster, dmat::DMatrix;
     return deepcopy(pointer_to_array(ptr, len[1]))
 end
 
+type CVPack
+    dtrain::DMatrix
+    dtest::DMatrix
+    watchlist::Array{(DMatrix, ASCIIString), 1}
+    bst::Booster
+    function CVPack(dtrain::DMatrix, dtest::DMatrix, param)
+        bst = Booster([dtrain,dtest])
+        for itm in param
+            XGBoosterSetParam(bst.handle, string(itm[1]), string(itm[2]))
+        end
+        watchlist = [ (dtrain,"train"), (dtest, "test") ]
+        new(dtrain, dtest, watchlist, bst)
+    end
+end
 
-function nfold_cv()
+function mknfold(dall::DMatrix, nfold::Integer, param,
+                 seed::Integer, evals=[]; fpreproc = None)
+    srand(seed)
+    randidx = randperm(XGDMatrixNumRow(dall.handle))
+    kstep = int(size(randidx)[1] / nfold)
+    idset = [randidx[ ((i - 1)*kstep) + 1 : min(size(randidx)[1],(i)*kstep + 1) ] for i=1:nfold]
+    ret = CVPack[]
+    for k=1:nfold
+        selected = []
+        for i=1:nfold
+            if k != i
+                selected = vcat(selected, idset[i])
+            end
+        end
+        dtrain = slice(dall, selected)
+        dtest = slice(dall, idset[k])
+        if typeof(fpreproc) == Function
+            dtrain, dtest, tparam = fpreproc(dtrain, dtest, deepcopy(param))
+        else
+            tparam = param
+        end
+        plst = vcat([itm for itm in param], [("eval_metric", itm) for itm in evals])
+        push!(ret, CVPack(dtrain, dtest, plst))
+    end
+    return ret
+end
 
+function aggcv(rlist; show_stdv=true)
+    cvmap = Dict()
+    ret = split(rlist[1])[1]
+    for line in rlist
+        arr = split(line)
+        @assert ret == arr[1]
+        for it in arr[2:end]
+            k, v  = split(it, ":")
+            if k in cvmap == false
+                cvmap[k] = []
+            end
+            push!(cvmap[k], float(v))
+        end
+    end
+    itms = [itm for itm in cvmap]
+    sort!(itms)
+    for itm in itms
+        k = itm[1]
+        v = itm[2]
+        if show_stdv == true
+            ret *= @sprintf("\tcv-%s:%f+%f", k, mean(v), std(v))
+        else
+            ret *= @sprintf("\tcv-%s:%f", k, mean(v))
+        end
+    end
+    return ret
+end
+
+function nfold_cv(params, dtrain::DMatrix, num_boost_round::Integer=10,
+                  nfold::Integer=3; metrics=[], obj = None, feval = None,
+                  fpreproc = None, show_stdv=true, seed::Integer=0)
+    results = []
+    cvfolds = mknfold(dtrain, nfold, params, seed, metrics, fpreproc=fpreproc)
+    for i=1:num_boost_round
+        for f in cvfolds
+            update(f.bst, 1, f.dtrain, obj=obj)
+        end
+        res = aggcv([eval_set(f.bst, f.watchlist, i, feval=feval) for f in cvfolds], show_stdv)
+        push!(results, res)
+        @printf(STDERR, "%s", res)
+    end
 end
 

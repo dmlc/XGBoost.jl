@@ -20,7 +20,14 @@ bst = xgboost(dtrain, num_round, param=param, watchlist=watchlist)
 preds = predict(bst, dtest)
 labels = get_info(dtest, "label")
 
-print ("error=" , sum((preds .> 0.5)!=labels) /float(size(labels)[1]), "\n")
+tmp = zip(preds, labels)
+cnt = 0
+for itm in tmp
+    if convert(Integer, itm[1] > 0.5) != itm[2]
+        cnt += 1
+    end
+end
+print("error=", string(cnt / convert(Real, size(labels)[1])), "\n")
 
 # save model
 save(bst, "0001.model")
@@ -39,7 +46,6 @@ dtest2 = DMatrix("dtest.buffer")
 preds2 = predict(bst2, dtest2)
 # assert they are the same
 @assert sum(preds2 - preds) == 0
-
 # build dmatrix from dense matrix
 #### Error result, guess problem from data representation
 
@@ -65,7 +71,7 @@ end
 train = svm2dense("../data/agaricus.txt.train", (6513, 126))
 test = svm2dense("../data/agaricus.txt.test", (1611, 126))
 
-dtrain = DMatrix(train[1], label=train[2]) ### Wrong!
+dtrain = DMatrix(train[1], label=train[2])
 
 watchlist  = [(dtest, "eval"), (dtrain, "train")]
 bst = xgboost(dtrain, num_round, param=param, watchlist=watchlist)

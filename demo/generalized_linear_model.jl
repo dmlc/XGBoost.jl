@@ -28,4 +28,12 @@ bst = xgboost(dtrain, num_round, param=param, watchlist=watchlist)
 preds = predict(bst, dtest)
 labels = get_info(dtest, "label")
 
-print ("error=" , sum((preds .> 0.5)!=labels) /float(size(labels)[1]), "\n")
+tmp = zip(preds, labels)
+cnt = 0
+for itm in tmp
+    if convert(Integer, itm[1] > 0.5) != itm[2]
+        cnt += 1
+    end
+end
+print("error=", string(cnt / convert(Real, size(labels)[1])), "\n")
+    
