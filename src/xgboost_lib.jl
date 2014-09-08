@@ -75,8 +75,8 @@ end
 type Booster
     handle::Ptr{Void}
     predict::Function
-    function Booster(dmats::Array{DMatrix, 1}, len::Int64)
-        handle = XGBoosterCreate([itm.handle for itm in dmats], len::Int64)
+    function Booster(dmats::Array{DMatrix, 1})
+        handle = XGBoosterCreate([itm.handle for itm in dmats], size(dmats)[1])
         this = new()
         this.handle = handle
         finalizer(this, JLFree)
