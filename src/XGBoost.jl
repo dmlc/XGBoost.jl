@@ -1,7 +1,8 @@
 module XGBoost
 
 include("xgboost_lib.jl")
-export xgboost, predict, save, nfold_cv, slice, Booster, DMatrix, get_info, dump_model, set_info
+export DMatrix, Booster
+export xgboost, predict, save, nfold_cv, slice, get_info, set_info, dump_model
 
 
 end # module
