@@ -131,7 +131,7 @@ function xgboost(dtrain::DMatrix, nrounds::Integer;
 
     for i = 1:nrounds
         update(bst, 1, dtrain, obj=obj)
-        eval_set(bst, watchlist, i, feval=feval)
+        @printf(STDERR, "%s", eval_set(bst, watchlist, i, feval=feval))
     end
     return bst
 end
@@ -161,20 +161,22 @@ function eval_set(bst::Booster, watchlist::Array{(DMatrix, ASCIIString), 1},
         push!(dmats, itm[1])
         push!(evnames, itm[2])
     end
-
+    res = ""
     if typeof(feval) == Function
-        @printf(STDERR, "[%d]", iter)
+        res *= @sprintf("[%d]", iter)
+        #@printf(STDERR, "[%d]", iter)
         for j=1:size(dmats)[1]
             pred = predict(bst, dmats[j])
             name, val = feval(pred, dmats[j])
-            @printf(STDERR, "\t%s-%s:%f", evnames[j], name, val)
+            res *= @sprintf("\t%s-%s:%f", evnames[j], name, val)
         end
-        @printf(STDERR, "\n")
+        res *= @sprintf("\n")
     else
-        @printf(STDERR, "%s\n", XGBoosterEvalOneIter(bst.handle, convert(Int32, iter),
+        res *= @sprintf("%s\n", XGBoosterEvalOneIter(bst.handle, convert(Int32, iter),
                                                      [mt.handle for mt in dmats],
                                                      evnames, convert(Uint64, size(dmats)[1])))
     end
+    return res
 end
 
 ### predict ###
@@ -236,8 +238,8 @@ function aggcv(rlist; show_stdv=true)
         @assert ret == arr[1]
         for it in arr[2:end]
             k, v  = split(it, ":")
-            if k in cvmap == false
-                cvmap[k] = []
+            if k in keys(cvmap) == false
+                cvmap[k] = Float64[]
             end
             push!(cvmap[k], float(v))
         end
@@ -259,15 +261,16 @@ end
 function nfold_cv(params, dtrain::DMatrix, num_boost_round::Integer=10,
                   nfold::Integer=3; metrics=[], obj = None, feval = None,
                   fpreproc = None, show_stdv=true, seed::Integer=0)
-    results = []
+    results = ASCIIString[]
     cvfolds = mknfold(dtrain, nfold, params, seed, metrics, fpreproc=fpreproc)
     for i=1:num_boost_round
         for f in cvfolds
             update(f.bst, 1, f.dtrain, obj=obj)
         end
-        res = aggcv([eval_set(f.bst, f.watchlist, i, feval=feval) for f in cvfolds], show_stdv)
+        res = aggcv([eval_set(f.bst, f.watchlist, i, feval=feval) for f in cvfolds],
+                    show_stdv=show_stdv)
         push!(results, res)
-        @printf(STDERR, "%s", res)
+        @printf(STDERR, "%s\n", res)
     end
 end
 
