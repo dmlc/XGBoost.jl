@@ -10,26 +10,40 @@ num_round = 2
 nfold = 5
 
 print ("running cross validation\n")
+# do cross validation, this will print result out as
+# [iteration]  metric_name:mean_value+std_value
+# std_value is standard deviation of the metric
 nfold_cv(param, dtrain, num_round, nfold, metrics=["error"], seed = 0)
 
 print ("running cross validation, disable standard deviation display\n")
-
+# do cross validation, this will print result out as
+# [iteration]  metric_name:mean_value+std_value
+# std_value is standard deviation of the metric
 nfold_cv(param, dtrain, num_round, nfold, metrics=["error"], seed = 0, show_stdv = false)
 
 print ("running cross validation, with preprocessing function\n")
-
+# define the preprocessing function
+# used to return the preprocessed training, test data, and parameter
+# we can use this to do weight rescale, etc.
+# as a example, we try to set scale_pos_weight
 function fpreproc(dtrain::DMatrix, dtest::DMatrix, param)
     label = get_info(dtrain, "label")
     ratio = sum(label == 0) / sum(label == 1)
     param["scale_pos_weight"] = ratio
     return (dtrain, dtest, param)
 end
-
+# do cross validation, for each fold
+# the dtrain, dtest, param will be passed into fpreproc
+# then the return value of fpreproc will be used to generate
+# results of that fold
 nfold_cv(param, dtrain, num_round, nfold, metrics=["auc"],
          seed = 0, show_stdv = false, fpreproc=fpreproc)
 
 print ("running cross validation, with cutomsized loss function\n")
-
+###
+# you can also do cross validation with cutomized loss function
+# See custom_objective.py
+##
 
 function logregobj(preds::Array{Float32, 1}, dtrain::DMatrix)
         labels = get_info(dtrain, "label")
@@ -54,5 +68,6 @@ function evalerror(preds::Array{Float32, 1}, dtrain::DMatrix)
 end
 
 param = ["max_depth"=>2, "eta"=>1, "silent"=>1]
+# train with customized objective
 nfold_cv(param, dtrain, num_round, nfold, metrics=[],
          seed = 0, obj=logregobj, feval=evalerror)

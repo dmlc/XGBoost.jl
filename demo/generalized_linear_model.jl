@@ -18,7 +18,7 @@ param = ["booster"=>"gblinear", "eta"=>1, "silent"=>0,
          "objective"=>"binary:logistic", "alpha"=>0.0001, "lambda"=>1]
 ##
 # the rest of settings are the same
-##
+#
 
 watchlist  = [(dtest,"eval"), (dtrain,"train")]
 num_round = 4
@@ -36,4 +36,3 @@ for itm in tmp
     end
 end
 print("error=", string(cnt / convert(Real, size(labels)[1])), "\n")
-    

@@ -7,7 +7,7 @@ watchlist  = [(dtest,"eval"), (dtrain,"train")]
 
 ###
 # advanced: start from a initial base prediction
-#
+##
 
 print ("start running example to start from a initial prediction\n")
 param = ["max_depth"=>2, "eta"=>1, "silent"=>1, "objective"=>"binary:logistic"]

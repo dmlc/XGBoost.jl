@@ -25,7 +25,7 @@ for itm in tmp
         cnt += 1
     end
 end
-print("error of pred1=", string(cnt / convert(Real, size(labels)[1])), "\n")
+print("error of pred1= ", string(cnt / convert(Real, size(labels)[1])), "\n")
 
 tmp = zip(pred2, labels)
 cnt = 0
@@ -34,4 +34,5 @@ for itm in tmp
         cnt += 1
     end
 end
-print("error of pred2=", string(cnt / convert(Real, size(labels)[1])), "\n")
+
+print("error of pred2= ", string(cnt / convert(Real, size(labels)[1])), "\n")

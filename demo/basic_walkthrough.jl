@@ -8,7 +8,8 @@ dtest = DMatrix("../data/agaricus.txt.test")
 
 # specify parameters via dict
 param = ["max_depth"=>2, "eta"=>1, "silent"=>0, "objective"=>"binary:logistic"]
-# param = [("max_depth", 2), ("eta", 1), ("silent", 0), ("objective", "binary:logistic")]
+# To use multi thread, add the param
+param["nthread"] = 4
 
 # specify validations set to watch performance
 watchlist  = [(dtest,"eval"), (dtrain,"train")]
@@ -47,7 +48,6 @@ preds2 = predict(bst2, dtest2)
 # assert they are the same
 @assert sum(preds2 - preds) == 0
 # build dmatrix from dense matrix
-#### Error result, guess problem from data representation
 
 function svm2dense(fname::ASCIIString, shape)
     dmx = zeros(Float32, shape)
@@ -76,8 +76,8 @@ dtrain = DMatrix(train[1], label=train[2])
 watchlist  = [(dtest, "eval"), (dtrain, "train")]
 bst = xgboost(dtrain, num_round, param=param, watchlist=watchlist)
 
-
-dtrain = DMatrix(sparse(train[1]), label=train[2]) ### Correct
+### build model from sparse CSC matrix
+dtrain = DMatrix(sparse(train[1]), label=train[2])
 watchlist  = [(dtest,"eval"), (dtrain,"train")]
 bst = xgboost(dtrain, num_round, param=param, watchlist=watchlist)
 
