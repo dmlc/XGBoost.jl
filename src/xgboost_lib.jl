@@ -74,19 +74,28 @@ end
 
 type Booster
     handle::Ptr{Void}
+    predict::Function
     function Booster(dmats::Array{DMatrix, 1})
         handle = XGBoosterCreate([itm.handle for itm in dmats], size(dmats)[1])
-        new(handle)
-        sp = new(handle)
-        finalizer(sp, JLFree)
-        sp
+        this = new()
+        this.handle = handle
+        finalizer(this, JLFree)
+        function predict_(dmat::DMatrix;
+                  output_margin::Bool = false, ntree_limit::Integer=0)
+            len = Uint64[1]
+            ptr = XGBoosterPredict(this.handle, dmat.handle, convert(Int32, output_margin),
+                                   convert(Uint32, ntree_limit), len)
+            return deepcopy(pointer_to_array(ptr, len[1]))
+        end
+        this.predict = predict_
+        return this
     end
     function Booster(fname::ASCIIString)
         handle = XGBoosterCreate(Ptr{Void}[], 0)
         XGBoosterLoadModel(handle, fname)
-        sp = new(handle)
-        finalizer(sp, JLFree)
-        sp
+        this = new(handle)
+        finalizer(this, JLFree)
+        return this
     end
     function JLFree(bst::Booster)
         XGBoosterFree(bst.handle)
