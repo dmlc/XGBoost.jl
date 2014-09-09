@@ -109,7 +109,7 @@ end
 
 ### train ###
 function xgboost(dtrain::DMatrix, nrounds::Integer;
-                 param=Any, watchlist=[],
+                 param=[], watchlist=[],
                  obj=None, feval=None,
                  kwargs...)
     cache = [dtrain]
@@ -118,7 +118,6 @@ function xgboost(dtrain::DMatrix, nrounds::Integer;
     end
     bst = Booster(cachelist = cache)
     for itm in kwargs
-        print(itm, "\n")
         XGBoosterSetParam(bst.handle, string(itm[1]), string(itm[2]))
     end
     for itm in param

@@ -17,6 +17,9 @@ num_round = 2
 
 bst = xgboost(dtrain, num_round, param=param, watchlist=watchlist)
 
+# alternatively, you can direct pass in the model parameters
+bst = xgboost(dtrain, num_round, watchlist=watchlist, max_depth=2, eta=1, objective="binary:logistic")
+
 # this is prediction
 preds = predict(bst, dtest)
 labels = get_info(dtest, "label")
