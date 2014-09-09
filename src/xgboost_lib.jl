@@ -74,15 +74,11 @@ end
 
 type Booster
     handle::Ptr{Void}
-    function Booster(dmats::Array{DMatrix, 1})
-        handle = XGBoosterCreate([itm.handle for itm in dmats], size(dmats)[1])
-        sp = new(handle)
-        finalizer(sp, JLFree)
-        sp
-    end
-    function Booster(fname::ASCIIString)
-        handle = XGBoosterCreate(Ptr{Void}[], 0)
-        XGBoosterLoadModel(handle, fname)
+    function Booster(;cachelist::Array{DMatrix, 1} = Array{DMatrix,1}[], model_file::ASCIIString = "")
+        handle = XGBoosterCreate([itm.handle for itm in cachelist], size(cachelist)[1])
+        if model_file == ""
+            XGBoosterLoadModel(handle, fname)
+        end
         this = new(handle)
         finalizer(this, JLFree)
         return this
@@ -119,7 +115,7 @@ function xgboost(dtrain::DMatrix, nrounds::Integer;
     for itm in watchlist
         push!(cache, itm[1])
     end
-    bst = Booster(cache)
+    bst = Booster(cachelist = cache)
     for itm in kwargs
         print(itm, "\n")
         XGBoosterSetParam(bst.handle, string(itm[1]), string(itm[2]))
@@ -193,7 +189,7 @@ type CVPack
     watchlist::Array{(DMatrix, ASCIIString), 1}
     bst::Booster
     function CVPack(dtrain::DMatrix, dtest::DMatrix, param)
-        bst = Booster([dtrain,dtest])
+        bst = Booster(cachelist = [dtrain,dtest])
         for itm in param
             XGBoosterSetParam(bst.handle, string(itm[1]), string(itm[2]))
         end

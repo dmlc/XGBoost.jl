@@ -42,7 +42,7 @@ save(dtest, "dtest.buffer")
 save(bst, "xgb.model")
 
 # load model and data in
-bst2 = Booster("xgb.model")
+bst2 = Booster(model_file = "xgb.model")
 dtest2 = DMatrix("dtest.buffer")
 preds2 = predict(bst2, dtest2)
 # assert they are the same
