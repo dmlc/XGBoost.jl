@@ -74,10 +74,11 @@ end
 
 type Booster
     handle::Ptr{Void}
-    function Booster(;cachelist::Array{DMatrix, 1} = Array{DMatrix,1}[], model_file::ASCIIString = "")
+    function Booster(;cachelist::Array{DMatrix, 1} = convert(Array{DMatrix,1}, []),
+                     model_file::ASCIIString = "")
         handle = XGBoosterCreate([itm.handle for itm in cachelist], size(cachelist)[1])
-        if model_file == ""
-            XGBoosterLoadModel(handle, fname)
+        if model_file != ""
+            XGBoosterLoadModel(handle, model_file)
         end
         this = new(handle)
         finalizer(this, JLFree)
