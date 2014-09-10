@@ -17,14 +17,9 @@ The package is also made to be extensible, so that users are also allowed to def
 ```julia
 Pkg.add("XGBoost")
 ```
-or
+or run the following two lines
 ```julia
 Pkg.clone("https://github.com/antinucleon/XGBoost.jl.git")
-```
-
-then run
-
-```julia
 Pkg.build("XGBoost")
 ```
 
@@ -63,7 +58,7 @@ metrics = ["auc"]
 nfold_cv(param, dtrain, num_round, nfold, metrics=metrics)
 ```
 
-### Check [demo](https://github.com/antinucleon/XGBoost.jl/blob/master/demo/) for all usages
+### Check [demo](https://github.com/antinucleon/XGBoost.jl/blob/master/demo/) for feature walkthrough
 - [Basic walkthrough of wrappers](basic_walkthrough.jl)
 - [Cutomize loss function, and evaluation metric](custom_objective.jl)
 - [Boosting from existing prediction](boost_from_prediction.jl)
@@ -73,6 +68,6 @@ nfold_cv(param, dtrain, num_round, nfold, metrics=metrics)
 
 ### Check [wiki](https://github.com/antinucleon/XGBoost.jl/wiki) for detailed function definition
 
-### Check [XGBoost Wiki](https://github.com/tqchen/xgboost/wiki) for param setting
+### Check [XGBoost Wiki](https://github.com/tqchen/xgboost/wiki) for parameter setting
 
 
