@@ -17,9 +17,14 @@ The package is also made to be extensible, so that users are also allowed to def
 ```julia
 Pkg.add("XGBoost")
 ```
-or run the following two lines
+or
 ```julia
 Pkg.clone("https://github.com/antinucleon/XGBoost.jl.git")
+```
+
+then run
+
+```julia
 Pkg.build("XGBoost")
 ```
 
@@ -55,19 +60,21 @@ pred = predict(bst, dtest)
 ```julia
 nfold=5
 metrics = ["auc"]
-nfold_cv(param, dtrain, num_round, nfold, metrics=metrics)
+nfold_cv(dtrain, num_round, nfold, param, metrics=metrics)
 ```
 
-### Check [demo](https://github.com/antinucleon/XGBoost.jl/blob/master/demo/) for feature walkthrough
-- [Basic walkthrough of wrappers](basic_walkthrough.jl)
-- [Cutomize loss function, and evaluation metric](custom_objective.jl)
-- [Boosting from existing prediction](boost_from_prediction.jl)
-- [Predicting using first n trees](predict_first_ntree.jl)
-- [Generalized Linear Model](generalized_linear_model.jl)
-- [Cross validation](cross_validation.jl)
+## Feature Walkthrough
+Check [demo](https://github.com/antinucleon/XGBoost.jl/blob/master/demo/)
 
-### Check [wiki](https://github.com/antinucleon/XGBoost.jl/wiki) for detailed function definition
+- [Basic walkthrough of wrappers](demo/basic_walkthrough.jl)
+- [Cutomize loss function, and evaluation metric](demo/custom_objective.jl)
+- [Boosting from existing prediction](demo/boost_from_prediction.jl)
+- [Predicting using first n trees](demo/predict_first_ntree.jl)
+- [Generalized Linear Model](demo/generalized_linear_model.jl)
+- [Cross validation](demo/cross_validation.jl)
 
-### Check [XGBoost Wiki](https://github.com/tqchen/xgboost/wiki) for parameter setting
+
+## Model Parameter Setting
+Check [XGBoost Wiki](https://github.com/tqchen/xgboost/wiki)
 
 

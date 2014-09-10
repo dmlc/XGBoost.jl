@@ -57,14 +57,7 @@ function evalerror(preds::Array{Float32, 1}, dtrain::DMatrix)
     labels = get_info(dtrain, "label")
     # return a pair metric_name, result
     # since preds are margin(before logistic transformation, cutoff at 0)
-    tmp = zip(preds, labels)
-    cnt = 0
-    for itm in tmp
-        if convert(Integer, itm[1] > 0.0) != itm[2]
-            cnt += 1
-        end
-    end
-    return ("self-error", float(cnt / convert(Real, size(labels)[1])))
+    return ("self-error", sum((preds .> 0.0) .!= labels) / float(size(preds)[1]))
 end
 
 # train with customized objective

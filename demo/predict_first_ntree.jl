@@ -18,21 +18,5 @@ pred1 = predict(bst, dtest, ntree_limit=1)
 # by default, we predict using all the trees
 pred2 = predict(bst, dtest)
 
-tmp = zip(pred1, labels)
-cnt = 0
-for itm in tmp
-    if convert(Integer, itm[1] > 0.5) != itm[2]
-        cnt += 1
-    end
-end
-print("error of pred1= ", string(cnt / convert(Real, size(labels)[1])), "\n")
-
-tmp = zip(pred2, labels)
-cnt = 0
-for itm in tmp
-    if convert(Integer, itm[1] > 0.5) != itm[2]
-        cnt += 1
-    end
-end
-
-print("error of pred2= ", string(cnt / convert(Real, size(labels)[1])), "\n")
+print("error of pred1= ", sum((pred1 .> 0.5) .!= labels) / float(size(pred1)[1]), "\n")
+print("error of pred2= ", sum((pred2 .> 0.5) .!= labels) / float(size(pred2)[1]), "\n")
