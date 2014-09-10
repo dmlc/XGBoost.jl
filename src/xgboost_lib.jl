@@ -123,7 +123,9 @@ function xgboost(dtrain::DMatrix, nrounds::Integer;
     for itm in param
         XGBoosterSetParam(bst.handle, string(itm[1]), string(itm[2]))
     end
-
+    if size(watchlist)[1] == 0
+        watchlist = [(dtrain, "train")]
+    end
     for i = 1:nrounds
         update(bst, 1, dtrain, obj=obj)
         @printf(STDERR, "%s", eval_set(bst, watchlist, i, feval=feval))

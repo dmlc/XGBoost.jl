@@ -44,6 +44,9 @@ function evalerror(preds::Array{Float32, 1}, dtrain::DMatrix)
     return ("self-error", float(cnt / convert(Real, size(labels)[1])))
 end
 
+
+# training with customized objective, we can also do step by step training
+# simply look at xgboost_lib.jl's implementation of train
 bst = xgboost(dtrain, num_round, param=param, watchlist=watchlist,
               obj=logregobj, feval=evalerror)
 

@@ -16,6 +16,12 @@ dtest = DMatrix("../data/agaricus.txt.test")
 
 param = ["booster"=>"gblinear", "eta"=>1, "silent"=>0,
          "objective"=>"binary:logistic", "alpha"=>0.0001, "lambda"=>1]
+# normally, you do not need to set eta (step_size)
+# XGBoost uses a parallel coordinate descent algorithm (shotgun),
+# there could be affection on convergence with parallelization on certain cases
+# setting eta to be smaller value, e.g 0.5 can make the optimization more stable
+
+
 ##
 # the rest of settings are the same
 #
