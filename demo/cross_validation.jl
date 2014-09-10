@@ -13,13 +13,13 @@ print ("running cross validation\n")
 # do cross validation, this will print result out as
 # [iteration]  metric_name:mean_value+std_value
 # std_value is standard deviation of the metric
-nfold_cv(param, dtrain, num_round, nfold, metrics=["error"], seed = 0)
+nfold_cv(dtrain, num_round, nfold, param = param, metrics=["error"], seed = 0)
 
 print ("running cross validation, disable standard deviation display\n")
 # do cross validation, this will print result out as
 # [iteration]  metric_name:mean_value+std_value
 # std_value is standard deviation of the metric
-nfold_cv(param, dtrain, num_round, nfold, metrics=["error"], seed = 0, show_stdv = false)
+nfold_cv(dtrain, num_round, nfold, param = param, metrics=["error"], seed = 0, show_stdv = false)
 
 print ("running cross validation, with preprocessing function\n")
 # define the preprocessing function
@@ -36,7 +36,7 @@ end
 # the dtrain, dtest, param will be passed into fpreproc
 # then the return value of fpreproc will be used to generate
 # results of that fold
-nfold_cv(param, dtrain, num_round, nfold, metrics=["auc"],
+nfold_cv(dtrain, num_round, nfold, param=param, metrics=["auc"],
          seed = 0, show_stdv = false, fpreproc=fpreproc)
 
 print ("running cross validation, with cutomsized loss function\n")
@@ -67,7 +67,7 @@ function evalerror(preds::Array{Float32, 1}, dtrain::DMatrix)
     return ("self-error", float(cnt / convert(Real, size(labels)[1])))
 end
 
-param = ["max_depth"=>2, "eta"=>1, "silent"=>1]
 # train with customized objective
-nfold_cv(param, dtrain, num_round, nfold, metrics=[],
-         seed = 0, obj=logregobj, feval=evalerror)
+nfold_cv(dtrain, num_round, nfold, metrics=[],
+         seed = 0, obj=logregobj, feval=evalerror,
+         max_depth=2, eta=1, silent=1)

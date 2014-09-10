@@ -201,7 +201,7 @@ type CVPack
 end
 
 function mknfold(dall::DMatrix, nfold::Integer, param,
-                 seed::Integer, evals=[]; fpreproc = None)
+                 seed::Integer, evals=[]; fpreproc = None, kwargs = [])
     srand(seed)
     randidx = randperm(XGDMatrixNumRow(dall.handle))
     kstep = int(size(randidx)[1] / nfold)
@@ -222,6 +222,7 @@ function mknfold(dall::DMatrix, nfold::Integer, param,
             tparam = param
         end
         plst = vcat([itm for itm in param], [("eval_metric", itm) for itm in evals])
+        plst = vcat(plst, [itm for itm in kwargs])
         push!(ret, CVPack(dtrain, dtest, plst))
     end
     return ret
@@ -255,11 +256,12 @@ function aggcv(rlist; show_stdv=true)
     return ret
 end
 
-function nfold_cv(params, dtrain::DMatrix, num_boost_round::Integer=10,
-                  nfold::Integer=3; metrics=[], obj = None, feval = None,
-                  fpreproc = None, show_stdv=true, seed::Integer=0)
+function nfold_cv(dtrain::DMatrix, num_boost_round::Integer=10, nfold::Integer=3;
+                  param = [], metrics=[], obj = None, feval = None,
+                  fpreproc = None, show_stdv=true, seed::Integer=0, kwargs...)
     results = ASCIIString[]
-    cvfolds = mknfold(dtrain, nfold, params, seed, metrics, fpreproc=fpreproc)
+    
+    cvfolds = mknfold(dtrain, nfold, param, seed, metrics, fpreproc=fpreproc, kwargs = kwargs)
     for i=1:num_boost_round
         for f in cvfolds
             update(f.bst, 1, f.dtrain, obj=obj)
