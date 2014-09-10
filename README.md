@@ -60,7 +60,7 @@ pred = predict(bst, dtest)
 ```julia
 nfold=5
 metrics = ["auc"]
-nfold_cv(dtrain, num_round, nfold, param, metrics=metrics)
+nfold_cv(dtrain, num_round, nfold, param=param, metrics=metrics)
 ```
 
 ## Feature Walkthrough
