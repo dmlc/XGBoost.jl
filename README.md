@@ -40,7 +40,8 @@ The `XGBoost` package also depends on the `BinDeps`
 To show how XGBoost works, here is an example of dataset Mushroom
 
 - Prepare Data
-XGBoost support Julia ```Array```, ```SparseMatrixCSC```, libSVM format text and XGBoost binary file as input. Here is an example of Mushroom classification. This example will use the function ```readlibsvm``` in (basic_walkthrough.jl)[demo/basic_walkthrough.jl]. This function load libsvm format text into Julia dense matrix.
+
+XGBoost support Julia ```Array```, ```SparseMatrixCSC```, libSVM format text and XGBoost binary file as input. Here is an example of Mushroom classification. This example will use the function ```readlibsvm``` in [basic_walkthrough.jl](demo/basic_walkthrough.jl#L5). This function load libsvm format text into Julia dense matrix.
 
 ```julia
 using XGBoost
