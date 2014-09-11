@@ -40,31 +40,34 @@ The `XGBoost` package also depends on the `BinDeps`
 To show how XGBoost works, here is an example of dataset Mushroom
 
 - Prepare Data
-XGBoots use DMatix as inner data struct, DMatrix can be built from libsvm txt, XGBoost buffer file, Julia sparse Matrix and Julia dense matrix.
+XGBoost support Julia ```Array```, ```SparseMatrixCSC```, libSVM format text and XGBoost binary file as input. Here is an example of Mushroom classification. This example will use the function ```readlibsvm``` in (basic_walkthrough.jl)[demo/basic_walkthrough.jl]. This function load libsvm format text into Julia dense matrix.
+
 ```julia
 using XGBoost
 
-dtrain = DMatrix("demo/agaricus.txt.train")
-dtest = DMatrix("demo/agaricus.txt.test")
+train_X, train_Y = readlibsvm("data/agaricus.txt.train", (6513, 126))
+test_X, test_Y = readlibsvm("data/agaricus.txt.test", (1611, 126))
+
 ```
 
 - Fit Model
 ```julia
-param = ["max_depth"=>2, "eta"=>1, "silent"=>1]
 num_round = 2
-bst = xgboost(dtrain, num_round, param=param)
+bst = xgboost(train_X, num_round, label=train_Y, eta=1, max_depth=2)
 ```
 
 ## Predict
 ```julia
-pred = predict(bst, dtest)
+pred = predict(bst, test_X)
+print("test-error=", sum((pred .> 0.5) .!= test_Y) / float(size(pred)[1]), "\n")
 ```
 
 ## Cross-Validation
 ```julia
 nfold=5
+param = ["max_depth"=>2, "eta"=>1, "objective"=>"binary:logistic"]
 metrics = ["auc"]
-nfold_cv(dtrain, num_round, nfold, param=param, metrics=metrics)
+nfold_cv(train_X, num_round, nfold, label=train_Y, param=param, metrics=metrics)
 ```
 
 ## Feature Walkthrough
