@@ -7,12 +7,13 @@ prefix=joinpath(BinDeps.depsdir(libxgboostwrapper),"usr")
 provides(BuildProcess,
            (@build_steps begin
                `rm -rf xgboost`
-               `git clone https://github.com/tqchen/xgboost.git`
+               `git clone https://github.com/tqchen/xgboost.git`               
                CreateDirectory(prefix)
                CreateDirectory(joinpath(prefix, "lib"))
                @build_steps begin
                    ChangeDirectory("xgboost")
                    FileRule(joinpath(prefix,"lib","libxgboostwrapper.so"), @build_steps begin
+                       `git checkout v0.32`
                        `bash build.sh`
                        `cp wrapper/libxgboostwrapper.so $prefix/lib`               
                    end)
