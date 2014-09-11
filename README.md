@@ -24,13 +24,9 @@ Pkg.add("XGBoost")
 or
 ```julia
 Pkg.clone("https://github.com/antinucleon/XGBoost.jl.git")
-```
-
-then run
-
-```julia
 Pkg.build("XGBoost")
 ```
+
 
 The `XGBoost` package also depends on the `BinDeps`
 
