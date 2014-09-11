@@ -66,7 +66,7 @@ nfold_cv(dtrain, num_round, nfold, param=param, metrics=metrics)
 ## Feature Walkthrough
 Check [demo](https://github.com/antinucleon/XGBoost.jl/blob/master/demo/)
 
-- [Basic walkthrough of wrappers](demo/basic_walkthrough.jl)
+- [Basic walkthrough of features](demo/basic_walkthrough.jl)
 - [Cutomize loss function, and evaluation metric](demo/custom_objective.jl)
 - [Boosting from existing prediction](demo/boost_from_prediction.jl)
 - [Predicting using first n trees](demo/predict_first_ntree.jl)

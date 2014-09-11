@@ -2,7 +2,7 @@ using XGBoost
 
 # we load in the agaricus dataset
 # In this example, we are aiming to predict whether a mushroom can be eated
-function svm2dense(fname::ASCIIString, shape)
+function readlibsvm(fname::ASCIIString, shape)
     dmx = zeros(Float32, shape)
     label = Float32[]
     fi = open(fname, "r")
@@ -21,9 +21,9 @@ function svm2dense(fname::ASCIIString, shape)
     return (dmx, label)
 end
 
-
-train = svm2dense("../data/agaricus.txt.train", (6513, 126))
-test = svm2dense("../data/agaricus.txt.test", (1611, 126))
+# we use auxiliary function to read LIBSVM format into julia Matrix
+train = readlibsvm("../data/agaricus.txt.train", (6513, 126))
+test = readlibsvm("../data/agaricus.txt.test", (1611, 126))
 
 #-------------Basic Training using XGBoost-----------------
 # note: xgboost naturally handles sparse input
@@ -36,11 +36,13 @@ print("training xgboost with dense matrix\n")
 #   by calling xgboost(data, num_round, label=label, training-parameters)
 bst = xgboost(train[1], num_round, label = train[2], eta=1, max_depth=2, objective="binary:logistic")
 
+
 print("training xgboost with sparse matrix\n")
 sptrain = sparse(train[1])
 # alternatively, you can pass parameters in as a map
 param = ["max_depth"=>2, "eta"=>1, "objective"=>"binary:logistic"]
 bst = xgboost(sptrain, num_round, label = train[2], param=param)
+
 # you can also put in xgboost's DMatrix object
 # DMatrix stores label, data and other meta datas needed for advanced features
 print("training xgboost with DMatrix")
@@ -92,5 +94,5 @@ print("test-error=", sum((pred .> 0.5) .!= label) / float(size(pred)[1]), "\n")
 
 # Finally, you can dump the tree you learned using dump_model into a text file
 dump_model(bst, "dump.raw.txt")
-# If you have feature map file, you can dump the model in a more beautiul way
+# If you have feature map file, you can dump the model in a more readable way
 dump_model(bst, "dump.nice.txt", fmap="../data/featmap.txt")
