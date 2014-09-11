@@ -14,7 +14,7 @@ It supports various objective functions, including regression, classification an
 The package is also made to be extensible, so that users are also allowed to define their own objectives easily.
 
 ## Features
-* Sparse feature format, sparse feature format allows easy handling of missing values, and improve computation efficiency.
+* Sparse feature format, it allows easy handling of missing values, and improve computation efficiency.
 * Advanced features, such as customized loss function, cross validation, see [demo folder](demo) for walkthrough examples.
 
 ## Installation
