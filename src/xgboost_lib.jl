@@ -107,16 +107,37 @@ function dump_model(bst::Booster, fname::ASCIIString; fmap::ASCIIString="")
     close(fo)
 end
 
+function makeDMatrix(data, label)
+    # running converts
+    if typeof(data) != DMatrix
+        if typeof(data) == ASCIIString
+            if label != None
+                warning("label will be ignore when data is file")
+            end
+            return DMatrix(data)
+        else 
+            if label == None
+                error("label argument must be presented for training, unless you pass in a DMatrix")
+            end
+            return DMatrix(data, label = label)
+        end
+    else
+        return data
+    end    
+end
+
 ### train ###
-function xgboost(dtrain::DMatrix, nrounds::Integer;
-                 param=[], watchlist=[], metrics=[],
+function xgboost(data, nrounds::Integer;
+                 label = None, param=[], watchlist=[], metrics=[],
                  obj=None, feval=None,
                  kwargs...)
+    dtrain = makeDMatrix(data, label)
     cache = [dtrain]
     for itm in watchlist
         push!(cache, itm[1])
     end
     bst = Booster(cachelist = cache)
+    XGBoosterSetParam(bst.handle, "silent", "1")
     for itm in kwargs
         XGBoosterSetParam(bst.handle, string(itm[1]), string(itm[2]))
     end
@@ -180,10 +201,14 @@ function eval_set(bst::Booster, watchlist::Array{(DMatrix, ASCIIString), 1},
 end
 
 ### predict ###
-function predict(bst::Booster, dmat::DMatrix;
+function predict(bst::Booster, data;
                  output_margin::Bool = false, ntree_limit::Integer=0)
+    if typeof(data) != DMatrix
+        data = DMatrix(data)
+    end
+
     len = Uint64[1]
-    ptr = XGBoosterPredict(bst.handle, dmat.handle, convert(Int32, output_margin),
+    ptr = XGBoosterPredict(bst.handle, data.handle, convert(Int32, output_margin),
                            convert(Uint32, ntree_limit), len)
     return deepcopy(pointer_to_array(ptr, len[1]))
 end
@@ -259,9 +284,10 @@ function aggcv(rlist; show_stdv=true)
     return ret
 end
 
-function nfold_cv(dtrain::DMatrix, num_boost_round::Integer=10,
-                  nfold::Integer=3; param=[], metrics=[], obj = None, feval = None,
+function nfold_cv(data, num_boost_round::Integer=10, nfold::Integer=3; 
+                  label = None, param=[], metrics=[], obj = None, feval = None,
                   fpreproc = None, show_stdv=true, seed::Integer=0, kwargs...)
+    dtrain = makeDMatrix(data, label)
     results = ASCIIString[]
     cvfolds = mknfold(dtrain, nfold, param, seed, metrics, fpreproc=fpreproc, kwargs = kwargs)
     for i=1:num_boost_round
