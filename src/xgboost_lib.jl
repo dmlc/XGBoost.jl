@@ -138,11 +138,11 @@ function xgboost(data, nrounds::Integer;
     end
     bst = Booster(cachelist = cache)
     XGBoosterSetParam(bst.handle, "silent", "1")
-    silent = true
+    silent = false
     for itm in kwargs
         XGBoosterSetParam(bst.handle, string(itm[1]), string(itm[2]))
         if itm[1] == :silent
-            silent = itm[2] == 1
+            silent = itm[2] != 0
         end
     end
     for itm in param
