@@ -138,8 +138,12 @@ function xgboost(data, nrounds::Integer;
     end
     bst = Booster(cachelist = cache)
     XGBoosterSetParam(bst.handle, "silent", "1")
+    silent = true
     for itm in kwargs
         XGBoosterSetParam(bst.handle, string(itm[1]), string(itm[2]))
+        if itm[1] == :silent
+            silent = itm[2] == 1
+        end
     end
     for itm in param
         XGBoosterSetParam(bst.handle, string(itm[1]), string(itm[2]))
@@ -152,7 +156,9 @@ function xgboost(data, nrounds::Integer;
     end
     for i = 1:nrounds
         update(bst, 1, dtrain, obj=obj)
-        @printf(STDERR, "%s", eval_set(bst, watchlist, i, feval=feval))
+        if !silent
+            @printf(STDERR, "%s", eval_set(bst, watchlist, i, feval=feval))
+        end
     end
     return bst
 end
