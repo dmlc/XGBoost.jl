@@ -1,5 +1,7 @@
 include("xgboost_wrapper_h.jl")
 
+using Compat
+
 # TODO: Use reference instead of array for length
 
 type DMatrix
@@ -180,7 +182,7 @@ end
 
 
 ### eval_set ###
-function eval_set(bst::Booster, watchlist::Array{(DMatrix, ASCIIString), 1},
+function eval_set(bst::Booster, watchlist::Array{(@compat Tuple{DMatrix, ASCIIString}), 1},
                   iter::Integer; feval=None)
     dmats = DMatrix[]
     evnames = ASCIIString[]
@@ -222,7 +224,7 @@ end
 type CVPack
     dtrain::DMatrix
     dtest::DMatrix
-    watchlist::Array{(DMatrix, ASCIIString), 1}
+    watchlist::Array{(@compat Tuple{DMatrix, ASCIIString}), 1}
     bst::Booster
     function CVPack(dtrain::DMatrix, dtest::DMatrix, param)
         bst = Booster(cachelist = [dtrain,dtest])
@@ -238,11 +240,11 @@ function mknfold(dall::DMatrix, nfold::Integer, param,
                  seed::Integer, evals=[]; fpreproc = None, kwargs = [])
     srand(seed)
     randidx = randperm(XGDMatrixNumRow(dall.handle))
-    kstep = int(size(randidx)[1] / nfold)
+    kstep = round(size(randidx)[1] / nfold)
     idset = [randidx[ ((i - 1)*kstep) + 1 : min(size(randidx)[1],(i)*kstep + 1) ] for i=1:nfold]
     ret = CVPack[]
     for k=1:nfold
-        selected = []
+        selected = Array(Int,0)
         for i=1:nfold
             if k != i
                 selected = vcat(selected, idset[i])
