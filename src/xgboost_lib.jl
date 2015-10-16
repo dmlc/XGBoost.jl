@@ -11,11 +11,11 @@ type DMatrix
         if name == "label" || name == "weight" || name == "base_margin"
             XGDMatrixSetFloatInfo(ptr, name,
                                   convert(Array{Float32, 1}, array),
-                                  convert(Uint64, size(array)[1]))
+                                  convert(UInt64, size(array)[1]))
         elseif name == "group"
             XGDMatrixSetGroup(ptr, name,
-                              convert(Array{Uint32, 1}, label),
-                              convert(Uint64, size(array)[1]))
+                              convert(Array{UInt32, 1}, label),
+                              convert(UInt64, size(array)[1]))
         else
             error("unknown information name")
         end
@@ -70,7 +70,7 @@ end
 ### slice ###
 function slice{T<:Integer}(dmat::DMatrix, idxset::Array{T, 1})
     handle = XGDMatrixSliceDMatrix(dmat.handle, convert(Array{Int32, 1}, idxset) - 1,
-                                   convert(Uint64, size(idxset)[1]))
+                                   convert(UInt64, size(idxset)[1]))
     return DMatrix(handle)
 end
 
@@ -97,12 +97,10 @@ function save(bst::Booster, fname::ASCIIString)
 end
 
 ### dump model ###
-function dump_model(bst::Booster, fname::ASCIIString; fmap::ASCIIString="")
-    out_len = Uint64[1]
-    ptr = XGBoosterDumpModel(bst.handle, fmap, out_len)
-    data = pointer_to_array(ptr, out_len[1])
+function dump_model(bst::Booster, fname::ASCIIString; fmap::ASCIIString="", with_stats::Bool=false)
+    data = XGBoosterDumpModel(bst.handle, fmap, convert(Int64, with_stats))
     fo = open(fname, "w")
-    for i=1:out_len[1]
+    for i=1:length(data)
         @printf(fo, "booster[%d]:\n", i)
         @printf(fo, "%s", bytestring(data[i]))
     end
@@ -113,25 +111,25 @@ function makeDMatrix(data, label)
     # running converts
     if typeof(data) != DMatrix
         if typeof(data) == ASCIIString
-            if label != None
-                warning("label will be ignore when data is file")
+            if label != Union{}
+                warning("label will be ignored when data is a file")
             end
             return DMatrix(data)
-        else 
-            if label == None
-                error("label argument must be presented for training, unless you pass in a DMatrix")
+        else
+            if label == Union{}
+                error("label argument must be present for training, unless you pass in a DMatrix")
             end
             return DMatrix(data, label = label)
         end
     else
         return data
-    end    
+    end
 end
 
 ### train ###
 function xgboost(data, nrounds::Integer;
-                 label = None, param=[], watchlist=[], metrics=[],
-                 obj=None, feval=None,
+                 label=Union{}, param=[], watchlist=[], metrics=[],
+                 obj=Union{}, feval=Union{},
                  kwargs...)
     dtrain = makeDMatrix(data, label)
     cache = [dtrain]
@@ -166,7 +164,7 @@ function xgboost(data, nrounds::Integer;
 end
 
 ### update ###
-function update(bst::Booster, nrounds::Integer, dtrain::DMatrix; obj=None)
+function update(bst::Booster, nrounds::Integer, dtrain::DMatrix; obj=Union{})
     if typeof(obj) == Function
         pred = predict(bst, dtrain)
         grad, hess = obj(pred, dtrain)
@@ -174,7 +172,7 @@ function update(bst::Booster, nrounds::Integer, dtrain::DMatrix; obj=None)
         XGBoosterBoostOneIter(bst.handle, dtrain.handle,
                               convert(Array{Float32, 1}, grad),
                               convert(Array{Float32, 1}, hess),
-                              convert(Uint64, size(hess)[1]))
+                              convert(UInt64, size(hess)[1]))
     else
         XGBoosterUpdateOneIter(bst.handle, convert(Int32, nrounds), dtrain.handle)
     end
@@ -183,7 +181,7 @@ end
 
 ### eval_set ###
 function eval_set(bst::Booster, watchlist::Array{(@compat Tuple{DMatrix, ASCIIString}), 1},
-                  iter::Integer; feval=None)
+                  iter::Integer; feval=Union{})
     dmats = DMatrix[]
     evnames = ASCIIString[]
     for itm in watchlist
@@ -203,7 +201,7 @@ function eval_set(bst::Booster, watchlist::Array{(@compat Tuple{DMatrix, ASCIISt
     else
         res *= @sprintf("%s\n", XGBoosterEvalOneIter(bst.handle, convert(Int32, iter),
                                                      [mt.handle for mt in dmats],
-                                                     evnames, convert(Uint64, size(dmats)[1])))
+                                                     evnames, convert(UInt64, size(dmats)[1])))
     end
     return res
 end
@@ -215,9 +213,9 @@ function predict(bst::Booster, data;
         data = DMatrix(data)
     end
 
-    len = Uint64[1]
+    len = UInt64[1]
     ptr = XGBoosterPredict(bst.handle, data.handle, convert(Int32, output_margin),
-                           convert(Uint32, ntree_limit), len)
+                           convert(UInt32, ntree_limit), len)
     return deepcopy(pointer_to_array(ptr, len[1]))
 end
 
@@ -237,7 +235,7 @@ type CVPack
 end
 
 function mknfold(dall::DMatrix, nfold::Integer, param,
-                 seed::Integer, evals=[]; fpreproc = None, kwargs = [])
+                 seed::Integer, evals=[]; fpreproc = Union{}, kwargs = [])
     srand(seed)
     randidx = randperm(XGDMatrixNumRow(dall.handle))
     kstep = round(size(randidx)[1] / nfold)
@@ -292,9 +290,9 @@ function aggcv(rlist; show_stdv=true)
     return ret
 end
 
-function nfold_cv(data, num_boost_round::Integer=10, nfold::Integer=3; 
-                  label = None, param=[], metrics=[], obj = None, feval = None,
-                  fpreproc = None, show_stdv=true, seed::Integer=0, kwargs...)
+function nfold_cv(data, num_boost_round::Integer=10, nfold::Integer=3;
+                  label = Union{}, param=[], metrics=[], obj = Union{}, feval = Union{},
+                  fpreproc = Union{}, show_stdv=true, seed::Integer=0, kwargs...)
     dtrain = makeDMatrix(data, label)
     results = ASCIIString[]
     cvfolds = mknfold(dtrain, nfold, param, seed, metrics, fpreproc=fpreproc, kwargs = kwargs)
@@ -309,3 +307,63 @@ function nfold_cv(data, num_boost_round::Integer=10, nfold::Integer=3;
     end
 end
 
+immutable FeatureImportance
+    fname::ASCIIString
+    gain::Float64
+    cover::Float64
+    freq::Float64
+end
+function Base.display(f::FeatureImportance)
+    @printf("%s: gain = %0.04f, cover = %0.04f, freq = %0.04f\n", f.fname, f.gain, f.cover, f.freq)
+end
+function Base.display(arr::Array{FeatureImportance,1}; maxrows=50)
+    println("Gain      Coverage  Frequency  Feature")
+    for i in 1:min(maxrows, length(arr))
+        @printf("%0.04f    %0.04f    %0.04f     %s\n", arr[i].gain, arr[i].cover, arr[i].freq, arr[i].fname)
+    end
+end
+
+function importance(bst::Booster; fmap::ASCIIString="")
+    data = XGBoosterDumpModel(bst.handle, fmap, 1)
+
+    # get the total gains for each feature and the whole model
+    gains = Dict{ASCIIString,Float64}()
+    covers = Dict{ASCIIString,Float64}()
+    freqs = Dict{ASCIIString,Float64}()
+    totalGain = 0.0
+    totalCover = 0.0
+    totalFreq = 0.0
+    lineMatch = r"^[^\w]*[0-9]+:\[([^\[]+)] yes=([\.0-9]+),no=([\.0-9]+),[^,]*,?gain=([\.0-9]+),cover=([\.0-9]+)"
+    nameStrip = r"[<>][0-9\.]+$"
+    for i=1:length(data)
+        for line in split(bytestring(data[i]), '\n')
+            m = match(lineMatch, line)
+            if typeof(m) != Void
+                fname = replace(m.captures[1], nameStrip, "")
+
+                gain = parse(Float64, m.captures[4])
+                totalGain += gain
+                gains[fname] = get(gains, fname, 0.0) + gain
+
+                cover = parse(Float64, m.captures[5])
+                totalCover += cover
+                covers[fname] = get(covers, fname, 0.0) + cover
+
+                totalFreq += 1
+                freqs[fname] = get(freqs, fname, 0.0) + 1
+            end
+        end
+    end
+
+    # compile these gains into list of features sorted by gain value
+    res = FeatureImportance[]
+    for fname in keys(gains)
+        push!(res, FeatureImportance(
+            fname,
+            gains[fname]/totalGain,
+            covers[fname]/totalCover,
+            freqs[fname]/totalFreq
+        ))
+    end
+    sort!(res, by=x->-x.gain)
+end
