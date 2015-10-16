@@ -45,5 +45,5 @@ facts("Feature importance") do
 end
 
 facts("Example is running") do
-    include("example.jl")
+    include( "example.jl")
 end
