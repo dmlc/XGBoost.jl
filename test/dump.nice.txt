@@ -1,0 +1,14 @@
+booster[1]:
+0:[odor=none] yes=2,no=1,gain=4000.53,cover=1628.25
+	1:[stalk-root=club] yes=4,no=3,gain=1158.21,cover=924.5
+		3:leaf=1.71218,cover=812
+		4:leaf=-1.70044,cover=112.5
+	2:[spore-print-color=green] yes=6,no=5,gain=198.174,cover=703.75
+		5:leaf=-1.94071,cover=690.5
+		6:leaf=1.85965,cover=13.25
+booster[2]:
+0:[stalk-root=rooted] yes=2,no=1,gain=832.545,cover=788.852
+	1:[odor=none] yes=4,no=3,gain=569.725,cover=768.39
+		3:leaf=0.784718,cover=458.937
+		4:leaf=-0.96853,cover=309.453
+	2:leaf=-6.23624,cover=20.4624
