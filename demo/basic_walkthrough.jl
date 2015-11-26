@@ -45,7 +45,7 @@ bst = xgboost(sptrain, num_round, label = train_Y, param=param)
 
 # you can also put in xgboost's DMatrix object
 # DMatrix stores label, data and other meta datas needed for advanced features
-print("training xgboost with DMatrix")
+print("training xgboost with DMatrix\n")
 dtrain = DMatrix(train_X, label = train_Y)
 bst = xgboost(dtrain, num_round, eta = 1, objective = "binary:logistic")
 
