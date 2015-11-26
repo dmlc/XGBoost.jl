@@ -13,8 +13,8 @@ type DMatrix
                                   convert(Array{Float32, 1}, array),
                                   convert(UInt64, size(array)[1]))
         elseif name == "group"
-            XGDMatrixSetGroup(ptr, name,
-                              convert(Array{UInt32, 1}, label),
+            XGDMatrixSetGroup(ptr,
+                              convert(Array{UInt32, 1}, array),
                               convert(UInt64, size(array)[1]))
         else
             error("unknown information name")
@@ -129,9 +129,13 @@ end
 ### train ###
 function xgboost(data, nrounds::Integer;
                  label=Union{}, param=[], watchlist=[], metrics=[],
-                 obj=Union{}, feval=Union{},
+                 obj=Union{}, feval=Union{}, group=[],
                  kwargs...)
     dtrain = makeDMatrix(data, label)
+    if length(group) > 0
+      set_info(dtrain, "group", group)
+    end
+
     cache = [dtrain]
     for itm in watchlist
         push!(cache, itm[1])
