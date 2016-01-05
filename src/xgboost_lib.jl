@@ -339,7 +339,7 @@ function importance(bst::Booster; fmap::ASCIIString="")
     totalGain = 0.0
     totalCover = 0.0
     totalFreq = 0.0
-    lineMatch = r"^[^\w]*[0-9]+:\[([^\[]+)] yes=([\.0-9]+),no=([\.0-9]+),[^,]*,?gain=([\.0-9]+),cover=([\.0-9]+)"
+    lineMatch = r"^[^\w]*[0-9]+:\[([^\]]+)\] yes=([\.+e0-9]+),no=([\.+e0-9]+),[^,]*,?gain=([\.+e0-9]+),cover=([\.+e0-9]+).*"
     nameStrip = r"[<>][^<>]+$"
     for i=1:length(data)
         for line in split(bytestring(data[i]), '\n')
