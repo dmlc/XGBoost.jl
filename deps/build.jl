@@ -7,7 +7,7 @@ prefix=joinpath(BinDeps.depsdir(libxgboostwrapper),"usr")
 provides(BuildProcess,
            (@build_steps begin
                `rm -rf xgboost`
-               `git clone https://github.com/tqchen/xgboost.git`
+               `git clone https://github.com/dmlc/xgboost.git`
                CreateDirectory(prefix)
                CreateDirectory(joinpath(prefix, "lib"))
                @build_steps begin
