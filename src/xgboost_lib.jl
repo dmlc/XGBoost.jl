@@ -40,7 +40,7 @@ type DMatrix
         finalizer(sp, JLFree)
         sp
     end
-    function DMatrix{T<:Real}(data::Array{T, 2}, missing = 0;kwargs...)
+    function DMatrix{T<:Real}(data::Array{T, 2}, missing = NaN32; kwargs...)
         handle = XGDMatrixCreateFromMat(convert(Array{Float32, 2}, data),
                                         convert(Float32, missing))
         for itm in kwargs
