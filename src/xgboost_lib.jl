@@ -317,9 +317,11 @@ immutable FeatureImportance
     cover::Float64
     freq::Float64
 end
+
 function Base.display(f::FeatureImportance)
     @printf("%s: gain = %0.04f, cover = %0.04f, freq = %0.04f\n", f.fname, f.gain, f.cover, f.freq)
 end
+
 function Base.display(arr::Array{FeatureImportance,1}; maxrows=50)
     println("Gain      Coverage  Frequency  Feature")
     for i in 1:min(maxrows, length(arr))
@@ -338,7 +340,7 @@ function importance(bst::Booster; fmap::ASCIIString="")
     totalCover = 0.0
     totalFreq = 0.0
     lineMatch = r"^[^\w]*[0-9]+:\[([^\[]+)] yes=([\.0-9]+),no=([\.0-9]+),[^,]*,?gain=([\.0-9]+),cover=([\.0-9]+)"
-    nameStrip = r"[<>][0-9\.]+$"
+    nameStrip = r"[<>][^<>]+$"
     for i=1:length(data)
         for line in split(bytestring(data[i]), '\n')
             m = match(lineMatch, line)
@@ -370,4 +372,17 @@ function importance(bst::Booster; fmap::ASCIIString="")
         ))
     end
     sort!(res, by=x->-x.gain)
+end
+
+function importance(bst::Booster, feature_names::Vector{ASCIIString})
+    res = importance(bst)
+
+    result = FeatureImportance[]
+    for old_importance in res
+        actual_name = feature_names[parse(Int64, old_importance.fname[2:end])+1]
+        push!(result, FeatureImportance(actual_name, old_importance.gain,
+                                    old_importance.cover, old_importance.freq))
+    end
+
+    result
 end
