@@ -19,7 +19,7 @@ facts("Agaricus training") do
     dtest = DMatrix("../data/agaricus.txt.test")
     watchlist = [(dtest, "eval"), (dtrain, "train")]
 
-    bst = xgboost(dtrain, 2, watchlist=watchlist,  eta=1, max_depth=2, objective="binary:logistic")
+    bst = xgboost(dtrain, 2, watchlist=watchlist,  eta=1, max_depth=2, objective="binary:logistic", silent=1)
     @fact bst --> not(nothing)
 
     preds = XGBoost.predict(bst, dtest)
@@ -31,6 +31,18 @@ facts("Agaricus training") do
     @fact err --> less_than(0.1)
 end
 
+
+facts("Feature importance") do
+    dtrain = DMatrix("../data/agaricus.txt.train")
+    dtest = DMatrix("../data/agaricus.txt.test")
+    watchlist = [(dtest, "eval"), (dtrain, "train")]
+
+    bst = xgboost(dtrain, 5, watchlist=watchlist,  eta=1, max_depth=2, objective="binary:logistic", silent=1, seed=12345)
+    important_features = importance(bst)
+
+    @fact startswith(important_features[1].fname, "f28") --> true
+    @pending important_features[1].fname --> "f28"
+end
 
 facts("Example is running") do
     include("example.jl")
