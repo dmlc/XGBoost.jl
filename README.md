@@ -1,6 +1,8 @@
 XGBoost.jl
 ==========
 
+[![Build Status](https://travis-ci.org/dmlc/XGBoost.jl.svg?branch=master)](https://travis-ci.org/dmlc/XGBoost.jl)
+
 eXtreme Gradient Boosting Package in Julia
 
 ## Abstract
@@ -80,5 +82,3 @@ Check [demo](https://github.com/antinucleon/XGBoost.jl/blob/master/demo/)
 
 ## Model Parameter Setting
 Check [XGBoost Wiki](https://github.com/tqchen/xgboost/wiki)
-
-
