@@ -39,7 +39,10 @@ function XGDMatrixCreateFromCSC(data::SparseMatrixCSC{Float32, Int64})
 end
 
 function XGDMatrixCreateFromMat(data::Array{Float32, 2}, missing::Float32)
-    data = transpose(data)
+    XGDMatrixCreateFromMatT(transpose(data), missing)
+end
+
+function XGDMatrixCreateFromMatT(data::Array{Float32, 2}, missing::Float32)
     nrow = size(data)[2]
     ncol = size(data)[1]
     handle = Ref{Ptr{Void}}()

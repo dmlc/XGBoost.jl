@@ -40,9 +40,15 @@ type DMatrix
         finalizer(sp, JLFree)
         sp
     end
-    function DMatrix{T<:Real}(data::Array{T, 2}, missing = NaN32; kwargs...)
-        handle = XGDMatrixCreateFromMat(convert(Array{Float32, 2}, data),
-                                        convert(Float32, missing))
+
+    function DMatrix{T<:Real}(data::Array{T, 2}, missing = NaN32, transposed::Bool=false; kwargs...)
+        handle = nothing
+        if !transposed
+            handle = XGDMatrixCreateFromMat(convert(Array{Float32, 2}, data), convert(Float32, missing))
+        else
+            handle = XGDMatrixCreateFromMatT(convert(Array{Float32, 2}, data), convert(Float32, missing))
+        end
+
         for itm in kwargs
             _setinfo(handle, string(itm[1]), itm[2])
         end
