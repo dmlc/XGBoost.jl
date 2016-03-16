@@ -280,7 +280,7 @@ function aggcv(rlist; show_stdv=true)
         @assert ret == arr[1]
         for it in arr[2:end]
             k, v  = split(it, ":")
-            if k in keys(cvmap) == false
+            if !haskey(cvmap, k)
                 cvmap[k] = Float64[]
             end
             push!(cvmap[k], float(v))
