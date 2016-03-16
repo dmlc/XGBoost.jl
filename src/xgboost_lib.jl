@@ -248,7 +248,7 @@ function mknfold(dall::DMatrix, nfold::Integer, param,
                  seed::Integer, evals=[]; fpreproc = Union{}, kwargs = [])
     srand(seed)
     randidx = randperm(XGDMatrixNumRow(dall.handle))
-    kstep = round(size(randidx)[1] / nfold)
+    kstep = round(Int64, size(randidx)[1] / nfold)
     idset = [randidx[ ((i - 1)*kstep) + 1 : min(size(randidx)[1],(i)*kstep + 1) ] for i=1:nfold]
     ret = CVPack[]
     for k=1:nfold
@@ -287,7 +287,7 @@ function aggcv(rlist; show_stdv=true)
         end
     end
     itms = [itm for itm in cvmap]
-    sort!(itms)
+    sort!(itms, by=x->x[1])
     for itm in itms
         k = itm[1]
         v = itm[2]
@@ -324,16 +324,19 @@ immutable FeatureImportance
     freq::Float64
 end
 
-function Base.display(f::FeatureImportance)
-    @printf("%s: gain = %0.04f, cover = %0.04f, freq = %0.04f\n", f.fname, f.gain, f.cover, f.freq)
+function Base.show(io::IO, f::FeatureImportance)
+    @printf(io, "%s: gain = %0.04f, cover = %0.04f, freq = %0.04f", f.fname, f.gain, f.cover, f.freq)
 end
 
-function Base.display(arr::Array{FeatureImportance,1}; maxrows=50)
-    println("Gain      Coverage  Frequency  Feature")
+function Base.show(io::IO, arr::Array{FeatureImportance,1}; maxrows=30)
+    println(io, "$(length(arr))-element Array{$(FeatureImportance),1}:")
+    println(io, "Gain      Coverage  Frequency  Feature")
     for i in 1:min(maxrows, length(arr))
-        @printf("%0.04f    %0.04f    %0.04f     %s\n", arr[i].gain, arr[i].cover, arr[i].freq, arr[i].fname)
+        @printf(io, "%0.04f    %0.04f    %0.04f     %s\n", arr[i].gain, arr[i].cover, arr[i].freq, arr[i].fname)
     end
 end
+
+Base.writemime(io::IO, ::MIME"text/plain", arr::Array{FeatureImportance,1}) = show(io, arr)
 
 function importance(bst::Booster; fmap::ASCIIString="")
     data = XGBoosterDumpModel(bst.handle, fmap, 1)
