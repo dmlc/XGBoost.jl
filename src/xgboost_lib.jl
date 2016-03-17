@@ -248,8 +248,8 @@ function mknfold(dall::DMatrix, nfold::Integer, param,
                  seed::Integer, evals=[]; fpreproc = Union{}, kwargs = [])
     srand(seed)
     randidx = randperm(XGDMatrixNumRow(dall.handle))
-    kstep = round(Int64, size(randidx)[1] / nfold)
-    idset = [randidx[ ((i - 1)*kstep) + 1 : min(size(randidx)[1],(i)*kstep + 1) ] for i=1:nfold]
+    kstep = size(randidx)[1] / nfold
+    idset = [randidx[ round(Int64, (i-1)*kstep) + 1 : min(size(randidx)[1],round(Int64, i*kstep)) ] for i=1:nfold]
     ret = CVPack[]
     for k=1:nfold
         selected = Array(Int,0)
