@@ -281,7 +281,6 @@ function aggcv(rlist; show_stdv=true)
         end
     end
     itms = [itm for itm in cvmap]
-    sort!(itms)
     for itm in itms
         k = itm[1]
         v = itm[2]
