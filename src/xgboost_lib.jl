@@ -40,9 +40,15 @@ type DMatrix
         finalizer(sp, JLFree)
         sp
     end
-    function DMatrix{T<:Real}(data::Array{T, 2}, missing = NaN32; kwargs...)
-        handle = XGDMatrixCreateFromMat(convert(Array{Float32, 2}, data),
-                                        convert(Float32, missing))
+
+    function DMatrix{T<:Real}(data::Array{T, 2}, missing = NaN32, transposed::Bool=false; kwargs...)
+        handle = nothing
+        if !transposed
+            handle = XGDMatrixCreateFromMat(convert(Array{Float32, 2}, data), convert(Float32, missing))
+        else
+            handle = XGDMatrixCreateFromMatT(convert(Array{Float32, 2}, data), convert(Float32, missing))
+        end
+
         for itm in kwargs
             _setinfo(handle, string(itm[1]), itm[2])
         end
@@ -242,8 +248,8 @@ function mknfold(dall::DMatrix, nfold::Integer, param,
                  seed::Integer, evals=[]; fpreproc = Union{}, kwargs = [])
     srand(seed)
     randidx = randperm(XGDMatrixNumRow(dall.handle))
-    kstep = round(size(randidx)[1] / nfold)
-    idset = [randidx[ ((i - 1)*kstep) + 1 : min(size(randidx)[1],(i)*kstep + 1) ] for i=1:nfold]
+    kstep = size(randidx)[1] / nfold
+    idset = [randidx[ round(Int64, (i-1)*kstep) + 1 : min(size(randidx)[1],round(Int64, i*kstep)) ] for i=1:nfold]
     ret = CVPack[]
     for k=1:nfold
         selected = Array(Int,0)
@@ -274,14 +280,14 @@ function aggcv(rlist; show_stdv=true)
         @assert ret == arr[1]
         for it in arr[2:end]
             k, v  = split(it, ":")
-            if k in keys(cvmap) == false
+            if !haskey(cvmap, k)
                 cvmap[k] = Float64[]
             end
             push!(cvmap[k], float(v))
         end
     end
     itms = [itm for itm in cvmap]
-    sort!(itms)
+    sort!(itms, by=x->x[1])
     for itm in itms
         k = itm[1]
         v = itm[2]
@@ -318,16 +324,19 @@ immutable FeatureImportance
     freq::Float64
 end
 
-function Base.display(f::FeatureImportance)
-    @printf("%s: gain = %0.04f, cover = %0.04f, freq = %0.04f\n", f.fname, f.gain, f.cover, f.freq)
+function Base.show(io::IO, f::FeatureImportance)
+    @printf(io, "%s: gain = %0.04f, cover = %0.04f, freq = %0.04f", f.fname, f.gain, f.cover, f.freq)
 end
 
-function Base.display(arr::Array{FeatureImportance,1}; maxrows=50)
-    println("Gain      Coverage  Frequency  Feature")
+function Base.show(io::IO, arr::Array{FeatureImportance,1}; maxrows=30)
+    println(io, "$(length(arr))-element Array{$(FeatureImportance),1}:")
+    println(io, "Gain      Coverage  Frequency  Feature")
     for i in 1:min(maxrows, length(arr))
-        @printf("%0.04f    %0.04f    %0.04f     %s\n", arr[i].gain, arr[i].cover, arr[i].freq, arr[i].fname)
+        @printf(io, "%0.04f    %0.04f    %0.04f     %s\n", arr[i].gain, arr[i].cover, arr[i].freq, arr[i].fname)
     end
 end
+
+Base.writemime(io::IO, ::MIME"text/plain", arr::Array{FeatureImportance,1}) = show(io, arr)
 
 function importance(bst::Booster; fmap::ASCIIString="")
     data = XGBoosterDumpModel(bst.handle, fmap, 1)
@@ -339,7 +348,7 @@ function importance(bst::Booster; fmap::ASCIIString="")
     totalGain = 0.0
     totalCover = 0.0
     totalFreq = 0.0
-    lineMatch = r"^[^\w]*[0-9]+:\[([^\[]+)] yes=([\.0-9]+),no=([\.0-9]+),[^,]*,?gain=([\.0-9]+),cover=([\.0-9]+)"
+    lineMatch = r"^[^\w]*[0-9]+:\[([^\]]+)\] yes=([\.+e0-9]+),no=([\.+e0-9]+),[^,]*,?gain=([\.+e0-9]+),cover=([\.+e0-9]+).*"
     nameStrip = r"[<>][^<>]+$"
     for i=1:length(data)
         for line in split(bytestring(data[i]), '\n')

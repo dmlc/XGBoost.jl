@@ -32,6 +32,19 @@ facts("Agaricus training") do
 end
 
 
+facts("Cross validation") do
+    dtrain = DMatrix("../data/agaricus.txt.train")
+    dtest = DMatrix("../data/agaricus.txt.test")
+    watchlist = [(dtest, "eval"), (dtrain, "train")]
+
+    bst = nfold_cv(dtrain, 5, 3, eta=1, max_depth=2, objective="binary:logistic", silent=1, seed=12345)
+    # important_features = importance(bst)
+    #
+    # @fact startswith(important_features[1].fname, "f28") --> true
+    # @pending important_features[1].fname --> "f28"
+end
+
+
 facts("Feature importance") do
     dtrain = DMatrix("../data/agaricus.txt.train")
     dtest = DMatrix("../data/agaricus.txt.test")
@@ -43,6 +56,7 @@ facts("Feature importance") do
     @fact startswith(important_features[1].fname, "f28") --> true
     @pending important_features[1].fname --> "f28"
 end
+
 
 facts("Example is running") do
     include("example.jl")
