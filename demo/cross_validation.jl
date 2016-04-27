@@ -5,6 +5,8 @@ using XGBoost
 dtrain = DMatrix("../data/agaricus.txt.train")
 dtest = DMatrix("../data/agaricus.txt.test")
 
+#Defining parameters for xgboost
+
 param = ["max_depth"=>2, "eta"=>1, "silent"=>1, "objective"=>"binary:logistic"]
 num_round = 2
 nfold = 5
