@@ -31,12 +31,12 @@ type DMatrix
         finalizer(sp, JLFree)
         sp
     end
-    function DMatrix{K<:Real, V<:Integer}(data::SparseMatrixCSC{K, V}; kwargs...)
-        handle = XGDMatrixCreateFromCSC(convert(SparseMatrixCSC{Float32, Int64}, data))
-        sp = new(handle,  _setinfo)
+    function DMatrix{K<:Real, V<:Integer}(data::SparseMatrixCSC{K, V}, transposed::Bool=false; kwargs...)
+        handle = (transposed ? XGDMatrixCreateFromCSCT(data) : XGDMatrixCreateFromCSC(data))
         for itm in kwargs
             _setinfo(handle, string(itm[1]), itm[2])
         end
+        sp = new(handle, _setinfo)
         finalizer(sp, JLFree)
         sp
     end

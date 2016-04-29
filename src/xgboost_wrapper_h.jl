@@ -24,13 +24,27 @@ function XGDMatrixCreateFromFile(fname::ASCIIString, slient::Int32)
     return handle[]
 end
 
-function XGDMatrixCreateFromCSC(data::SparseMatrixCSC{Float32, Int64})
+function XGDMatrixCreateFromCSC(data::SparseMatrixCSC)
     handle = Ref{Ptr{Void}}()
     @xgboost_ccall(
         :XGDMatrixCreateFromCSC,
         (Ptr{UInt64}, Ptr{UInt32}, Ptr{Float32}, UInt64, UInt64, Ref{Ptr{Void}}),
         convert(Array{UInt64, 1}, data.colptr - 1),
-        convert(Array{UInt32, 1}, data.rowval - 1), data.nzval,
+        convert(Array{UInt32, 1}, data.rowval - 1), convert(Array{Float32, 1}, data.nzval),
+        convert(UInt64, size(data.colptr)[1]),
+        convert(UInt64, nnz(data)),
+        handle
+    )
+    return handle[]
+end
+
+function XGDMatrixCreateFromCSCT(data::SparseMatrixCSC)
+    handle = Ref{Ptr{Void}}()
+    @xgboost_ccall(
+        :XGDMatrixCreateFromCSR,
+        (Ptr{UInt64}, Ptr{UInt32}, Ptr{Float32}, UInt64, UInt64, Ref{Ptr{Void}}),
+        convert(Array{UInt64, 1}, data.colptr - 1),
+        convert(Array{UInt32, 1}, data.rowval - 1), convert(Array{Float32, 1}, data.nzval),
         convert(UInt64, size(data.colptr)[1]),
         convert(UInt64, nnz(data)),
         handle
