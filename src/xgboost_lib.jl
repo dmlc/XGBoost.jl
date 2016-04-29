@@ -41,7 +41,7 @@ type DMatrix
         sp
     end
 
-    function DMatrix{T<:Real}(data::Array{T, 2}, missing = NaN32, transposed::Bool=false; kwargs...)
+    function DMatrix{T<:Real}(data::Array{T, 2}, transposed::Bool=false, missing = NaN32; kwargs...)
         handle = nothing
         if !transposed
             handle = XGDMatrixCreateFromMat(convert(Array{Float32, 2}, data), convert(Float32, missing))
