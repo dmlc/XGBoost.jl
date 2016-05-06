@@ -1,6 +1,6 @@
-include("xgboost_wrapper_h.jl")
-
 using Compat
+
+include("xgboost_wrapper_h.jl")
 
 # TODO: Use reference instead of array for length
 
