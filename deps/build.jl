@@ -1,4 +1,5 @@
 using BinDeps
+using Compat
 @BinDeps.setup
 
 deps = [ libxgboostwrapper = library_dependency("xgboostwrapper", aliases = ["libxgboostwrapper.so"]) ]
@@ -21,4 +22,4 @@ provides(BuildProcess,
             end),
          libxgboostwrapper)
 
-@BinDeps.install Dict(:xgboostwrapper => :_xgboost)
+@BinDeps.install @compat(Dict(:xgboostwrapper => :_xgboost))
