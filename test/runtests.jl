@@ -4,15 +4,15 @@ using FactCheck
 include("utils.jl")
 
 facts("Sparse matrices") do
-    X = sparse(randn(100,10) .* bitrand(100,10))
+    X = sparse(randn(100,10) .* rand(Bool, 100,10))
     y = randn(100)
     DMatrix(X, label=y)
 
-    X = sparse(convert(Array{Float32,2}, randn(10,100) .* bitrand(10,100)))
+    X = sparse(convert(Array{Float32,2}, randn(10,100) .* rand(Bool, 10,100)))
     y = randn(100)
     DMatrix(X, true)
 
-    X = sparse(randn(100,10) .* bitrand(100,10))
+    X = sparse(randn(100,10) .* rand(Bool, 100,10))
     y = randn(100)
     DMatrix(X)
 end
