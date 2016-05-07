@@ -15,17 +15,17 @@ macro xgboost_ccall(f, argTypes, args...)
 end
 
 function XGDMatrixCreateFromFile(fname::ASCIIString, slient::Int32)
-    handle = Ref{Ptr{Void}}()
+    handle = Array{Ptr{Void}}(1)
     @xgboost_ccall(
         :XGDMatrixCreateFromFile,
         (Ptr{UInt8}, Int32, Ref{Ptr{Void}}),
         fname, slient, handle
     )
-    return handle[]
+    return handle[1]
 end
 
 function XGDMatrixCreateFromCSC(data::SparseMatrixCSC)
-    handle = Ref{Ptr{Void}}()
+    handle = Array{Ptr{Void}}(1)
     @xgboost_ccall(
         :XGDMatrixCreateFromCSC,
         (Ptr{UInt64}, Ptr{UInt32}, Ptr{Float32}, UInt64, UInt64, Ref{Ptr{Void}}),
@@ -35,11 +35,11 @@ function XGDMatrixCreateFromCSC(data::SparseMatrixCSC)
         convert(UInt64, nnz(data)),
         handle
     )
-    return handle[]
+    return handle[1]
 end
 
 function XGDMatrixCreateFromCSCT(data::SparseMatrixCSC)
-    handle = Ref{Ptr{Void}}()
+    handle = Array{Ptr{Void}}(1)
     @xgboost_ccall(
         :XGDMatrixCreateFromCSR,
         (Ptr{UInt64}, Ptr{UInt32}, Ptr{Float32}, UInt64, UInt64, Ref{Ptr{Void}}),
@@ -49,7 +49,7 @@ function XGDMatrixCreateFromCSCT(data::SparseMatrixCSC)
         convert(UInt64, nnz(data)),
         handle
     )
-    return handle[]
+    return handle[1]
 end
 
 function XGDMatrixCreateFromMat(data::Array{Float32, 2}, missing::Float32)
@@ -59,23 +59,23 @@ end
 function XGDMatrixCreateFromMatT(data::Array{Float32, 2}, missing::Float32)
     nrow = size(data)[2]
     ncol = size(data)[1]
-    handle = Ref{Ptr{Void}}()
+    handle = Array{Ptr{Void}}()
     @xgboost_ccall(
         :XGDMatrixCreateFromMat,
         (Ptr{Float32}, UInt64, UInt64, Float32, Ref{Ptr{Void}}),
         data, nrow, ncol, missing, handle
     )
-    return handle[]
+    return handle[1]
 end
 
 function XGDMatrixSliceDMatrix(handle::Ptr{Void}, idxset::Array{Int32, 1}, len::UInt64)
-    ret = Ref{Ptr{Void}}()
+    ret = Array{Ptr{Void}}()
     @xgboost_ccall(
         :XGDMatrixSliceDMatrix,
         (Ptr{Void}, Ptr{Int32}, UInt64, Ref{Ptr{Void}}),
         handle, idxset, len, ret
     )
-    return ret[]
+    return ret[1]
 end
 
 function XGDMatrixFree(handle::Ptr{Void})
@@ -121,33 +121,33 @@ function XGDMatrixSetGroup(handle::Ptr{Void}, array::Array{UInt32, 1}, len::UInt
 end
 
 function XGDMatrixGetFloatInfo(handle::Ptr{Void}, field::ASCIIString, outlen::Array{UInt64, 1})
-    ret = Ref{Ptr{Float32}}()
+    ret = Array{Ptr{Float32}}(1)
     @xgboost_ccall(
         :XGDMatrixGetFloatInfo,
         (Ptr{Void}, Ptr{UInt8}, Ptr{UInt64}, Ref{Ptr{Float32}}),
          handle, field, outlen, ret
     )
-    return ret[]
+    return ret[1]
 end
 
 function XGDMatrixGetUIntInfo(handle::Ptr{Void}, field::ASCIIString, outlen::Array{UInt64, 1})
-    ret = Ref{Ptr{UInt32}}()
+    ret = Array{Ptr{UInt32}}(1)
     @xgboost_ccall(
         :XGDMatrixGetUIntInfo,
         (Ptr{Void}, Ptr{UInt8}, Ptr{UInt64}, Ref{Ptr{UInt32}}),
          handle, field, outlen, ret
     )
-    return ret[]
+    return ret[1]
 end
 
 function XGDMatrixNumRow(handle::Ptr{Void})
-    ret = Ref{UInt64}()
+    ret = Array{UInt64}(1)
     @xgboost_ccall(
         :XGDMatrixNumRow,
         (Ptr{Void}, Ref{UInt64}),
          handle, ret
     )
-    return ret[]
+    return ret[1]
 end
 
 function JLGetFloatInfo(handle::Ptr{Void}, field::ASCIIString)
@@ -163,13 +163,13 @@ function JLGetUintInfo(handle::Ptr{Void}, field::ASCIIString)
 end
 
 function XGBoosterCreate(cachelist::Array{Ptr{Void}, 1}, len::Int64)
-    handle = Ref{Ptr{Void}}()
+    handle = Array{Ptr{Void}}(1)
     @xgboost_ccall(
         :XGBoosterCreate,
         (Ptr{Ptr{Void}}, UInt64, Ref{Ptr{Void}}),
         cachelist, len, handle
     )
-    return handle[]
+    return handle[1]
 end
 
 function XGBoosterFree(handle::Ptr{Void})
@@ -210,25 +210,25 @@ end
 function XGBoosterEvalOneIter(handle::Ptr{Void}, iter::Int32,
                               dmats::Array{Ptr{Void}, 1},
                               evnames::Array{ASCIIString, 1}, len::UInt64)
-    msg = Ref{Ptr{UInt8}}()
+    msg = Array{Ptr{UInt8}}(1)
     @xgboost_ccall(
         :XGBoosterEvalOneIter,
         (Ptr{Void}, Int32, Ptr{Ptr{Void}}, Ptr{Ptr{UInt8}}, UInt64, Ref{Ptr{UInt8}}),
         handle, iter, dmats, evnames, len, msg
     )
-    return bytestring(msg[])
+    return bytestring(msg[1])
 end
 
 
 function XGBoosterPredict(handle::Ptr{Void}, dmat::Ptr{Void}, output_margin::Int32,
                           ntree_limit::UInt32, len::Array{UInt64, 1})
-    ret = Ref{Ptr{Float32}}()
+    ret = Array{Ptr{Float32}}(1)
     @xgboost_ccall(
         :XGBoosterPredict,
         (Ptr{Void}, Ptr{Void}, Int32, UInt32, Ptr{UInt64}, Ref{Ptr{Float32}}),
         handle, dmat, output_margin, ntree_limit, len, ret
     )
-    return ret[]
+    return ret[1]
 end
 
 
@@ -250,12 +250,12 @@ end
 
 
 function XGBoosterDumpModel(handle::Ptr{Void}, fmap::ASCIIString, with_stats::Int64)
-    data = Ref{Ptr{Ptr{UInt8}}}()
-    out_len = Ref{UInt64}(0)
+    data = Array{Ptr{Ptr{UInt8}}}(1)
+    out_len = Array{UInt64}(1)
     @xgboost_ccall(
         :XGBoosterDumpModel,
         (Ptr{Void}, Ptr{UInt8}, Int64, Ref{UInt64}, Ref{Ptr{Ptr{UInt8}}}),
         handle, fmap, with_stats, out_len, data
     )
-    return pointer_to_array(data[], out_len[])
+    return pointer_to_array(data[1], out_len[1])
 end
