@@ -1,3 +1,5 @@
+import Compat: ASCIIString
+
 function readlibsvm(fname::ASCIIString, shape)
     dmx = zeros(Float32, shape)
     label = Float32[]

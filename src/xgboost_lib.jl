@@ -1,6 +1,7 @@
-include("xgboost_wrapper_h.jl")
-
 using Compat
+import Compat: ASCIIString
+
+include("xgboost_wrapper_h.jl")
 
 # TODO: Use reference instead of array for length
 
@@ -108,7 +109,7 @@ function dump_model(bst::Booster, fname::ASCIIString; fmap::ASCIIString="", with
     fo = open(fname, "w")
     for i=1:length(data)
         @printf(fo, "booster[%d]:\n", i)
-        @printf(fo, "%s", bytestring(data[i]))
+        @printf(fo, "%s", unsafe_string(data[i]))
     end
     close(fo)
 end
@@ -226,7 +227,7 @@ function predict(bst::Booster, data;
     len = UInt64[1]
     ptr = XGBoosterPredict(bst.handle, data.handle, convert(Int32, output_margin),
                            convert(UInt32, ntree_limit), len)
-    return deepcopy(pointer_to_array(ptr, len[1]))
+    return deepcopy(unsafe_wrap(Array, ptr, len[1]))
 end
 
 type CVPack
@@ -336,7 +337,7 @@ function Base.show(io::IO, arr::Array{FeatureImportance,1}; maxrows=30)
     end
 end
 
-Base.writemime(io::IO, ::MIME"text/plain", arr::Array{FeatureImportance,1}) = show(io, arr)
+@compat Base.show(io::IO, ::MIME"text/plain", arr::Array{FeatureImportance,1}) = show(io, arr)
 
 function importance(bst::Booster; fmap::ASCIIString="")
     data = XGBoosterDumpModel(bst.handle, fmap, 1)
@@ -351,7 +352,7 @@ function importance(bst::Booster; fmap::ASCIIString="")
     lineMatch = r"^[^\w]*[0-9]+:\[([^\]]+)\] yes=([\.+e0-9]+),no=([\.+e0-9]+),[^,]*,?gain=([\.+e0-9]+),cover=([\.+e0-9]+).*"
     nameStrip = r"[<>][^<>]+$"
     for i=1:length(data)
-        for line in split(bytestring(data[i]), '\n')
+        for line in split(unsafe_string(data[i]), '\n')
             m = match(lineMatch, line)
             if typeof(m) != Void
                 fname = replace(m.captures[1], nameStrip, "")

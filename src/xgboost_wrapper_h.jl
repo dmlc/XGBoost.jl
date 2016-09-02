@@ -8,7 +8,7 @@ macro xgboost_ccall(f, argTypes, args...)
     return quote
         err = ccall(($f, _xgboost), Int64, ($(argTypes...),), $(args...))
         if err != 0
-            errMsg = bytestring(ccall((:XGBGetLastError, _xgboost), Ptr{UInt8}, ()))
+            errMsg = unsafe_string(ccall((:XGBGetLastError, _xgboost), Ptr{UInt8}, ()))
             error("Call to XGBoost C function "*string($f)*" failed: $errMsg")
         end
     end
@@ -153,13 +153,13 @@ end
 function JLGetFloatInfo(handle::Ptr{Void}, field::ASCIIString)
     len = UInt64[1]
     ptr = XGDMatrixGetFloatInfo(handle, field, len)
-    return pointer_to_array(ptr, len[1])
+    return unsafe_wrap(Array, ptr, len[1])
 end
 
 function JLGetUintInfo(handle::Ptr{Void}, field::ASCIIString)
     len = UInt64[1]
     ptr = XGDMatrixGetUIntInfo(handle, field, len)
-    return pointer_to_array(ptr, len[1])
+    return unsafe_wrap(Array, ptr, len[1])
 end
 
 function XGBoosterCreate(cachelist::Array{Ptr{Void}, 1}, len::Int64)
@@ -216,7 +216,7 @@ function XGBoosterEvalOneIter(handle::Ptr{Void}, iter::Int32,
         (Ptr{Void}, Int32, Ptr{Ptr{Void}}, Ptr{Ptr{UInt8}}, UInt64, Ref{Ptr{UInt8}}),
         handle, iter, dmats, evnames, len, msg
     )
-    return bytestring(msg[])
+    return unsafe_string(msg[])
 end
 
 
@@ -257,5 +257,5 @@ function XGBoosterDumpModel(handle::Ptr{Void}, fmap::ASCIIString, with_stats::In
         (Ptr{Void}, Ptr{UInt8}, Int64, Ref{UInt64}, Ref{Ptr{Ptr{UInt8}}}),
         handle, fmap, with_stats, out_len, data
     )
-    return pointer_to_array(data[], out_len[])
+    return unsafe_wrap(Array, data[], out_len[])
 end
