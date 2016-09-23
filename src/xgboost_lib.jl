@@ -1,5 +1,5 @@
 using Compat
-import Compat: ASCIIString
+import Compat: Compat.ASCIIString
 
 include("xgboost_wrapper_h.jl")
 
@@ -8,7 +8,7 @@ include("xgboost_wrapper_h.jl")
 type DMatrix
     handle::Ptr{Void}
     _set_info::Function
-    function _setinfo{T<:Number}(ptr::Ptr{Void}, name::ASCIIString, array::Array{T, 1})
+    function _setinfo{T<:Number}(ptr::Ptr{Void}, name::Compat.ASCIIString, array::Array{T, 1})
         if name == "label" || name == "weight" || name == "base_margin"
             XGDMatrixSetFloatInfo(ptr, name,
                                   convert(Array{Float32, 1}, array),
@@ -26,7 +26,7 @@ type DMatrix
         finalizer(sp, JLFree)
         sp
     end
-    function DMatrix(fname::ASCIIString; silent = false)
+    function DMatrix(fname::Compat.ASCIIString; silent = false)
         handle = XGDMatrixCreateFromFile(fname, convert(Int32, silent))
         sp = new(handle, _setinfo)
         finalizer(sp, JLFree)
@@ -62,15 +62,15 @@ type DMatrix
     end
 end
 
-function get_info(dmat::DMatrix, field::ASCIIString)
+function get_info(dmat::DMatrix, field::Compat.ASCIIString)
     JLGetFloatInfo(dmat.handle, field)
 end
 
-function set_info{T<:Real}(dmat::DMatrix, field::ASCIIString, array::Array{T, 1})
+function set_info{T<:Real}(dmat::DMatrix, field::Compat.ASCIIString, array::Array{T, 1})
     dmat._set_info(dmat.handle, field, array)
 end
 
-function save(dmat::DMatrix, fname::ASCIIString; slient=true)
+function save(dmat::DMatrix, fname::Compat.ASCIIString; slient=true)
     XGDMatrixSaveBinary(dmat.handle, fname, convert(Int32, slient))
 end
 
@@ -84,7 +84,7 @@ end
 type Booster
     handle::Ptr{Void}
     function Booster(;cachelist::Array{DMatrix, 1} = convert(Array{DMatrix,1}, []),
-                     model_file::ASCIIString = "")
+                     model_file::Compat.ASCIIString = "")
         handle = XGBoosterCreate([itm.handle for itm in cachelist], size(cachelist)[1])
         if model_file != ""
             XGBoosterLoadModel(handle, model_file)
@@ -99,12 +99,12 @@ type Booster
 end
 
 ### save ###
-function save(bst::Booster, fname::ASCIIString)
+function save(bst::Booster, fname::Compat.ASCIIString)
     XGBoosterSaveModel(bst.handle, fname)
 end
 
 ### dump model ###
-function dump_model(bst::Booster, fname::ASCIIString; fmap::ASCIIString="", with_stats::Bool=false)
+function dump_model(bst::Booster, fname::Compat.ASCIIString; fmap::Compat.ASCIIString="", with_stats::Bool=false)
     data = XGBoosterDumpModel(bst.handle, fmap, convert(Int64, with_stats))
     fo = open(fname, "w")
     for i=1:length(data)
@@ -117,7 +117,7 @@ end
 function makeDMatrix(data, label)
     # running converts
     if typeof(data) != DMatrix
-        if typeof(data) == ASCIIString
+        if typeof(data) == Compat.ASCIIString
             if label != Union{}
                 warning("label will be ignored when data is a file")
             end
@@ -191,10 +191,10 @@ end
 
 
 ### eval_set ###
-function eval_set(bst::Booster, watchlist::Array{(@compat Tuple{DMatrix, ASCIIString}), 1},
+function eval_set(bst::Booster, watchlist::Array{(@compat Tuple{DMatrix, Compat.ASCIIString}), 1},
                   iter::Integer; feval=Union{})
     dmats = DMatrix[]
-    evnames = ASCIIString[]
+    evnames = Compat.ASCIIString[]
     for itm in watchlist
         push!(dmats, itm[1])
         push!(evnames, itm[2])
@@ -233,7 +233,7 @@ end
 type CVPack
     dtrain::DMatrix
     dtest::DMatrix
-    watchlist::Array{(@compat Tuple{DMatrix, ASCIIString}), 1}
+    watchlist::Array{(@compat Tuple{DMatrix, Compat.ASCIIString}), 1}
     bst::Booster
     function CVPack(dtrain::DMatrix, dtest::DMatrix, param)
         bst = Booster(cachelist = [dtrain,dtest])
@@ -305,7 +305,7 @@ function nfold_cv(data, num_boost_round::Integer=10, nfold::Integer=3;
                   label = Union{}, param=[], metrics=[], obj = Union{}, feval = Union{},
                   fpreproc = Union{}, show_stdv=true, seed::Integer=0, kwargs...)
     dtrain = makeDMatrix(data, label)
-    results = ASCIIString[]
+    results = Compat.ASCIIString[]
     cvfolds = mknfold(dtrain, nfold, param, seed, metrics, fpreproc=fpreproc, kwargs = kwargs)
     for i=1:num_boost_round
         for f in cvfolds
@@ -319,7 +319,7 @@ function nfold_cv(data, num_boost_round::Integer=10, nfold::Integer=3;
 end
 
 immutable FeatureImportance
-    fname::ASCIIString
+    fname::Compat.ASCIIString
     gain::Float64
     cover::Float64
     freq::Float64
@@ -339,13 +339,13 @@ end
 
 @compat Base.show(io::IO, ::MIME"text/plain", arr::Array{FeatureImportance,1}) = show(io, arr)
 
-function importance(bst::Booster; fmap::ASCIIString="")
+function importance(bst::Booster; fmap::Compat.ASCIIString="")
     data = XGBoosterDumpModel(bst.handle, fmap, 1)
 
     # get the total gains for each feature and the whole model
-    gains = Dict{ASCIIString,Float64}()
-    covers = Dict{ASCIIString,Float64}()
-    freqs = Dict{ASCIIString,Float64}()
+    gains = Dict{Compat.ASCIIString,Float64}()
+    covers = Dict{Compat.ASCIIString,Float64}()
+    freqs = Dict{Compat.ASCIIString,Float64}()
     totalGain = 0.0
     totalCover = 0.0
     totalFreq = 0.0
@@ -384,7 +384,7 @@ function importance(bst::Booster; fmap::ASCIIString="")
     sort!(res, by=x->-x.gain)
 end
 
-function importance(bst::Booster, feature_names::Vector{ASCIIString})
+function importance(bst::Booster, feature_names::Vector{Compat.ASCIIString})
     res = importance(bst)
 
     result = FeatureImportance[]

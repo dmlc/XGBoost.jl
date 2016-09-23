@@ -14,7 +14,7 @@ macro xgboost_ccall(f, argTypes, args...)
     end
 end
 
-function XGDMatrixCreateFromFile(fname::ASCIIString, slient::Int32)
+function XGDMatrixCreateFromFile(fname::Compat.ASCIIString, slient::Int32)
     handle = Ref{Ptr{Void}}()
     @xgboost_ccall(
         :XGDMatrixCreateFromFile,
@@ -86,7 +86,7 @@ function XGDMatrixFree(handle::Ptr{Void})
     )
 end
 
-function XGDMatrixSaveBinary(handle::Ptr{Void}, fname::ASCIIString, slient::Int32)
+function XGDMatrixSaveBinary(handle::Ptr{Void}, fname::Compat.ASCIIString, slient::Int32)
     @xgboost_ccall(
         :XGDMatrixSaveBinary,
         (Ptr{Void}, Ptr{UInt8}, Int32),
@@ -94,7 +94,7 @@ function XGDMatrixSaveBinary(handle::Ptr{Void}, fname::ASCIIString, slient::Int3
     )
 end
 
-function XGDMatrixSetFloatInfo(handle::Ptr{Void}, field::ASCIIString,
+function XGDMatrixSetFloatInfo(handle::Ptr{Void}, field::Compat.ASCIIString,
                                array::Array{Float32, 1}, len::UInt64)
     @xgboost_ccall(
         :XGDMatrixSetFloatInfo,
@@ -103,7 +103,7 @@ function XGDMatrixSetFloatInfo(handle::Ptr{Void}, field::ASCIIString,
     )
 end
 
-function XGDMatrixSetUIntInfo(handle::Ptr{Void}, field::ASCIIString,
+function XGDMatrixSetUIntInfo(handle::Ptr{Void}, field::Compat.ASCIIString,
                               array::Array{UInt32, 1}, len::UInt64)
     @xgboost_ccall(
         :XGDMatrixSetUIntInfo,
@@ -120,7 +120,7 @@ function XGDMatrixSetGroup(handle::Ptr{Void}, array::Array{UInt32, 1}, len::UInt
     )
 end
 
-function XGDMatrixGetFloatInfo(handle::Ptr{Void}, field::ASCIIString, outlen::Array{UInt64, 1})
+function XGDMatrixGetFloatInfo(handle::Ptr{Void}, field::Compat.ASCIIString, outlen::Array{UInt64, 1})
     ret = Ref{Ptr{Float32}}()
     @xgboost_ccall(
         :XGDMatrixGetFloatInfo,
@@ -130,7 +130,7 @@ function XGDMatrixGetFloatInfo(handle::Ptr{Void}, field::ASCIIString, outlen::Ar
     return ret[]
 end
 
-function XGDMatrixGetUIntInfo(handle::Ptr{Void}, field::ASCIIString, outlen::Array{UInt64, 1})
+function XGDMatrixGetUIntInfo(handle::Ptr{Void}, field::Compat.ASCIIString, outlen::Array{UInt64, 1})
     ret = Ref{Ptr{UInt32}}()
     @xgboost_ccall(
         :XGDMatrixGetUIntInfo,
@@ -150,13 +150,13 @@ function XGDMatrixNumRow(handle::Ptr{Void})
     return ret[]
 end
 
-function JLGetFloatInfo(handle::Ptr{Void}, field::ASCIIString)
+function JLGetFloatInfo(handle::Ptr{Void}, field::Compat.ASCIIString)
     len = UInt64[1]
     ptr = XGDMatrixGetFloatInfo(handle, field, len)
     return unsafe_wrap(Array, ptr, len[1])
 end
 
-function JLGetUintInfo(handle::Ptr{Void}, field::ASCIIString)
+function JLGetUintInfo(handle::Ptr{Void}, field::Compat.ASCIIString)
     len = UInt64[1]
     ptr = XGDMatrixGetUIntInfo(handle, field, len)
     return unsafe_wrap(Array, ptr, len[1])
@@ -180,7 +180,7 @@ function XGBoosterFree(handle::Ptr{Void})
     )
 end
 
-function XGBoosterSetParam(handle::Ptr{Void}, key::ASCIIString, value::ASCIIString)
+function XGBoosterSetParam(handle::Ptr{Void}, key::Compat.ASCIIString, value::Compat.ASCIIString)
     @xgboost_ccall(
         :XGBoosterSetParam,
         (Ptr{Void}, Ptr{UInt8}, Ptr{UInt8}),
@@ -209,7 +209,7 @@ end
 
 function XGBoosterEvalOneIter(handle::Ptr{Void}, iter::Int32,
                               dmats::Array{Ptr{Void}, 1},
-                              evnames::Array{ASCIIString, 1}, len::UInt64)
+                              evnames::Array{Compat.ASCIIString, 1}, len::UInt64)
     msg = Ref{Ptr{UInt8}}()
     @xgboost_ccall(
         :XGBoosterEvalOneIter,
@@ -232,7 +232,7 @@ function XGBoosterPredict(handle::Ptr{Void}, dmat::Ptr{Void}, output_margin::Int
 end
 
 
-function XGBoosterLoadModel(handle::Ptr{Void}, fname::ASCIIString)
+function XGBoosterLoadModel(handle::Ptr{Void}, fname::Compat.ASCIIString)
     @xgboost_ccall(
         :XGBoosterLoadModel,
         (Ptr{Void}, Ptr{UInt8}),
@@ -240,7 +240,7 @@ function XGBoosterLoadModel(handle::Ptr{Void}, fname::ASCIIString)
     )
 end
 
-function XGBoosterSaveModel(handle::Ptr{Void}, fname::ASCIIString)
+function XGBoosterSaveModel(handle::Ptr{Void}, fname::Compat.ASCIIString)
     @xgboost_ccall(
         :XGBoosterSaveModel,
         (Ptr{Void}, Ptr{UInt8}),
@@ -249,7 +249,7 @@ function XGBoosterSaveModel(handle::Ptr{Void}, fname::ASCIIString)
 end
 
 
-function XGBoosterDumpModel(handle::Ptr{Void}, fmap::ASCIIString, with_stats::Int64)
+function XGBoosterDumpModel(handle::Ptr{Void}, fmap::Compat.ASCIIString, with_stats::Int64)
     data = Ref{Ptr{Ptr{UInt8}}}()
     out_len = Ref{UInt64}(0)
     @xgboost_ccall(
