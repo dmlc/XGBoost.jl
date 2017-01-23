@@ -1,7 +1,7 @@
 using BinDeps
 @BinDeps.setup
 
-deps = [ libxgboostwrapper = library_dependency("xgboostwrapper", aliases = ["libxgboostwrapper.so"]) ]
+deps = [ libxgboostwrapper = library_dependency("xgboostwrapper", aliases = ["libxgboost.so"]) ]
 
 prefix=joinpath(BinDeps.depsdir(libxgboostwrapper),"usr")
 provides(BuildProcess,
@@ -12,9 +12,9 @@ provides(BuildProcess,
                CreateDirectory(joinpath(prefix, "lib"))
                @build_steps begin
                    ChangeDirectory("xgboost")
-                   FileRule(joinpath(prefix,"lib","libxgboostwrapper.so"), @build_steps begin
+                   FileRule(joinpath(prefix,"lib","libxgboost.so"), @build_steps begin
                        `bash build.sh`
-                       `cp wrapper/libxgboostwrapper.so $prefix/lib`
+                       `cp lib/libxgboost.so $prefix/lib`
                    end)
                end
             end),
