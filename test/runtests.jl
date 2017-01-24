@@ -33,7 +33,8 @@ facts("Agaricus training") do
     dtest = DMatrix("../data/agaricus.txt.test")
     watchlist = [(dtest, "eval"), (dtrain, "train")]
 
-    bst = xgboost(dtrain, 2, watchlist=watchlist,  eta=1, max_depth=2, objective="binary:logistic", silent=1)
+    bst = xgboost(dtrain, 2, watchlist=watchlist, eta = 1, max_depth = 2,
+                  objective = "binary:logistic", silent = 1)
     @fact bst --> not(nothing)
 
     preds = XGBoost.predict(bst, dtest)
@@ -50,7 +51,8 @@ facts("Cross validation") do
     dtest = DMatrix("../data/agaricus.txt.test")
     watchlist = [(dtest, "eval"), (dtrain, "train")]
 
-    bst = nfold_cv(dtrain, 5, 3, eta=1, max_depth=2, objective="binary:logistic", silent=1, seed=12345)
+    bst = nfold_cv(dtrain, 5, 3, eta = 1, max_depth = 2, objective = "binary:logistic", silent = 1,
+                   seed = 12345)
     # important_features = importance(bst)
     #
     # @fact startswith(important_features[1].fname, "f28") --> true
@@ -62,7 +64,8 @@ facts("Feature importance") do
     dtest = DMatrix("../data/agaricus.txt.test")
     watchlist = [(dtest, "eval"), (dtrain, "train")]
 
-    bst = xgboost(dtrain, 5, watchlist=watchlist,  eta=1, max_depth=2, objective="binary:logistic", silent=1, seed=12345)
+    bst = xgboost(dtrain, 5, watchlist = watchlist, eta = 1, max_depth = 2,
+                  objective = "binary:logistic", silent = 1, seed = 12345)
     important_features = importance(bst)
 
     @fact startswith(important_features[1].fname, "f28") --> true

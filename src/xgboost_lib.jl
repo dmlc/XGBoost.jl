@@ -29,7 +29,8 @@ type DMatrix
         finalizer(sp, JLFree)
         sp
     end
-    function DMatrix{K<:Real, V<:Integer}(data::SparseMatrixCSC{K,V}, transposed::Bool=false; kwargs...)
+    function DMatrix{K<:Real, V<:Integer}(data::SparseMatrixCSC{K,V}, transposed::Bool = false;
+                                          kwargs...)
         handle = (transposed ? XGDMatrixCreateFromCSCT(data) : XGDMatrixCreateFromCSC(data))
         for itm in kwargs
             _setinfo(handle, string(itm[1]), itm[2])
@@ -42,9 +43,11 @@ type DMatrix
     function DMatrix{T<:Real}(data::Matrix{T}, transposed::Bool=false, missing = NaN32; kwargs...)
         handle = nothing
         if !transposed
-            handle = XGDMatrixCreateFromMat(convert(Matrix{Float32}, data), convert(Float32, missing))
+            handle = XGDMatrixCreateFromMat(convert(Matrix{Float32}, data),
+                                            convert(Float32, missing))
         else
-            handle = XGDMatrixCreateFromMatT(convert(Matrix{Float32}, data), convert(Float32, missing))
+            handle = XGDMatrixCreateFromMatT(convert(Matrix{Float32}, data),
+                                             convert(Float32, missing))
         end
 
         for itm in kwargs
@@ -101,10 +104,10 @@ function save(bst::Booster, fname::String)
 end
 
 ### dump model ###
-function dump_model(bst::Booster, fname::String; fmap::String="", with_stats::Bool=false)
+function dump_model(bst::Booster, fname::String; fmap::String="", with_stats::Bool = false)
     data = XGBoosterDumpModel(bst.handle, fmap, convert(Int64, with_stats))
     fo = open(fname, "w")
-    for i=1:length(data)
+    for i in 1:length(data)
         @printf(fo, "booster[%d]:\n", i)
         @printf(fo, "%s", unsafe_string(data[i]))
     end
@@ -131,10 +134,8 @@ function makeDMatrix(data, label)
 end
 
 ### train ###
-function xgboost(data, nrounds::Integer;
-                 label=Union{}, param=[], watchlist=[], metrics=[],
-                 obj=Union{}, feval=Union{}, group=[],
-                 kwargs...)
+function xgboost(data, nrounds::Integer; label = Union{}, param = [], watchlist = [], metrics = [],
+                 obj = Union{}, feval = Union{}, group = [], kwargs...)
     dtrain = makeDMatrix(data, label)
     if length(group) > 0
       set_info(dtrain, "group", group)
@@ -172,7 +173,7 @@ function xgboost(data, nrounds::Integer;
 end
 
 ### update ###
-function update(bst::Booster, nrounds::Integer, dtrain::DMatrix; obj=Union{})
+function update(bst::Booster, nrounds::Integer, dtrain::DMatrix; obj = Union{})
     if typeof(obj) == Function
         pred = predict(bst, dtrain)
         grad, hess = obj(pred, dtrain)
@@ -188,8 +189,8 @@ end
 
 
 ### eval_set ###
-function eval_set(bst::Booster, watchlist::Vector{Tuple{DMatrix,String}},
-                  iter::Integer; feval=Union{})
+function eval_set(bst::Booster, watchlist::Vector{Tuple{DMatrix,String}}, iter::Integer;
+                  feval = Union{})
     dmats = DMatrix[]
     evnames = String[]
     for itm in watchlist
@@ -200,7 +201,7 @@ function eval_set(bst::Booster, watchlist::Vector{Tuple{DMatrix,String}},
     if typeof(feval) == Function
         res *= @sprintf("[%d]", iter)
         #@printf(STDERR, "[%d]", iter)
-        for j=1:size(dmats)[1]
+        for j in 1:size(dmats)[1]
             pred = predict(bst, dmats[j])
             name, val = feval(pred, dmats[j])
             res *= @sprintf("\t%s-%s:%f", evnames[j], name, val)
@@ -215,8 +216,7 @@ function eval_set(bst::Booster, watchlist::Vector{Tuple{DMatrix,String}},
 end
 
 ### predict ###
-function predict(bst::Booster, data;
-                 output_margin::Bool = false, ntree_limit::Integer=0)
+function predict(bst::Booster, data; output_margin::Bool = false, ntree_limit::Integer = 0)
     if typeof(data) != DMatrix
         data = DMatrix(data)
     end
@@ -233,25 +233,25 @@ type CVPack
     watchlist::Vector{Tuple{DMatrix,String}}
     bst::Booster
     function CVPack(dtrain::DMatrix, dtest::DMatrix, param)
-        bst = Booster(cachelist = [dtrain,dtest])
+        bst = Booster(cachelist = [dtrain, dtest])
         for itm in param
             XGBoosterSetParam(bst.handle, string(itm[1]), string(itm[2]))
         end
-        watchlist = [ (dtrain,"train"), (dtest, "test") ]
+        watchlist = [(dtrain,"train"), (dtest, "test")]
         new(dtrain, dtest, watchlist, bst)
     end
 end
 
-function mknfold(dall::DMatrix, nfold::Integer, param,
-                 seed::Integer, evals=[]; fpreproc = Union{}, kwargs = [])
+function mknfold(dall::DMatrix, nfold::Integer, param, seed::Integer, evals=[]; fpreproc = Union{},
+                 kwargs = [])
     srand(seed)
     randidx = randperm(XGDMatrixNumRow(dall.handle))
     kstep = size(randidx)[1] / nfold
-    idset = [randidx[ round(Int64, (i-1)*kstep) + 1 : min(size(randidx)[1],round(Int64, i*kstep)) ] for i=1:nfold]
+    idset = [randidx[round(Int64, (i-1) * kstep) + 1 : min(size(randidx)[1],round(Int64, i * kstep))] for i in 1:nfold]
     ret = CVPack[]
-    for k=1:nfold
-        selected = Array(Int,0)
-        for i=1:nfold
+    for k in 1:nfold
+        selected = Int[]
+        for i in 1:nfold
             if k != i
                 selected = vcat(selected, idset[i])
             end
@@ -270,7 +270,7 @@ function mknfold(dall::DMatrix, nfold::Integer, param,
     return ret
 end
 
-function aggcv(rlist; show_stdv=true)
+function aggcv(rlist; show_stdv = true)
     cvmap = Dict()
     ret = split(rlist[1])[1]
     for line in rlist
@@ -284,11 +284,11 @@ function aggcv(rlist; show_stdv=true)
             push!(cvmap[k], float(v))
         end
     end
-    itms = [itm for itm in cvmap]
-    sort!(itms, by=x->x[1])
-    for itm in itms
-        k = itm[1]
-        v = itm[2]
+    items = [item for item in cvmap]
+    sort!(items, by = x -> x[1])
+    for item in items
+        k = item[1]
+        v = item[2]
         if show_stdv == true
             ret *= @sprintf("\tcv-%s:%f+%f", k, mean(v), std(v))
         else
@@ -298,18 +298,18 @@ function aggcv(rlist; show_stdv=true)
     return ret
 end
 
-function nfold_cv(data, num_boost_round::Integer=10, nfold::Integer=3;
-                  label = Union{}, param=[], metrics=[], obj = Union{}, feval = Union{},
-                  fpreproc = Union{}, show_stdv=true, seed::Integer=0, kwargs...)
+function nfold_cv(data, num_boost_round::Integer = 10, nfold::Integer = 3; label = Union{},
+                  param=[], metrics=[], obj = Union{}, feval = Union{}, fpreproc = Union{},
+                  show_stdv = true, seed::Integer = 0, kwargs...)
     dtrain = makeDMatrix(data, label)
     results = String[]
     cvfolds = mknfold(dtrain, nfold, param, seed, metrics, fpreproc=fpreproc, kwargs = kwargs)
-    for i=1:num_boost_round
+    for i in 1:num_boost_round
         for f in cvfolds
-            update(f.bst, 1, f.dtrain, obj=obj)
+            update(f.bst, 1, f.dtrain, obj = obj)
         end
-        res = aggcv([eval_set(f.bst, f.watchlist, i, feval=feval) for f in cvfolds],
-                    show_stdv=show_stdv)
+        res = aggcv([eval_set(f.bst, f.watchlist, i, feval = feval) for f in cvfolds],
+                    show_stdv = show_stdv)
         push!(results, res)
         @printf(STDERR, "%s\n", res)
     end
@@ -323,20 +323,22 @@ immutable FeatureImportance
 end
 
 function Base.show(io::IO, f::FeatureImportance)
-    @printf(io, "%s: gain = %0.04f, cover = %0.04f, freq = %0.04f", f.fname, f.gain, f.cover, f.freq)
+    @printf(io, "%s: gain = %0.04f, cover = %0.04f, freq = %0.04f", f.fname, f.gain, f.cover,
+            f.freq)
 end
 
-function Base.show(io::IO, arr::Vector{FeatureImportance}; maxrows=30)
+function Base.show(io::IO, arr::Vector{FeatureImportance}; maxrows = 30)
     println(io, "$(length(arr))-element Vector{$(FeatureImportance)}:")
     println(io, "Gain      Coverage  Frequency  Feature")
     for i in 1:min(maxrows, length(arr))
-        @printf(io, "%0.04f    %0.04f    %0.04f     %s\n", arr[i].gain, arr[i].cover, arr[i].freq, arr[i].fname)
+        @printf(io, "%0.04f    %0.04f    %0.04f     %s\n", arr[i].gain, arr[i].cover, arr[i].freq,
+                arr[i].fname)
     end
 end
 
 Base.show(io::IO, ::MIME"text/plain", arr::Vector{FeatureImportance}) = show(io, arr)
 
-function importance(bst::Booster; fmap::String="")
+function importance(bst::Booster; fmap::String = "")
     data = XGBoosterDumpModel(bst.handle, fmap, 1)
 
     # get the total gains for each feature and the whole model
@@ -348,7 +350,7 @@ function importance(bst::Booster; fmap::String="")
     totalFreq = 0.0
     lineMatch = r"^[^\w]*[0-9]+:\[([^\]]+)\] yes=([\.+e0-9]+),no=([\.+e0-9]+),[^,]*,?gain=([\.+e0-9]+),cover=([\.+e0-9]+).*"
     nameStrip = r"[<>][^<>]+$"
-    for i=1:length(data)
+    for i in 1:length(data)
         for line in split(unsafe_string(data[i]), '\n')
             m = match(lineMatch, line)
             if typeof(m) != Void
@@ -371,14 +373,12 @@ function importance(bst::Booster; fmap::String="")
     # compile these gains into list of features sorted by gain value
     res = FeatureImportance[]
     for fname in keys(gains)
-        push!(res, FeatureImportance(
-            fname,
-            gains[fname]/totalGain,
-            covers[fname]/totalCover,
-            freqs[fname]/totalFreq
-        ))
+        push!(res, FeatureImportance(fname,
+                                     gains[fname] / totalGain,
+                                     covers[fname] / totalCover,
+                                     freqs[fname] / totalFreq))
     end
-    sort!(res, by=x->-x.gain)
+    sort!(res, by = x -> -x.gain)
 end
 
 function importance(bst::Booster, feature_names::Vector{String})
@@ -386,10 +386,10 @@ function importance(bst::Booster, feature_names::Vector{String})
 
     result = FeatureImportance[]
     for old_importance in res
-        actual_name = feature_names[parse(Int64, old_importance.fname[2:end])+1]
-        push!(result, FeatureImportance(actual_name, old_importance.gain,
-                                    old_importance.cover, old_importance.freq))
+        actual_name = feature_names[parse(Int64, old_importance.fname[2:end]) + 1]
+        push!(result, FeatureImportance(actual_name, old_importance.gain, old_importance.cover,
+                                        old_importance.freq))
     end
 
-    result
+    return result
 end
