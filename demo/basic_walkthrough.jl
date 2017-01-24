@@ -32,8 +32,8 @@ test_X, test_Y = readlibsvm("../data/agaricus.txt.test", (1611, 126))
 num_round = 2
 
 print("training xgboost with dense matrix\n")
-# you can directly pass julia's matrix or sparse matrix as data,
-#   by calling xgboost(data, num_round, label=label, training-parameters)
+# you can directly pass Julia's matrix or sparse matrix as data,
+# by calling xgboost(data, num_round, label=label, training-parameters)
 bst = xgboost(train_X, num_round, label = train_Y, eta=1, max_depth=2, objective="binary:logistic")
 
 
@@ -82,7 +82,7 @@ bst = xgboost(dtrain, num_round, param=param, watchlist=watchlist, metrics=["log
 save(dtest, "dtest.buffer")
 save(dtrain, "dtrain.buffer")
 
-# load model and data in
+# load model and data
 dtrain = DMatrix("dtrain.buffer")
 dtest = DMatrix("dtest.buffer")
 bst = Booster(model_file = "xgb.model")
