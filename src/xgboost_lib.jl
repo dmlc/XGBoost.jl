@@ -67,8 +67,8 @@ function set_info{T<:Real}(dmat::DMatrix, field::String, array::Vector{T})
     dmat._set_info(dmat.handle, field, array)
 end
 
-function save(dmat::DMatrix, fname::String; slient=true)
-    XGDMatrixSaveBinary(dmat.handle, fname, convert(Int32, slient))
+function save(dmat::DMatrix, fname::String; silent=true)
+    XGDMatrixSaveBinary(dmat.handle, fname, convert(Int32, silent))
 end
 
 ### slice ###
