@@ -5,7 +5,7 @@ include("xgboost_wrapper_h.jl")
 type DMatrix
     handle::Ptr{Void}
     _set_info::Function
-    function _setinfo{T<:Number}(ptr::Ptr{Void}, name::String, array::Array{T, 1})
+    function _setinfo{T<:Number}(ptr::Ptr{Void}, name::String, array::Array{T,1})
         if name == "label" || name == "weight" || name == "base_margin"
             XGDMatrixSetFloatInfo(ptr, name,
                                   convert(Array{Float32, 1}, array),
@@ -29,7 +29,7 @@ type DMatrix
         finalizer(sp, JLFree)
         sp
     end
-    function DMatrix{K<:Real, V<:Integer}(data::SparseMatrixCSC{K, V}, transposed::Bool=false; kwargs...)
+    function DMatrix{K<:Real, V<:Integer}(data::SparseMatrixCSC{K,V}, transposed::Bool=false; kwargs...)
         handle = (transposed ? XGDMatrixCreateFromCSCT(data) : XGDMatrixCreateFromCSC(data))
         for itm in kwargs
             _setinfo(handle, string(itm[1]), itm[2])
@@ -39,7 +39,7 @@ type DMatrix
         sp
     end
 
-    function DMatrix{T<:Real}(data::Array{T, 2}, transposed::Bool=false, missing = NaN32; kwargs...)
+    function DMatrix{T<:Real}(data::Array{T,2}, transposed::Bool=false, missing = NaN32; kwargs...)
         handle = nothing
         if !transposed
             handle = XGDMatrixCreateFromMat(convert(Array{Float32, 2}, data), convert(Float32, missing))
@@ -63,7 +63,7 @@ function get_info(dmat::DMatrix, field::String)
     JLGetFloatInfo(dmat.handle, field)
 end
 
-function set_info{T<:Real}(dmat::DMatrix, field::String, array::Array{T, 1})
+function set_info{T<:Real}(dmat::DMatrix, field::String, array::Array{T,1})
     dmat._set_info(dmat.handle, field, array)
 end
 
@@ -72,15 +72,15 @@ function save(dmat::DMatrix, fname::String; slient=true)
 end
 
 ### slice ###
-function slice{T<:Integer}(dmat::DMatrix, idxset::Array{T, 1})
-    handle = XGDMatrixSliceDMatrix(dmat.handle, convert(Array{Int32, 1}, idxset) - 1,
+function slice{T<:Integer}(dmat::DMatrix, idxset::Array{T,1})
+    handle = XGDMatrixSliceDMatrix(dmat.handle, convert(Array{Int32,1}, idxset) - 1,
                                    convert(UInt64, size(idxset)[1]))
     return DMatrix(handle)
 end
 
 type Booster
     handle::Ptr{Void}
-    function Booster(;cachelist::Array{DMatrix, 1} = convert(Array{DMatrix,1}, []),
+    function Booster(;cachelist::Array{DMatrix,1} = convert(Array{DMatrix,1}, []),
                      model_file::String = "")
         handle = XGBoosterCreate([itm.handle for itm in cachelist], size(cachelist)[1])
         if model_file != ""
@@ -178,8 +178,8 @@ function update(bst::Booster, nrounds::Integer, dtrain::DMatrix; obj=Union{})
         grad, hess = obj(pred, dtrain)
         @assert size(grad) == size(hess)
         XGBoosterBoostOneIter(bst.handle, dtrain.handle,
-                              convert(Array{Float32, 1}, grad),
-                              convert(Array{Float32, 1}, hess),
+                              convert(Array{Float32,1}, grad),
+                              convert(Array{Float32,1}, hess),
                               convert(UInt64, size(hess)[1]))
     else
         XGBoosterUpdateOneIter(bst.handle, convert(Int32, nrounds), dtrain.handle)
@@ -188,7 +188,7 @@ end
 
 
 ### eval_set ###
-function eval_set(bst::Booster, watchlist::Array{Tuple{DMatrix, String},1},
+function eval_set(bst::Booster, watchlist::Array{Tuple{DMatrix,String},1},
                   iter::Integer; feval=Union{})
     dmats = DMatrix[]
     evnames = String[]
