@@ -28,7 +28,7 @@ test_X, test_Y = readlibsvm("../data/agaricus.txt.test", (1611, 126))
 #-------------Basic Training using XGBoost-----------------
 # note: xgboost naturally handles sparse input
 # use sparse matrix when your feature is sparse(e.g. when you using one-hot encoding vector)
-# model paramters can be set as paramter for ```xgboost``` function, or use an Array{(ASCIIString, Any), 1}/Dict()
+# model parameters can be set as parameters for ```xgboost``` function, or use a Vector{String} / Dict()
 num_round = 2
 
 print("training xgboost with dense matrix\n")

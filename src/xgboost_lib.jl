@@ -5,14 +5,14 @@ include("xgboost_wrapper_h.jl")
 type DMatrix
     handle::Ptr{Void}
     _set_info::Function
-    function _setinfo{T<:Number}(ptr::Ptr{Void}, name::String, array::Array{T,1})
+    function _setinfo{T<:Number}(ptr::Ptr{Void}, name::String, array::Vector{T})
         if name == "label" || name == "weight" || name == "base_margin"
             XGDMatrixSetFloatInfo(ptr, name,
-                                  convert(Array{Float32, 1}, array),
+                                  convert(Vector{Float32}, array),
                                   convert(UInt64, size(array)[1]))
         elseif name == "group"
             XGDMatrixSetGroup(ptr,
-                              convert(Array{UInt32, 1}, array),
+                              convert(Vector{UInt32}, array),
                               convert(UInt64, size(array)[1]))
         else
             error("unknown information name")
@@ -39,12 +39,12 @@ type DMatrix
         sp
     end
 
-    function DMatrix{T<:Real}(data::Array{T,2}, transposed::Bool=false, missing = NaN32; kwargs...)
+    function DMatrix{T<:Real}(data::Matrix{T}, transposed::Bool=false, missing = NaN32; kwargs...)
         handle = nothing
         if !transposed
-            handle = XGDMatrixCreateFromMat(convert(Array{Float32, 2}, data), convert(Float32, missing))
+            handle = XGDMatrixCreateFromMat(convert(Matrix{Float32}, data), convert(Float32, missing))
         else
-            handle = XGDMatrixCreateFromMatT(convert(Array{Float32, 2}, data), convert(Float32, missing))
+            handle = XGDMatrixCreateFromMatT(convert(Matrix{Float32}, data), convert(Float32, missing))
         end
 
         for itm in kwargs
@@ -63,7 +63,7 @@ function get_info(dmat::DMatrix, field::String)
     JLGetFloatInfo(dmat.handle, field)
 end
 
-function set_info{T<:Real}(dmat::DMatrix, field::String, array::Array{T,1})
+function set_info{T<:Real}(dmat::DMatrix, field::String, array::Vector{T})
     dmat._set_info(dmat.handle, field, array)
 end
 
@@ -72,15 +72,15 @@ function save(dmat::DMatrix, fname::String; slient=true)
 end
 
 ### slice ###
-function slice{T<:Integer}(dmat::DMatrix, idxset::Array{T,1})
-    handle = XGDMatrixSliceDMatrix(dmat.handle, convert(Array{Int32,1}, idxset) - 1,
+function slice{T<:Integer}(dmat::DMatrix, idxset::Vector{T})
+    handle = XGDMatrixSliceDMatrix(dmat.handle, convert(Vector{Int32}, idxset) - 1,
                                    convert(UInt64, size(idxset)[1]))
     return DMatrix(handle)
 end
 
 type Booster
     handle::Ptr{Void}
-    function Booster(;cachelist::Array{DMatrix,1} = convert(Array{DMatrix,1}, []),
+    function Booster(; cachelist::Vector{DMatrix} = convert(Vector{DMatrix}, []),
                      model_file::String = "")
         handle = XGBoosterCreate([itm.handle for itm in cachelist], size(cachelist)[1])
         if model_file != ""
@@ -178,8 +178,8 @@ function update(bst::Booster, nrounds::Integer, dtrain::DMatrix; obj=Union{})
         grad, hess = obj(pred, dtrain)
         @assert size(grad) == size(hess)
         XGBoosterBoostOneIter(bst.handle, dtrain.handle,
-                              convert(Array{Float32,1}, grad),
-                              convert(Array{Float32,1}, hess),
+                              convert(Vector{Float32}, grad),
+                              convert(Vector{Float32}, hess),
                               convert(UInt64, size(hess)[1]))
     else
         XGBoosterUpdateOneIter(bst.handle, convert(Int32, nrounds), dtrain.handle)
@@ -188,7 +188,7 @@ end
 
 
 ### eval_set ###
-function eval_set(bst::Booster, watchlist::Array{Tuple{DMatrix,String},1},
+function eval_set(bst::Booster, watchlist::Vector{Tuple{DMatrix,String}},
                   iter::Integer; feval=Union{})
     dmats = DMatrix[]
     evnames = String[]
@@ -230,7 +230,7 @@ end
 type CVPack
     dtrain::DMatrix
     dtest::DMatrix
-    watchlist::Array{Tuple{DMatrix,String},1}
+    watchlist::Vector{Tuple{DMatrix,String}}
     bst::Booster
     function CVPack(dtrain::DMatrix, dtest::DMatrix, param)
         bst = Booster(cachelist = [dtrain,dtest])
@@ -326,15 +326,15 @@ function Base.show(io::IO, f::FeatureImportance)
     @printf(io, "%s: gain = %0.04f, cover = %0.04f, freq = %0.04f", f.fname, f.gain, f.cover, f.freq)
 end
 
-function Base.show(io::IO, arr::Array{FeatureImportance,1}; maxrows=30)
-    println(io, "$(length(arr))-element Array{$(FeatureImportance),1}:")
+function Base.show(io::IO, arr::Vector{FeatureImportance}; maxrows=30)
+    println(io, "$(length(arr))-element Vector{$(FeatureImportance)}:")
     println(io, "Gain      Coverage  Frequency  Feature")
     for i in 1:min(maxrows, length(arr))
         @printf(io, "%0.04f    %0.04f    %0.04f     %s\n", arr[i].gain, arr[i].cover, arr[i].freq, arr[i].fname)
     end
 end
 
-Base.show(io::IO, ::MIME"text/plain", arr::Array{FeatureImportance,1}) = show(io, arr)
+Base.show(io::IO, ::MIME"text/plain", arr::Vector{FeatureImportance}) = show(io, arr)
 
 function importance(bst::Booster; fmap::String="")
     data = XGBoosterDumpModel(bst.handle, fmap, 1)

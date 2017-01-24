@@ -16,7 +16,7 @@ param = ["max_depth"=>2, "eta"=>1, "silent"=>1]
 watchlist  = [(dtest,"eval"), (dtrain,"train")]
 num_round = 2
 
-function logregobj(preds::Array{Float32, 1}, dtrain::DMatrix)
+function logregobj(preds::Vector{Float32}, dtrain::DMatrix)
     labels = get_info(dtrain, "label")
     preds = 1.0 ./ (1.0 + exp(-preds))
     grad = preds - labels
@@ -30,7 +30,7 @@ end
 # for example, we are doing logistic loss, the prediction is score before logistic transformation
 # the buildin evaluation error assumes input is after logistic transformation
 # Take this in mind when you use the customization, and maybe you need write customized evaluation function
-function evalerror(preds::Array{Float32, 1}, dtrain::DMatrix)
+function evalerror(preds::Vector{Float32}, dtrain::DMatrix)
     labels = get_info(dtrain, "label")
     # return a pair metric_name, result
     # since preds are margin(before logistic transformation, cutoff at 0)

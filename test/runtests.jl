@@ -3,12 +3,13 @@ using FactCheck
 
 include("utils.jl")
 
+
 facts("Sparse matrices") do
     X = sparse(randn(100,10) .* bitrand(100,10))
     y = randn(100)
     DMatrix(X, label=y)
 
-    X = sparse(convert(Array{Float32,2}, randn(10,100) .* bitrand(10,100)))
+    X = sparse(convert(Matrix{Float32}, randn(10,100) .* bitrand(10,100)))
     y = randn(100)
     DMatrix(X, true)
 
@@ -27,7 +28,6 @@ facts("DMatrix loading") do
     @fact train_Y --> labels
 end
 
-
 facts("Agaricus training") do
     dtrain = DMatrix("../data/agaricus.txt.train")
     dtest = DMatrix("../data/agaricus.txt.test")
@@ -45,7 +45,6 @@ facts("Agaricus training") do
     @fact err --> less_than(0.1)
 end
 
-
 facts("Cross validation") do
     dtrain = DMatrix("../data/agaricus.txt.train")
     dtest = DMatrix("../data/agaricus.txt.test")
@@ -58,7 +57,6 @@ facts("Cross validation") do
     # @pending important_features[1].fname --> "f28"
 end
 
-
 facts("Feature importance") do
     dtrain = DMatrix("../data/agaricus.txt.train")
     dtest = DMatrix("../data/agaricus.txt.test")
@@ -70,7 +68,6 @@ facts("Feature importance") do
     @fact startswith(important_features[1].fname, "f28") --> true
     @pending important_features[1].fname --> "f28"
 end
-
 
 facts("Example is running") do
     include("example.jl")

@@ -41,13 +41,13 @@ end
 nfold_cv(dtrain, num_round, nfold, param=param, metrics=["auc"],
          seed = 0, show_stdv = false, fpreproc=fpreproc)
 
-print ("running cross validation, with cutomsized loss function\n")
+print("running cross validation, with customized loss function\n")
 ###
 # you can also do cross validation with cutomized loss function
 # See custom_objective.py
 ##
 
-function logregobj(preds::Array{Float32, 1}, dtrain::DMatrix)
+function logregobj(preds::Vector{Float32}, dtrain::DMatrix)
         labels = get_info(dtrain, "label")
         preds = 1.0 ./ (1.0 + exp(-preds))
         grad = preds - labels
@@ -55,7 +55,7 @@ function logregobj(preds::Array{Float32, 1}, dtrain::DMatrix)
         return (grad, hess)
 end
 
-function evalerror(preds::Array{Float32, 1}, dtrain::DMatrix)
+function evalerror(preds::Vector{Float32}, dtrain::DMatrix)
     labels = get_info(dtrain, "label")
     # return a pair metric_name, result
     # since preds are margin(before logistic transformation, cutoff at 0)
