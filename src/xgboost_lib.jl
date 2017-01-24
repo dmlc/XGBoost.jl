@@ -5,6 +5,7 @@ include("xgboost_wrapper_h.jl")
 type DMatrix
     handle::Ptr{Void}
     _set_info::Function
+
     function _setinfo{T<:Number}(ptr::Ptr{Void}, name::String, array::Vector{T})
         if name == "label" || name == "weight" || name == "base_margin"
             XGDMatrixSetFloatInfo(ptr, name,
@@ -18,29 +19,33 @@ type DMatrix
             error("unknown information name")
         end
     end
+
     function DMatrix(handle::Ptr{Void})
-        sp = new(handle, _setinfo)
-        finalizer(sp, JLFree)
-        sp
+        dmat = new(handle, _setinfo)
+        finalizer(dmat, JLFree)
+        return dmat
     end
+
     function DMatrix(fname::String; silent = false)
         handle = XGDMatrixCreateFromFile(fname, convert(Int32, silent))
-        sp = new(handle, _setinfo)
-        finalizer(sp, JLFree)
-        sp
+        dmat = new(handle, _setinfo)
+        finalizer(dmat, JLFree)
+        return dmat
     end
+
     function DMatrix{K<:Real, V<:Integer}(data::SparseMatrixCSC{K,V}, transposed::Bool = false;
                                           kwargs...)
         handle = (transposed ? XGDMatrixCreateFromCSCT(data) : XGDMatrixCreateFromCSC(data))
         for itm in kwargs
             _setinfo(handle, string(itm[1]), itm[2])
         end
-        sp = new(handle, _setinfo)
-        finalizer(sp, JLFree)
-        sp
+        dmat = new(handle, _setinfo)
+        finalizer(dmat, JLFree)
+        return dmat
     end
 
-    function DMatrix{T<:Real}(data::Matrix{T}, transposed::Bool=false, missing = NaN32; kwargs...)
+    function DMatrix{T<:Real}(data::Matrix{T}, transposed::Bool = false, missing = NaN32;
+                              kwargs...)
         handle = nothing
         if !transposed
             handle = XGDMatrixCreateFromMat(convert(Matrix{Float32}, data),
@@ -53,10 +58,11 @@ type DMatrix
         for itm in kwargs
             _setinfo(handle, string(itm[1]), itm[2])
         end
-        sp = new(handle, _setinfo)
-        finalizer(sp, JLFree)
-        sp
+        dmat = new(handle, _setinfo)
+        finalizer(dmat, JLFree)
+        return dmat
     end
+
     function JLFree(dmat::DMatrix)
         XGDMatrixFree(dmat.handle)
     end
@@ -70,7 +76,7 @@ function set_info{T<:Real}(dmat::DMatrix, field::String, array::Vector{T})
     dmat._set_info(dmat.handle, field, array)
 end
 
-function save(dmat::DMatrix, fname::String; silent=true)
+function save(dmat::DMatrix, fname::String; silent = true)
     XGDMatrixSaveBinary(dmat.handle, fname, convert(Int32, silent))
 end
 
@@ -83,16 +89,18 @@ end
 
 type Booster
     handle::Ptr{Void}
+
     function Booster(; cachelist::Vector{DMatrix} = convert(Vector{DMatrix}, []),
                      model_file::String = "")
         handle = XGBoosterCreate([itm.handle for itm in cachelist], size(cachelist)[1])
         if model_file != ""
             XGBoosterLoadModel(handle, model_file)
         end
-        this = new(handle)
-        finalizer(this, JLFree)
-        return this
+        bst = new(handle)
+        finalizer(bst, JLFree)
+        return bst
     end
+
     function JLFree(bst::Booster)
         XGBoosterFree(bst.handle)
     end
@@ -166,7 +174,7 @@ function xgboost(data, nrounds::Integer; label = Union{}, param = [], watchlist 
     for i = 1:nrounds
         update(bst, 1, dtrain, obj=obj)
         if !silent
-            @printf(STDERR, "%s", eval_set(bst, watchlist, i, feval=feval))
+            @printf(STDERR, "%s", eval_set(bst, watchlist, i, feval = feval))
         end
     end
     return bst
@@ -345,9 +353,9 @@ function importance(bst::Booster; fmap::String = "")
     gains = Dict{String,Float64}()
     covers = Dict{String,Float64}()
     freqs = Dict{String,Float64}()
-    totalGain = 0.0
-    totalCover = 0.0
-    totalFreq = 0.0
+    totalGain = 0.
+    totalCover = 0.
+    totalFreq = 0.
     lineMatch = r"^[^\w]*[0-9]+:\[([^\]]+)\] yes=([\.+e0-9]+),no=([\.+e0-9]+),[^,]*,?gain=([\.+e0-9]+),cover=([\.+e0-9]+).*"
     nameStrip = r"[<>][^<>]+$"
     for i in 1:length(data)
@@ -358,14 +366,14 @@ function importance(bst::Booster; fmap::String = "")
 
                 gain = parse(Float64, m.captures[4])
                 totalGain += gain
-                gains[fname] = get(gains, fname, 0.0) + gain
+                gains[fname] = get(gains, fname, 0.) + gain
 
                 cover = parse(Float64, m.captures[5])
                 totalCover += cover
-                covers[fname] = get(covers, fname, 0.0) + cover
+                covers[fname] = get(covers, fname, 0.) + cover
 
                 totalFreq += 1
-                freqs[fname] = get(freqs, fname, 0.0) + 1
+                freqs[fname] = get(freqs, fname, 0.) + 1
             end
         end
     end
