@@ -31,8 +31,9 @@ Pkg.clone("https://github.com/antinucleon/XGBoost.jl.git")
 Pkg.build("XGBoost")
 ```
 
-
-The `XGBoost` package also depends on the `BinDeps`
+By default, the package builds the latest stable version of the XGBoost library. To build the
+latest master, set the environment variable XGBOOST_BUILD_VERSION to "master" prior to installing
+or building the package (e.g. `ENV["XGBOOST_BUILD_VERSION"] = "master"`).
 
 
 ## Minimal examples
@@ -68,7 +69,7 @@ print("test-error=", sum((pred .> 0.5) .!= test_Y) / float(size(pred)[1]), "\n")
 
 ## Cross-Validation
 ```julia
-nfold=5
+nfold = 5
 param = ["max_depth" => 2,
          "eta" => 1,
          "objective" => "binary:logistic"]
@@ -80,7 +81,7 @@ nfold_cv(train_X, num_round, nfold, label = train_Y, param = param, metrics = me
 Check [demo](https://github.com/antinucleon/XGBoost.jl/blob/master/demo/)
 
 - [Basic walkthrough of features](demo/basic_walkthrough.jl)
-- [Cutomize loss function, and evaluation metric](demo/custom_objective.jl)
+- [Customize loss function, and evaluation metric](demo/custom_objective.jl)
 - [Boosting from existing prediction](demo/boost_from_prediction.jl)
 - [Predicting using first n trees](demo/predict_first_ntree.jl)
 - [Generalized Linear Model](demo/generalized_linear_model.jl)
