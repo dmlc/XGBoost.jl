@@ -4,49 +4,33 @@ include("xgboost_wrapper_h.jl")
 
 type DMatrix
     handle::Ptr{Void}
-    _set_info::Function
-
-    function _setinfo{T<:Number}(ptr::Ptr{Void}, name::String, array::Vector{T})
-        if name == "label" || name == "weight" || name == "base_margin"
-            XGDMatrixSetFloatInfo(ptr, name,
-                                  convert(Vector{Float32}, array),
-                                  convert(UInt64, size(array)[1]))
-        elseif name == "group"
-            XGDMatrixSetGroup(ptr,
-                              convert(Vector{UInt32}, array),
-                              convert(UInt64, size(array)[1]))
-        else
-            error("unknown information name")
-        end
-    end
 
     function DMatrix(handle::Ptr{Void})
-        dmat = new(handle, _setinfo)
+        dmat = new(handle)
         finalizer(dmat, JLFree)
         return dmat
     end
 
     function DMatrix(fname::String; silent = false)
         handle = XGDMatrixCreateFromFile(fname, convert(Int32, silent))
-        dmat = new(handle, _setinfo)
+        dmat = new(handle)
         finalizer(dmat, JLFree)
         return dmat
     end
 
     function DMatrix{K<:Real, V<:Integer}(data::SparseMatrixCSC{K,V}, transposed::Bool = false;
                                           kwargs...)
-        handle = (transposed ? XGDMatrixCreateFromCSCT(data) : XGDMatrixCreateFromCSC(data))
+        handle = transposed ? XGDMatrixCreateFromCSCT(data) : XGDMatrixCreateFromCSC(data)
+        dmat = new(handle)
         for itm in kwargs
-            _setinfo(handle, string(itm[1]), itm[2])
+            setinfo(dmat, string(itm[1]), itm[2])
         end
-        dmat = new(handle, _setinfo)
         finalizer(dmat, JLFree)
         return dmat
     end
 
     function DMatrix{T<:Real}(data::Matrix{T}, transposed::Bool = false, missing = NaN32;
                               kwargs...)
-        handle = nothing
         if !transposed
             handle = XGDMatrixCreateFromMat(convert(Matrix{Float32}, data),
                                             convert(Float32, missing))
@@ -55,10 +39,11 @@ type DMatrix
                                              convert(Float32, missing))
         end
 
+        dmat = new(handle)
         for itm in kwargs
-            _setinfo(handle, string(itm[1]), itm[2])
+            setinfo(dmat, string(itm[1]), itm[2])
         end
-        dmat = new(handle, _setinfo)
+
         finalizer(dmat, JLFree)
         return dmat
     end
@@ -72,8 +57,18 @@ function get_info(dmat::DMatrix, field::String)
     JLGetFloatInfo(dmat.handle, field)
 end
 
-function set_info{T<:Real}(dmat::DMatrix, field::String, array::Vector{T})
-    dmat._set_info(dmat.handle, field, array)
+function setinfo{T<:Real}(dmat::DMatrix, name::String, array::Vector{T})
+    if name == "label" || name == "weight" || name == "base_margin"
+        XGDMatrixSetFloatInfo(dmat.handle, name,
+                              convert(Vector{Float32}, array),
+                              convert(UInt64, length(array)))
+    elseif name == "group"
+        XGDMatrixSetGroup(dmat.handle,
+                          convert(Vector{UInt32}, array),
+                          convert(UInt64, length(array)))
+    else
+        error("unknown information name")
+    end
 end
 
 function save(dmat::DMatrix, fname::String; silent = true)
@@ -112,7 +107,7 @@ function save(bst::Booster, fname::String)
 end
 
 ### dump model ###
-function dump_model(bst::Booster, fname::String; fmap::String="", with_stats::Bool = false)
+function dump_model(bst::Booster, fname::String; fmap::String = "", with_stats::Bool = false)
     data = XGBoosterDumpModel(bst.handle, fmap, convert(Int64, with_stats))
     fo = open(fname, "w")
     for i in 1:length(data)
