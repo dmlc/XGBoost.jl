@@ -12,7 +12,7 @@ typealias BoosterHandle Ptr{Void}
 "Calls an xgboost API function and correctly reports errors."
 macro xgboost(f, params...)
     return quote
-        err = ccall(($f, _jl_libxgboost), Int64,
+        err = ccall(($f, _jl_libxgboost), Cint,
                     ($((esc(i.args[2]) for i in params)...),),
                     $((esc(i.args[1]) for i in params)...))
         if err != 0
@@ -118,36 +118,26 @@ function XGDMatrixSetGroup(handle::DMatrixHandle, array::Vector{UInt32}, len::UI
              len => Bst_ulong)
 end
 
-function XGDMatrixGetFloatInfo(handle::DMatrixHandle, field::String, out_len::Vector{Bst_ulong})
+function XGDMatrixGetFloatInfo(handle::DMatrixHandle, field::String)
+    out_len = Ref{Bst_ulong}(0)
     out_dptr = Ref{Ptr{Cfloat}}()
     @xgboost(:XGDMatrixGetFloatInfo,
              handle => DMatrixHandle,
              field => Cstring,
-             out_len => Ptr{Bst_ulong},
+             out_len => Ref{Bst_ulong},
              out_dptr =>  Ref{Ptr{Cfloat}})
-    return out_dptr[]
-end
-
-function JLGetFloatInfo(handle::DMatrixHandle, field::String)
-    len = Bst_ulong[1]
-    ptr = XGDMatrixGetFloatInfo(handle, field, len)
-    return unsafe_wrap(Array, ptr, len[1])
-end
-
-function JLGetUintInfo(handle::DMatrixHandle, field::String)
-    len = Bst_ulong[1]
-    ptr = XGDMatrixGetUIntInfo(handle, field, len)
-    return unsafe_wrap(Array, ptr, len[1])
+    return unsafe_wrap(Array, out_dptr[], out_len[])
 end
 
 function XGDMatrixGetUIntInfo(handle::DMatrixHandle, field::String, out_len::Vector{Bst_ulong})
+    out_len = Ref{Bst_ulong}(0)
     out_dptr = Ref{Ptr{Cuint}}()
     @xgboost(:XGDMatrixGetUIntInfo,
              handle => DMatrixHandle,
              field => Cstring,
-             out_len => Ptr{Bst_ulong},
+             out_len => Ref{Bst_ulong},
              out_dptr => Ref{Ptr{Cuint}})
-    return out_dptr[]
+    return unsafe_wrap(Array, out_dptr[], out_len[])
 end
 
 function XGDMatrixNumRow(handle::DMatrixHandle)
@@ -244,4 +234,40 @@ function XGBoosterDumpModel(handle::BoosterHandle, fmap::String, with_stats::Int
              out_len => Ref{Bst_ulong},
              out_dump_array => Ref{Ptr{Cstring}})
     return unsafe_wrap(Array, out_dump_array[], out_len[])
+end
+
+function XGBoosterGetAttr(handle::BoosterHandle, key::String)
+    out = Ref{Cstring}()
+    success = Ref{Cint}(-1)
+    @xgboost(:XGBoosterGetAttr,
+             handle => BoosterHandle,
+             key => Cstring,
+             out => Ref{Cstring},
+             success => Ref{Cint})
+    return success[] == 1 ? unsafe_string(out[]) : ""
+end
+
+function XGBoosterSetAttr(handle::BoosterHandle, key::String, value::String)
+    @xgboost(:XGBoosterSetAttr,
+             handle => BoosterHandle,
+             key => Cstring,
+             value => Cstring)
+end
+
+function XGBoosterSetAttr(handle::BoosterHandle, key::String, value::Ptr{Void})
+    @xgboost(:XGBoosterSetAttr,
+             handle => BoosterHandle,
+             key => Cstring,
+             value => Ptr{Void})
+end
+
+function XGBoosterGetAttrNames(handle::BoosterHandle)
+    out_len = Ref{Bst_ulong}(0)
+    out = Ref{Ptr{Cstring}}()
+    @xgboost(:XGBoosterGetAttrNames,
+             handle => BoosterHandle,
+             out_len => Ref{Bst_ulong},
+             out => Ref{Ptr{Cstring}})
+    out_ptrs = unsafe_wrap(Array, out[], out_len[])
+    return [unsafe_string(ptr) for ptr in out_ptrs]
 end

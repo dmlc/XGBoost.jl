@@ -54,7 +54,7 @@ type DMatrix
 end
 
 function get_info(dmat::DMatrix, field::String)
-    JLGetFloatInfo(dmat.handle, field)
+    XGDMatrixGetFloatInfo(dmat.handle, field)
 end
 
 function setinfo{T<:Real}(dmat::DMatrix, name::String, array::Vector{T})
@@ -137,8 +137,10 @@ function makeDMatrix(data, label)
 end
 
 ### train ###
-function xgboost(data, nrounds::Integer; label = Union{}, param = [], watchlist = [], metrics = [],
-                 obj = Union{}, feval = Union{}, group = [], kwargs...)
+function xgboost{T<:Any}(data, nrounds::Integer;
+                         label = Union{}, param::Dict{String,T} = Dict{String,String}(),
+                         watchlist = [], metrics = [],
+                         obj = nothing, feval = Union{}, group = [], kwargs...)
     dtrain = makeDMatrix(data, label)
     if length(group) > 0
       set_info(dtrain, "group", group)
@@ -166,8 +168,8 @@ function xgboost(data, nrounds::Integer; label = Union{}, param = [], watchlist 
     for itm in metrics
         XGBoosterSetParam(bst.handle, "eval_metric", string(itm))
     end
-    for i = 1:nrounds
-        update(bst, 1, dtrain, obj=obj)
+    for i in 1:nrounds
+        update(bst, dtrain, 1, fobj = obj)
         if !silent
             @printf(STDERR, "%s", eval_set(bst, watchlist, i, feval = feval))
         end
@@ -176,17 +178,18 @@ function xgboost(data, nrounds::Integer; label = Union{}, param = [], watchlist 
 end
 
 ### update ###
-function update(bst::Booster, nrounds::Integer, dtrain::DMatrix; obj = Union{})
-    if typeof(obj) == Function
+function update(bst::Booster, dtrain::DMatrix, iteration::Integer;
+                fobj::Union{Function,Void} = nothing)
+    if typeof(fobj) == Function
         pred = predict(bst, dtrain)
-        grad, hess = obj(pred, dtrain)
+        grad, hess = fobj(pred, dtrain)
         @assert size(grad) == size(hess)
         XGBoosterBoostOneIter(bst.handle, dtrain.handle,
-                              convert(Vector{Float32}, grad),
-                              convert(Vector{Float32}, hess),
-                              convert(UInt64, size(hess)[1]))
+                            convert(Vector{Float32}, grad),
+                            convert(Vector{Float32}, hess),
+                            convert(UInt64, length(hess)))
     else
-        XGBoosterUpdateOneIter(bst.handle, convert(Int32, nrounds), dtrain.handle)
+        XGBoosterUpdateOneIter(bst.handle, convert(Int32, iteration), dtrain.handle)
     end
 end
 
@@ -303,14 +306,14 @@ function aggcv(rlist; show_stdv = true)
 end
 
 function nfold_cv(data, num_boost_round::Integer = 10, nfold::Integer = 3; label = Union{},
-                  param=[], metrics=[], obj = Union{}, feval = Union{}, fpreproc = Union{},
+                  param=[], metrics=[], obj = nothing, feval = Union{}, fpreproc = Union{},
                   show_stdv = true, seed::Integer = 0, kwargs...)
     dtrain = makeDMatrix(data, label)
     results = String[]
-    cvfolds = mknfold(dtrain, nfold, param, seed, metrics, fpreproc=fpreproc, kwargs = kwargs)
+    cvfolds = mknfold(dtrain, nfold, param, seed, metrics, fpreproc = fpreproc, kwargs = kwargs)
     for i in 1:num_boost_round
         for f in cvfolds
-            update(f.bst, 1, f.dtrain, obj = obj)
+            update(f.bst, f.dtrain, 1, fobj = obj)
         end
         res = aggcv([eval_set(f.bst, f.watchlist, i, feval = feval) for f in cvfolds],
                     show_stdv = show_stdv)
