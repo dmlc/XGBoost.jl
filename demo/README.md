@@ -1,7 +1,7 @@
 XGBoost.jl Feature Walkthrough
 ====
 * [Basic walkthrough of features](basic_walkthrough.jl)
-* [Cutomize loss function, and evaluation metric](custom_objective.jl)
+* [Customize loss function, and evaluation metric](custom_objective.jl)
 * [Boosting from existing prediction](boost_from_prediction.jl)
 * [Predicting using first n trees](predict_first_ntree.jl)
 * [Generalized Linear Model](generalized_linear_model.jl)
@@ -9,6 +9,6 @@ XGBoost.jl Feature Walkthrough
 
 Notes
 ====
-* Contribution of exampls, benchmarks is more than welcomed!
-* If you like to share how you use xgboost to solve your problem, send a pull request:)
+* Contributing examples or benchmarks is highly appreciated!
+* If you like to share how you use xgboost to solve your problem, send a pull request :)
 

@@ -28,20 +28,23 @@ test_X, test_Y = readlibsvm("../data/agaricus.txt.test", (1611, 126))
 #-------------Basic Training using XGBoost-----------------
 # note: xgboost naturally handles sparse input
 # use sparse matrix when your feature is sparse(e.g. when you using one-hot encoding vector)
-# model paramters can be set as paramter for ```xgboost``` function, or use an Array{(ASCIIString, Any), 1}/Dict()
+# model parameters can be set as parameters for ```xgboost``` function, or use a Vector{String} / Dict()
 num_round = 2
 
 print("training xgboost with dense matrix\n")
-# you can directly pass julia's matrix or sparse matrix as data,
-#   by calling xgboost(data, num_round, label=label, training-parameters)
-bst = xgboost(train_X, num_round, label = train_Y, eta=1, max_depth=2, objective="binary:logistic")
+# you can directly pass Julia's matrix or sparse matrix as data,
+# by calling xgboost(data, num_round, label=label, training-parameters)
+bst = xgboost(train_X, num_round, label = train_Y, eta = 1, max_depth = 2,
+              objective = "binary:logistic")
 
 
 print("training xgboost with sparse matrix\n")
 sptrain = sparse(train_X)
 # alternatively, you can pass parameters in as a map
-param = ["max_depth"=>2, "eta"=>1, "objective"=>"binary:logistic"]
-bst = xgboost(sptrain, num_round, label = train_Y, param=param)
+param = ["max_depth" => 2,
+         "eta" => 1,
+         "objective" => "binary:logistic"]
+bst = xgboost(sptrain, num_round, label = train_Y, param = param)
 
 # you can also put in xgboost's DMatrix object
 # DMatrix stores label, data and other meta datas needed for advanced features
@@ -50,7 +53,8 @@ dtrain = DMatrix(train_X, label = train_Y)
 bst = xgboost(dtrain, num_round, eta = 1, objective = "binary:logistic")
 
 # you can also specify data as file path to a LibSVM format input
-bst = xgboost("../data/agaricus.txt.train", num_round, max_depth = 2, eta = 1, objective = "binary:logistic")
+bst = xgboost("../data/agaricus.txt.train", num_round, max_depth = 2, eta = 1,
+              objective = "binary:logistic")
 
 #--------------------basic prediction using XGBoost--------------
 # you can do prediction using the following line
@@ -76,13 +80,14 @@ dtest = DMatrix(test_X, label = test_Y)
 # DMatrix in watchlist should have label (for evaluation)
 watchlist  = [(dtest,"eval"), (dtrain,"train")]
 # we can change evaluation metrics, or use multiple evaluation metrics
-bst = xgboost(dtrain, num_round, param=param, watchlist=watchlist, metrics=["logloss", "error"])
+bst = xgboost(dtrain, num_round, param = param, watchlist = watchlist,
+              metrics = ["logloss", "error"])
 
 # we can also save DMatrix into binary file, then we can load it faster next time
 save(dtest, "dtest.buffer")
 save(dtrain, "dtrain.buffer")
 
-# load model and data in
+# load model and data
 dtrain = DMatrix("dtrain.buffer")
 dtest = DMatrix("dtest.buffer")
 bst = Booster(model_file = "xgb.model")
@@ -95,4 +100,4 @@ print("test-error=", sum((pred .> 0.5) .!= label) / float(size(pred)[1]), "\n")
 # Finally, you can dump the tree you learned using dump_model into a text file
 dump_model(bst, "dump.raw.txt")
 # If you have feature map file, you can dump the model in a more readable way
-dump_model(bst, "dump.nice.txt", fmap="../data/featmap.txt")
+dump_model(bst, "dump.nice.txt", fmap = "../data/featmap.txt")
