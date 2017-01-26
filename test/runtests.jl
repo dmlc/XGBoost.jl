@@ -7,7 +7,7 @@ include("utils.jl")
 facts("Sparse matrices") do
     X = sparse(randn(100,10) .* bitrand(100,10))
     y = randn(100)
-    DMatrix(X, label=y)
+    DMatrix(X, label = y)
 
     X = sparse(convert(Matrix{Float32}, randn(10,100) .* bitrand(10,100)))
     y = randn(100)

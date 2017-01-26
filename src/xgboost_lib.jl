@@ -82,7 +82,7 @@ end
 
 ### slice ###
 function slice{T<:Integer}(dmat::DMatrix, idxset::Vector{T})
-    handle = XGDMatrixSliceDMatrix(dmat.handle, convert(Vector{Int32}, idxset) - 1,
+    handle = XGDMatrixSliceDMatrix(dmat.handle, convert(Vector{Int32}, idxset - 1),
                                    convert(UInt64, size(idxset)[1]))
     return DMatrix(handle)
 end
