@@ -3,9 +3,9 @@ include("xgboost_wrapper_h.jl")
 # TODO: Use reference instead of array for length
 
 type DMatrix
-    handle::Ptr{Void}
+    handle::DMatrixHandle
 
-    function DMatrix(handle::Ptr{Void})
+    function DMatrix(handle::DMatrixHandle)
         dmat = new(handle)
         finalizer(dmat, JLFree)
         return dmat
@@ -83,7 +83,7 @@ function slice{T<:Integer}(dmat::DMatrix, idxset::Vector{T})
 end
 
 type Booster
-    handle::Ptr{Void}
+    handle::BoosterHandle
 
     function Booster(; cachelist::Vector{DMatrix} = convert(Vector{DMatrix}, []),
                      model_file::String = "")
@@ -235,6 +235,7 @@ type CVPack
     dtest::DMatrix
     watchlist::Vector{Tuple{DMatrix,String}}
     bst::Booster
+
     function CVPack(dtrain::DMatrix, dtest::DMatrix, param)
         bst = Booster(cachelist = [dtrain, dtest])
         for itm in param
