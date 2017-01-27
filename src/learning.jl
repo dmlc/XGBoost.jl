@@ -1,87 +1,3 @@
-include("xgboost_wrapper_h.jl")
-
-# TODO: Use reference instead of array for length
-
-type DMatrix
-    handle::DMatrixHandle
-
-    function DMatrix(handle::DMatrixHandle)
-        dmat = new(handle)
-        finalizer(dmat, JLFree)
-        return dmat
-    end
-
-    function DMatrix(fname::String; silent = false)
-        handle = XGDMatrixCreateFromFile(fname, convert(Int32, silent))
-        dmat = new(handle)
-        finalizer(dmat, JLFree)
-        return dmat
-    end
-
-    function DMatrix{K<:Real, V<:Integer}(data::SparseMatrixCSC{K,V}, transposed::Bool = false;
-                                          kwargs...)
-        handle = transposed ? XGDMatrixCreateFromCSCT(data) : XGDMatrixCreateFromCSC(data)
-        dmat = new(handle)
-        for itm in kwargs
-            setinfo(dmat, string(itm[1]), itm[2])
-        end
-        finalizer(dmat, JLFree)
-        return dmat
-    end
-
-    function DMatrix{T<:Real}(data::Matrix{T}, transposed::Bool = false, missing = NaN32;
-                              kwargs...)
-        if !transposed
-            handle = XGDMatrixCreateFromMat(convert(Matrix{Float32}, data),
-                                            convert(Float32, missing))
-        else
-            handle = XGDMatrixCreateFromMatT(convert(Matrix{Float32}, data),
-                                             convert(Float32, missing))
-        end
-
-        dmat = new(handle)
-        for itm in kwargs
-            setinfo(dmat, string(itm[1]), itm[2])
-        end
-
-        finalizer(dmat, JLFree)
-        return dmat
-    end
-
-    function JLFree(dmat::DMatrix)
-        XGDMatrixFree(dmat.handle)
-    end
-end
-
-function get_info(dmat::DMatrix, field::String)
-    XGDMatrixGetFloatInfo(dmat.handle, field)
-end
-
-function setinfo{T<:Real}(dmat::DMatrix, name::String, array::Vector{T})
-    if name == "label" || name == "weight" || name == "base_margin"
-        XGDMatrixSetFloatInfo(dmat.handle, name,
-                              convert(Vector{Float32}, array),
-                              convert(UInt64, length(array)))
-    elseif name == "group"
-        XGDMatrixSetGroup(dmat.handle,
-                          convert(Vector{UInt32}, array),
-                          convert(UInt64, length(array)))
-    else
-        error("unknown information name")
-    end
-end
-
-function save(dmat::DMatrix, fname::String; silent = true)
-    XGDMatrixSaveBinary(dmat.handle, fname, convert(Int32, silent))
-end
-
-### slice ###
-function slice{T<:Integer}(dmat::DMatrix, idxset::Vector{T})
-    handle = XGDMatrixSliceDMatrix(dmat.handle, convert(Vector{Int32}, idxset - 1),
-                                   convert(UInt64, size(idxset)[1]))
-    return DMatrix(handle)
-end
-
 type Booster
     handle::BoosterHandle
 
@@ -101,10 +17,12 @@ type Booster
     end
 end
 
+
 ### save ###
 function save(bst::Booster, fname::String)
     XGBoosterSaveModel(bst.handle, fname)
 end
+
 
 ### dump model ###
 function dump_model(bst::Booster, fname::String; fmap::String = "", with_stats::Bool = false)
@@ -117,24 +35,6 @@ function dump_model(bst::Booster, fname::String; fmap::String = "", with_stats::
     close(fo)
 end
 
-function makeDMatrix(data, label)
-    # running converts
-    if typeof(data) != DMatrix
-        if typeof(data) == String
-            if label != Union{}
-                warning("label will be ignored when data is a file")
-            end
-            return DMatrix(data)
-        else
-            if label == Union{}
-                error("label argument must be present for training, unless you pass in a DMatrix")
-            end
-            return DMatrix(data, label = label)
-        end
-    else
-        return data
-    end
-end
 
 ### train ###
 function xgboost{T<:Any}(data, nrounds::Integer;
@@ -176,6 +76,7 @@ function xgboost{T<:Any}(data, nrounds::Integer;
     end
     return bst
 end
+
 
 ### update ###
 function update(bst::Booster, dtrain::DMatrix, iteration::Integer;
@@ -221,6 +122,7 @@ function eval_set(bst::Booster, watchlist::Vector{Tuple{DMatrix,String}}, iter::
     return res
 end
 
+
 ### predict ###
 function predict(bst::Booster, data; output_margin::Bool = false, ntree_limit::Integer = 0)
     if typeof(data) != DMatrix
@@ -232,6 +134,7 @@ function predict(bst::Booster, data; output_margin::Bool = false, ntree_limit::I
                            convert(UInt32, ntree_limit), len)
     return deepcopy(unsafe_wrap(Array, ptr, len[1]))
 end
+
 
 type CVPack
     dtrain::DMatrix
@@ -248,6 +151,7 @@ type CVPack
         new(dtrain, dtest, watchlist, bst)
     end
 end
+
 
 function mknfold(dall::DMatrix, nfold::Integer, param, seed::Integer, evals=[]; fpreproc = Union{},
                  kwargs = [])
@@ -277,6 +181,7 @@ function mknfold(dall::DMatrix, nfold::Integer, param, seed::Integer, evals=[]; 
     return ret
 end
 
+
 function aggcv(rlist; show_stdv = true)
     cvmap = Dict()
     ret = split(rlist[1])[1]
@@ -305,6 +210,7 @@ function aggcv(rlist; show_stdv = true)
     return ret
 end
 
+
 function nfold_cv(data, num_boost_round::Integer = 10, nfold::Integer = 3; label = Union{},
                   param=[], metrics=[], obj = nothing, feval = Union{}, fpreproc = Union{},
                   show_stdv = true, seed::Integer = 0, kwargs...)
@@ -322,6 +228,7 @@ function nfold_cv(data, num_boost_round::Integer = 10, nfold::Integer = 3; label
     end
 end
 
+
 immutable FeatureImportance
     fname::String
     gain::Float64
@@ -329,10 +236,12 @@ immutable FeatureImportance
     freq::Float64
 end
 
+
 function Base.show(io::IO, f::FeatureImportance)
     @printf(io, "%s: gain = %0.04f, cover = %0.04f, freq = %0.04f", f.fname, f.gain, f.cover,
             f.freq)
 end
+
 
 function Base.show(io::IO, arr::Vector{FeatureImportance}; maxrows = 30)
     println(io, "$(length(arr))-element Vector{$(FeatureImportance)}:")
@@ -343,7 +252,9 @@ function Base.show(io::IO, arr::Vector{FeatureImportance}; maxrows = 30)
     end
 end
 
+
 Base.show(io::IO, ::MIME"text/plain", arr::Vector{FeatureImportance}) = show(io, arr)
+
 
 function importance(bst::Booster; fmap::String = "")
     data = XGBoosterDumpModel(bst.handle, fmap, 1)
@@ -387,6 +298,7 @@ function importance(bst::Booster; fmap::String = "")
     end
     sort!(res, by = x -> -x.gain)
 end
+
 
 function importance(bst::Booster, feature_names::Vector{String})
     res = importance(bst)
