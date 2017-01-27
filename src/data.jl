@@ -50,35 +50,90 @@ type DMatrix
 end
 
 
-function get_info(dmat::DMatrix, field::String)
+# function feature_names(dmat::DMatrix)
+# function feature_types(dmat::DMatrix)
+
+
+function get_base_margin(dmat::DMatrix)
+    XGDMatrixGetFloatInfo(dmat.handle, "base_margin")
+end
+
+
+function get_float_info(dmat::DMatrix, field::String)
     XGDMatrixGetFloatInfo(dmat.handle, field)
 end
 
 
-function setinfo{T<:Real}(dmat::DMatrix, name::String, array::Vector{T})
-    if name == "label" || name == "weight" || name == "base_margin"
-        XGDMatrixSetFloatInfo(dmat.handle, name,
-                              convert(Vector{Float32}, array),
-                              convert(UInt64, length(array)))
-    elseif name == "group"
-        XGDMatrixSetGroup(dmat.handle,
-                          convert(Vector{UInt32}, array),
-                          convert(UInt64, length(array)))
-    else
-        error("unknown information name")
-    end
+function get_label(dmat::DMatrix)
+    return XGDMatrixGetFloatInfo(dmat.handle, "label")
 end
 
 
-function save(dmat::DMatrix, fname::String; silent = true)
+function get_uint_info(dmat::DMatrix, field::String)
+    return XGDMatrixGetUIntInfo(dmat.handle, field)
+end
+
+
+function get_weight(dmat::DMatrix)
+    return XGDMatrixGetFloatInfo(dmat.handle, "weight")
+end
+
+
+function num_col(dmat::DMatrix)
+    return XGDMatrixNumCol(dmat.handle)
+end
+
+
+function num_row(dmat::DMatrix)
+    return XGDMatrixNumRow(dmat.handle)
+end
+
+
+function save_binary(dmat::DMatrix, fname::String; silent = true)
     XGDMatrixSaveBinary(dmat.handle, fname, convert(Int32, silent))
+    return nothing
 end
 
 
-### slice ###
-function slice{T<:Integer}(dmat::DMatrix, idxset::Vector{T})
-    handle = XGDMatrixSliceDMatrix(dmat.handle, convert(Vector{Int32}, idxset - 1),
-                                   convert(UInt64, size(idxset)[1]))
+function set_base_margin(dmat::DMatrix, margin::Vector{Float32})
+    XGDMatrixSetFloatInfo(dmat.handle, "base_margin", margin, convert(UInt64, length(margin))
+    return nothing
+end
+
+
+function set_float_info(dmat::DMatrix, field::String, data::Array{Float32})
+    XGDMatrixSetFloatInfo(dmat.handle, field, data, convert(UInt64, length(data))
+    return nothing
+end
+
+
+function set_group(dmat::DMatrix, group::Vector{UInt32})
+    XGDMatrixSetGroup(dmat.handle, group, convert(UInt64, length(group))
+    return nothing
+end
+
+
+function set_label(dmat::DMatrix, label::Vector{Float32})
+    XGDMatrixSetFloatInfo(dmat.handle, "label", label, convert(UInt64, length(label))
+    return nothing
+end
+
+
+function set_uint_info(dmat::DMatrix, field::String, data::Array{UInt32})
+    XGDMatrixSetUIntInfo(handle.handle, field, data, convert(UInt64, length(data))
+    return nothing
+end
+
+
+function set_weight(dmat::DMatrix, weight::Vector{Float32})
+    XGDMatrixSetFloatInfo(dmat.handle, "weight", weight, convert(UInt64, length(weight))
+    return nothing
+end
+
+
+function slice{T<:Integer}(dmat::DMatrix, rindex::Vector{T})
+    handle = XGDMatrixSliceDMatrix(dmat.handle, convert(Vector{Int32}, rindex - 1),
+                                   convert(UInt64, length(rindex)))
     return DMatrix(handle)
 end
 

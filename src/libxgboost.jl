@@ -144,7 +144,7 @@ function XGDMatrixGetFloatInfo(handle::DMatrixHandle, field::String)
 end
 
 
-function XGDMatrixGetUIntInfo(handle::DMatrixHandle, field::String, out_len::Vector{Bst_ulong})
+function XGDMatrixGetUIntInfo(handle::DMatrixHandle, field::String)
     out_len = Ref{Bst_ulong}(0)
     out_dptr = Ref{Ptr{Cuint}}()
     @xgboost(:XGDMatrixGetUIntInfo,
@@ -159,6 +159,15 @@ end
 function XGDMatrixNumRow(handle::DMatrixHandle)
     out = Ref{Bst_ulong}()
     @xgboost(:XGDMatrixNumRow,
+             handle => DMatrixHandle,
+             out => Ref{Bst_ulong})
+    return out[]
+end
+
+
+function XGDMatrixNumCol(handle::DMatrixHandle)
+    out = Ref{Bst_ulong}()
+    @xgboost(:XGDMatrixNumCol,
              handle => DMatrixHandle,
              out => Ref{Bst_ulong})
     return out[]
