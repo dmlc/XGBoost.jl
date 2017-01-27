@@ -18,22 +18,120 @@ type Booster
 end
 
 
-### save ###
-function save(bst::Booster, fname::String)
-    XGBoosterSaveModel(bst.handle, fname)
+function attr(bst::Booster, attr::String)
+    return XGBoosterGetAttr(bst.handle, attr)
 end
 
 
-### dump model ###
-function dump_model(bst::Booster, fname::String; fmap::String = "", with_stats::Bool = false)
-    data = XGBoosterDumpModel(bst.handle, fmap, convert(Int64, with_stats))
-    fo = open(fname, "w")
-    for i in 1:length(data)
-        @printf(fo, "booster[%d]:\n", i)
-        @printf(fo, "%s", unsafe_string(data[i]))
+function attributes(bst::Booster)
+    names = XGBoosterGetAttrNames(bst)
+    result = Dict{String,String}()
+    for name in names
+        result[name] = XGBoosterGetAttr(bst.handle, name)
     end
-    close(fo)
+    return result
 end
+
+
+function boost(bst::Booster, dtrain::DMatrix, grad::Vector{Float32}, hess::Vector{Float32})
+    @assert size(grad) == size(hess)
+    XGBoosterBoostOneIter(bst.handle, dtrain.handle, grad, hess, convert(UInt64, length(hess)))
+    return nothing
+end
+
+
+#=
+function copy(bst::Booster)
+    model_file = save_raw()
+    handle =
+    return Booster(handle)
+end
+=#
+
+
+function dump_model(bst::Booster, fout::String; fmap::String = "", with_stats::Bool = false)
+    model = XGBoosterDumpModel(bst.handle, fmap, convert(Int64, with_stats))
+    file = open(fout, "w")
+    try
+        for i in 1:length(model)
+            @printf(file, "booster[%d]:\n", i)
+            @printf(file, "%s", unsafe_string(model[i]))
+        end
+    finally
+        close(file)
+    end
+    return nothing
+end
+
+#=
+function eval(bst::Booster, data::DMatrix; name::String = "eval", iteration::Int = 0)
+    return result
+end
+=#
+
+
+function eval_set(bst::Booster, evals::Vector{Tuple{DMatrix,String}}, iteration::Integer;
+                  feval::Union{Function,Void} = nothing)
+    dmats = DMatrix[eval[1] for eval in evals]
+    evnames = String[eval[2] for eval in evals]
+
+    result = ""
+    if typeof(feval) == Function
+        result *= @sprintf("[%d]", iteration)
+        for eval_idx in 1:length(dmats)
+            pred = predict(bst, dmats[eval_idx])
+            name, val = feval(pred, dmats[eval_idx])
+            result *= @sprintf("\t%s-%s:%f", evnames[eval_idx], name, val)
+        end
+        result *= @sprintf("\n")
+    else
+        result *= @sprintf("%s\n", XGBoosterEvalOneIter(bst.handle, convert(Int32, iteration),
+                                                        [dmat.handle for dmat in dmats], evnames,
+                                                        convert(UInt64, length(dmats))))
+    end
+    return result
+end
+
+
+function get_dump(bst::Booster; fmap = "", with_stats = false, dump_format = "text")
+    raw_dump = XGBoosterDumpModel(bst.handle, fmap, convert(Int64, with_stats))
+    model = [unsafe_string(ptr) for ptr in raw_dump]
+    return return model
+end
+
+
+# function get_fscore(bst::Booster; fmap = "")
+# function get_score(bst::Booster; fmap = "", importance_type = "weight")
+# function get_split_value_histogram(bst::Booster, feature::String; fmap = "", bins = nothing)
+
+
+function load_model(fname::String)
+    bst = Booster()
+    XGBoosterLoadModel(bst.handle, fname)
+    return nothing
+end
+
+
+# function load_rabit_checkpoint()
+
+
+# TODO: support pred_leaf
+function predict(bst::Booster, data::DMatrix;
+                 output_margin::Bool = false, ntree_limit::Integer = 0, pred_leaf = false)
+    return XGBoosterPredict(bst.handle, data.handle, convert(Int32, output_margin),
+                            convert(UInt32, ntree_limit))
+end
+
+
+function save_model(bst::Booster, fname::String)
+    XGBoosterSaveModel(bst.handle, fname)
+    return nothing
+end
+
+
+# function save_rabit_checkpoint()
+# function save_raw()
+
 
 
 ### train ###
@@ -92,47 +190,6 @@ function update(bst::Booster, dtrain::DMatrix, iteration::Integer;
     else
         XGBoosterUpdateOneIter(bst.handle, convert(Int32, iteration), dtrain.handle)
     end
-end
-
-
-### eval_set ###
-function eval_set(bst::Booster, watchlist::Vector{Tuple{DMatrix,String}}, iter::Integer;
-                  feval = Union{})
-    dmats = DMatrix[]
-    evnames = String[]
-    for itm in watchlist
-        push!(dmats, itm[1])
-        push!(evnames, itm[2])
-    end
-    res = ""
-    if typeof(feval) == Function
-        res *= @sprintf("[%d]", iter)
-        #@printf(STDERR, "[%d]", iter)
-        for j in 1:size(dmats)[1]
-            pred = predict(bst, dmats[j])
-            name, val = feval(pred, dmats[j])
-            res *= @sprintf("\t%s-%s:%f", evnames[j], name, val)
-        end
-        res *= @sprintf("\n")
-    else
-        res *= @sprintf("%s\n", XGBoosterEvalOneIter(bst.handle, convert(Int32, iter),
-                                                     [mt.handle for mt in dmats],
-                                                     evnames, convert(UInt64, size(dmats)[1])))
-    end
-    return res
-end
-
-
-### predict ###
-function predict(bst::Booster, data; output_margin::Bool = false, ntree_limit::Integer = 0)
-    if typeof(data) != DMatrix
-        data = DMatrix(data)
-    end
-
-    len = UInt64[1]
-    ptr = XGBoosterPredict(bst.handle, data.handle, convert(Int32, output_margin),
-                           convert(UInt32, ntree_limit), len)
-    return deepcopy(unsafe_wrap(Array, ptr, len[1]))
 end
 
 

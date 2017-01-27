@@ -232,16 +232,17 @@ end
 
 
 function XGBoosterPredict(handle::BoosterHandle, dmat::DMatrixHandle, option_mask::Int32,
-                          ntree_limit::UInt32, out_len::Vector{UInt64})
+                          ntree_limit::UInt32)
+    out_len = Ref{Bst_ulong}(0)
     out_result = Ref{Ptr{Float32}}()
     @xgboost(:XGBoosterPredict,
              handle => BoosterHandle,
              dmat => DMatrixHandle,
              option_mask => Cint,
              ntree_limit => Cuint,
-             out_len => Ptr{Bst_ulong},
+             out_len => Ref{Bst_ulong},
              out_result => Ref{Ptr{Cfloat}})
-    return out_result[]
+    return deepcopy(unsafe_wrap(Array, out_result[], out_len[1]))
 end
 
 
