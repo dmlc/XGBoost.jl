@@ -1,3 +1,6 @@
+# TODO: Get rid of type-conversions where possible
+# TODO: Relaxe type requirements for exported functions
+
 type DMatrix
     handle::DMatrixHandle
 
@@ -98,7 +101,7 @@ end
 
 
 function set_base_margin(dmat::DMatrix, margin::Vector{Float32})
-    XGDMatrixSetFloatInfo(dmat.handle, "base_margin", margin, convert(UInt64, length(margin))
+    XGDMatrixSetFloatInfo(dmat.handle, "base_margin", margin, convert(UInt64, length(margin)))
     return nothing
 end
 
