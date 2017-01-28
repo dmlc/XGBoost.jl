@@ -7,7 +7,8 @@ type DMatrix
         return dmat
     end
 
-    function DMatrix(fname::String; silent = false)
+    function DMatrix(fname::String;
+                     silent = false)
         handle = XGDMatrixCreateFromFile(fname, convert(Int32, silent))
         dmat = new(handle)
         finalizer(dmat, JLFree)
@@ -89,7 +90,8 @@ function num_row(dmat::DMatrix)
 end
 
 
-function save_binary(dmat::DMatrix, fname::String; silent = true)
+function save_binary(dmat::DMatrix, fname::String;
+                     silent = true)
     XGDMatrixSaveBinary(dmat.handle, fname, convert(Int32, silent))
     return nothing
 end
