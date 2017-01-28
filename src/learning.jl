@@ -1,7 +1,8 @@
 type Booster
     handle::BoosterHandle
 
-    function Booster(; cachelist::Vector{DMatrix} = convert(Vector{DMatrix}, []),
+    function Booster(;
+                     cachelist::Vector{DMatrix} = convert(Vector{DMatrix}, []),
                      model_file::String = "")
         handle = XGBoosterCreate([itm.handle for itm in cachelist], size(cachelist)[1])
         if model_file != ""
@@ -49,7 +50,8 @@ end
 =#
 
 
-function dump_model(bst::Booster, fout::String; fmap::String = "", with_stats::Bool = false)
+function dump_model(bst::Booster, fout::String;
+                    fmap::String = "", with_stats::Bool = false)
     model = XGBoosterDumpModel(bst.handle, fmap, convert(Int64, with_stats))
     file = open(fout, "w")
     try
@@ -63,11 +65,11 @@ function dump_model(bst::Booster, fout::String; fmap::String = "", with_stats::B
     return nothing
 end
 
-#=
-function eval(bst::Booster, data::DMatrix; name::String = "eval", iteration::Int = 0)
-    return result
+
+function eval(bst::Booster, data::DMatrix;
+              name::String = "eval", iteration::Int = 0)
+    return eval_set(bst, [(DMatrix,name)]), iteration)
 end
-=#
 
 
 function eval_set(bst::Booster, evals::Vector{Tuple{DMatrix,String}}, iteration::Integer;
@@ -93,7 +95,8 @@ function eval_set(bst::Booster, evals::Vector{Tuple{DMatrix,String}}, iteration:
 end
 
 
-function get_dump(bst::Booster; fmap = "", with_stats = false, dump_format = "text")
+function get_dump(bst::Booster;
+                  fmap = "", with_stats = false, dump_format = "text")
     raw_dump = XGBoosterDumpModel(bst.handle, fmap, convert(Int64, with_stats))
     model = [unsafe_string(ptr) for ptr in raw_dump]
     return return model
@@ -133,6 +136,120 @@ end
 # function save_raw()
 
 
+function set_attr(bst::Booster;
+                  kwargs...)
+    for (key, value) in kwargs
+        XGBoosterSetAttr(bst.handle, string(key), string(value))
+    end
+    return nothing
+end
+
+
+function set_param(bst::Booster, params::Dict)
+    for (key, value) in params
+        XGBoosterSetParam(bst.handle, string(key), string(value))
+    end
+    return nothing
+end
+
+
+function set_param(bst::Booster, params::String;
+                   value::Any = nothing)
+    XGBoosterSetParam(bst.handle, params, string(value))
+    return nothing
+end
+
+
+function train(bst::Booster, params::Dict, dtrain::DMatrix;
+               num_boost_round::Int = 10,
+               evals::Vector{Tuple{DMatrix,String}} = Vector{Tuple{DMatrix,String}}(),
+               obj::Union{Function,Void} = nothing, feval::Union{Function,Void} = nothing,
+               maximize::Bool = false, early_stopping_rounds::Union{Int,Void} = nothing,
+               evals_result::Union{Dict{String,Dict{String,String}},Void} = nothing,
+               verbose_eval::Union{Bool,Int} = true, xgb_model::Union{String,Void} = nothing,
+               callbacks::Union{Vector{Function},Void} = nothing)
+
+    callbacks_vec = typeof(callbacks) == Vector{Function} ? callbacks : Vector{Function}()
+
+    if typeof(verbose_eval) == Bool && verbose_eval == true
+        push!(callbacks_vec, cb_print_evaluation()) # TODO: Add this callback
+    elseif typeof(verbose_eval) == Int
+        push!(callbacks_vec, cb_print_evaluation(verbose_eval))
+    end
+
+    if typeof(early_stopping_rounds) != Void
+        push!(callbacks_vec, cb_early_stop(early_stopping_rounds; maximize = maximize,
+                                           verbose = verbose_eval))
+    end
+
+    if typeof(evals_result) != Void
+        push!(callbacks_vec, cb_record_evaluation(evals_result))
+    end
+
+    if typeof(xgb_model) != Void
+        bst = Booster(params, unshift!([eval[1] for eval in evals], dtrain); model_file = xgb_model)
+        num_boost = length(get_dump(bst))
+    else
+        bst = Booster(params, unshift!([eval[1] for eval in evals], dtrain))
+        num_boost = 0
+    end
+
+
+    # Add support for parallel tree
+    num_parallel_tree = 1
+    # Add support for num_class
+    # Add distributed code support
+    start_iteration = 1
+
+    callbacks_before_iter = [cb for cb in callbacks_vec if cb("before")]
+    callbacks_after_iter = [cb for cb in callbacks_vec if cb("after")]
+
+    for i in start_iteration:num_boost_round
+        for cb in callbacks_before_iter
+            cb(CallbackEnv(bst, CVPack[], i, start_iteration, num_boost_round, rank,
+                           Dict{String,Matrix{Float64}}())
+        end
+
+        # Add distributed code support
+
+        num_boost += 1
+
+        evaluation_result_list = []
+        if length(evals) > 0
+            bst_eval_set = eval_set(bst, evals, i, feval)
+            if typeof(bst_eval_set) == String
+                msg = bst_eval_set
+            else
+                msg = decode(bst_eval_set) # TODO: implement decode
+            end
+            res = [split(x, ':') for x in split(msg)]
+            evaluation_result_list = [(k, float(v)) for k, v in res] # TODO: res starts at idx 2?
+        end
+
+        try
+            for cb in callbacks_after_iter
+                cb(callbackenv)
+            end
+        catch err
+            if typeof(err) == EarlyStopException
+                break
+            else
+                throw(err)
+            end
+        end
+        # Add distributed code
+    end
+
+    if typeof(attr(bst, "best_score")) != Void
+        bst.best_score = float(attr(bst, "best_score"))
+        bst.best_iteration = parse(Int, attr(bst, "best_iteration"))
+    else
+        bst.best_iteration = num_boost - 1
+    end
+    bst.best_ntree_limit = (bst.best_iteration + 1) * num_parallel_tree
+
+    return bst
+end
 
 ### train ###
 function xgboost{T<:Any}(data, nrounds::Integer;
