@@ -2,9 +2,8 @@ type Booster
     handle::BoosterHandle
 
     function Booster(;
-                     cachelist::Vector{DMatrix} = convert(Vector{DMatrix}, []),
-                     model_file::String = "")
-        handle = XGBoosterCreate([itm.handle for itm in cachelist], size(cachelist)[1])
+                     cachelist::Vector{DMatrix} = DMatrix[], model_file::String = "")
+        handle = XGBoosterCreate([itm.handle for itm in cachelist], length(cachelist))
         if model_file != ""
             XGBoosterLoadModel(handle, model_file)
         end
@@ -36,7 +35,7 @@ end
 
 function boost(bst::Booster, dtrain::DMatrix, grad::Vector{Float32}, hess::Vector{Float32})
     @assert size(grad) == size(hess)
-    XGBoosterBoostOneIter(bst.handle, dtrain.handle, grad, hess, convert(UInt64, length(hess)))
+    XGBoosterBoostOneIter(bst.handle, dtrain.handle, grad, hess, length(hess))
     return nothing
 end
 
@@ -46,7 +45,7 @@ end
 
 function dump_model(bst::Booster, fout::String;
                     fmap::String = "", with_stats::Bool = false)
-    model = XGBoosterDumpModel(bst.handle, fmap, convert(Int64, with_stats))
+    model = XGBoosterDumpModel(bst.handle, fmap, with_stats)
     file = open(fout, "w")
     try
         for i in 1:length(model)
@@ -81,9 +80,9 @@ function eval_set(bst::Booster, evals::Vector{Tuple{DMatrix,String}}, iteration:
         end
         result *= @sprintf("\n")
     else
-        result *= @sprintf("%s\n", XGBoosterEvalOneIter(bst.handle, convert(Int32, iteration),
+        result *= @sprintf("%s\n", XGBoosterEvalOneIter(bst.handle, iteration,
                                                         [dmat.handle for dmat in dmats], evnames,
-                                                        convert(UInt64, length(dmats))))
+                                                        length(dmats)))
     end
     return result
 end
@@ -91,7 +90,7 @@ end
 
 function get_dump(bst::Booster;
                   fmap = "", with_stats = false, dump_format = "text")
-    raw_dump = XGBoosterDumpModel(bst.handle, fmap, convert(Int64, with_stats))
+    raw_dump = XGBoosterDumpModel(bst.handle, fmap, with_stats)
     model = [unsafe_string(ptr) for ptr in raw_dump]
     return return model
 end
@@ -115,8 +114,8 @@ end
 # TODO: support pred_leaf
 function predict(bst::Booster, data::DMatrix;
                  output_margin::Bool = false, ntree_limit::Integer = 0, pred_leaf = false)
-    return XGBoosterPredict(bst.handle, data.handle, convert(Int32, output_margin),
-                            convert(UInt32, ntree_limit))
+    option_mask = ifelse(output_margin == true, 1, 0)
+    return XGBoosterPredict(bst.handle, data.handle, option_mask, ntree_limit)
 end
 
 
@@ -247,9 +246,9 @@ end
 
 ### train ###
 function xgboost{T<:Any}(data, nrounds::Integer;
-                         label = Union{}, param::Dict{String,T} = Dict{String,String}(),
+                         label = nothing, param::Dict{String,T} = Dict{String,String}(),
                          watchlist = [], metrics = [],
-                         obj = nothing, feval = Union{}, group = [], kwargs...)
+                         obj = nothing, feval = nothing, group = [], kwargs...)
     dtrain = makeDMatrix(data, label)
     if length(group) > 0
       set_info(dtrain, "group", group)
@@ -294,12 +293,9 @@ function update(bst::Booster, dtrain::DMatrix, iteration::Integer;
         pred = predict(bst, dtrain)
         grad, hess = fobj(pred, dtrain)
         @assert size(grad) == size(hess)
-        XGBoosterBoostOneIter(bst.handle, dtrain.handle,
-                            convert(Vector{Float32}, grad),
-                            convert(Vector{Float32}, hess),
-                            convert(UInt64, length(hess)))
+        XGBoosterBoostOneIter(bst.handle, dtrain.handle, grad, hess, length(hess))
     else
-        XGBoosterUpdateOneIter(bst.handle, convert(Int32, iteration), dtrain.handle)
+        XGBoosterUpdateOneIter(bst.handle, iteration, dtrain.handle)
     end
 end
 
@@ -321,7 +317,7 @@ type CVPack
 end
 
 
-function mknfold(dall::DMatrix, nfold::Integer, param, seed::Integer, evals=[]; fpreproc = Union{},
+function mknfold(dall::DMatrix, nfold::Integer, param, seed::Integer, evals=[]; fpreproc = nothing,
                  kwargs = [])
     srand(seed)
     randidx = randperm(XGDMatrixNumRow(dall.handle))
@@ -379,8 +375,8 @@ function aggcv(rlist; show_stdv = true)
 end
 
 
-function nfold_cv(data, num_boost_round::Integer = 10, nfold::Integer = 3; label = Union{},
-                  param=[], metrics=[], obj = nothing, feval = Union{}, fpreproc = Union{},
+function nfold_cv(data, num_boost_round::Integer = 10, nfold::Integer = 3; label = nothing,
+                  param=[], metrics=[], obj = nothing, feval = nothing, fpreproc = nothing,
                   show_stdv = true, seed::Integer = 0, kwargs...)
     dtrain = makeDMatrix(data, label)
     results = String[]
