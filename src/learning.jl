@@ -277,7 +277,7 @@ function xgboost{T<:Any}(data, nrounds::Integer;
         XGBoosterSetParam(bst.handle, "eval_metric", string(itm))
     end
     for i in 1:nrounds
-        update(bst, dtrain, 1, fobj = obj)
+        update(bst, dtrain, i, fobj = obj)
         if !silent
             @printf(STDERR, "%s", eval_set(bst, watchlist, i, feval = feval))
         end
@@ -383,7 +383,7 @@ function nfold_cv(data, num_boost_round::Integer = 10, nfold::Integer = 3; label
     cvfolds = mknfold(dtrain, nfold, param, seed, metrics, fpreproc = fpreproc, kwargs = kwargs)
     for i in 1:num_boost_round
         for f in cvfolds
-            update(f.bst, f.dtrain, 1, fobj = obj)
+            update(f.bst, f.dtrain, i, fobj = obj)
         end
         res = aggcv([eval_set(f.bst, f.watchlist, i, feval = feval) for f in cvfolds],
                     show_stdv = show_stdv)
