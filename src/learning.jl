@@ -104,7 +104,7 @@ end
 function load_model(fname::String)
     bst = Booster()
     XGBoosterLoadModel(bst.handle, fname)
-    return nothing
+    return bst
 end
 
 
