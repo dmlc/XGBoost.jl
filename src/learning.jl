@@ -89,7 +89,7 @@ end
 
 
 function get_dump(bst::Booster;
-                  fmap = "", with_stats = false, dump_format = "text")
+                  fmap = "", with_stats = false)
     raw_dump = XGBoosterDumpModel(bst.handle, fmap, with_stats)
     model = [unsafe_string(ptr) for ptr in raw_dump]
     return return model
