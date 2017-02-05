@@ -107,31 +107,31 @@ end
 
 
 function set_float_info(dmat::DMatrix, field::String, data::Array{Float32})
-    XGDMatrixSetFloatInfo(dmat.handle, field, data, convert(UInt64, length(data))
+    XGDMatrixSetFloatInfo(dmat.handle, field, data, convert(UInt64, length(data)))
     return nothing
 end
 
 
 function set_group(dmat::DMatrix, group::Vector{UInt32})
-    XGDMatrixSetGroup(dmat.handle, group, convert(UInt64, length(group))
+    XGDMatrixSetGroup(dmat.handle, group, convert(UInt64, length(group)))
     return nothing
 end
 
 
 function set_label(dmat::DMatrix, label::Vector{Float32})
-    XGDMatrixSetFloatInfo(dmat.handle, "label", label, convert(UInt64, length(label))
+    XGDMatrixSetFloatInfo(dmat.handle, "label", label, convert(UInt64, length(label)))
     return nothing
 end
 
 
 function set_uint_info(dmat::DMatrix, field::String, data::Array{UInt32})
-    XGDMatrixSetUIntInfo(handle.handle, field, data, convert(UInt64, length(data))
+    XGDMatrixSetUIntInfo(handle.handle, field, data, convert(UInt64, length(data)))
     return nothing
 end
 
 
 function set_weight(dmat::DMatrix, weight::Vector{Float32})
-    XGDMatrixSetFloatInfo(dmat.handle, "weight", weight, convert(UInt64, length(weight))
+    XGDMatrixSetFloatInfo(dmat.handle, "weight", weight, convert(UInt64, length(weight)))
     return nothing
 end
 
