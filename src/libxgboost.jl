@@ -260,6 +260,26 @@ function XGBoosterSaveModel(handle::BoosterHandle, fname::String)
 end
 
 
+function XGBoosterLoadModelFromBuffer(handle::BoosterHandle, buf::Ptr{Void}, len::Bst_ulong)
+    @xgboost(:XGBoosterLoadModelFromBuffer,
+             handle => BoosterHandle,
+             buf => Ptr{Void},
+             len => Bst_ulong)
+end
+
+
+# TODO: implement test for this!
+function XGBoosterGetModelRaw(handle::BoosterHandle)
+    out_len = Ref{Bst_ulong}()
+    out_dptr = Ref{Cstring}()
+    @xgboost(:XGBoosterGetModelRaw,
+             handle => BoosterHandle,
+             out_len => Ref{Bst_ulong},
+             out_dptr => Ref{Cstring})
+    return out_dptr[], out_len[]
+end
+
+
 function XGBoosterDumpModel(handle::BoosterHandle, fmap::String, with_stats::Int64)
     out_dump_array = Ref{Ptr{Cstring}}()
     out_len = Ref{Bst_ulong}(0)
