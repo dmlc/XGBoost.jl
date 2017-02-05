@@ -73,12 +73,12 @@ end
 
 
 function get_base_margin(dmat::DMatrix)
-    XGDMatrixGetFloatInfo(dmat.handle, "base_margin")
+    return XGDMatrixGetFloatInfo(dmat.handle, "base_margin")
 end
 
 
 function get_float_info(dmat::DMatrix, field::String)
-    XGDMatrixGetFloatInfo(dmat.handle, field)
+    return XGDMatrixGetFloatInfo(dmat.handle, field)
 end
 
 
