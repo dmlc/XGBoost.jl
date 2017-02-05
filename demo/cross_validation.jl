@@ -32,7 +32,7 @@ print ("running cross validation, with preprocessing function\n")
 # we can use this to do weight rescale, etc.
 # as a example, we try to set scale_pos_weight
 function fpreproc(dtrain::DMatrix, dtest::DMatrix, param)
-    label = get_info(dtrain, "label")
+    label = get_label(dtrain)
     ratio = sum(label == 0) / sum(label == 1)
     param["scale_pos_weight"] = ratio
     return dtrain, dtest, param
@@ -51,7 +51,7 @@ print("running cross validation, with customized loss function\n")
 ##
 
 function logregobj(preds::Vector{Float32}, dtrain::DMatrix)
-        labels = get_info(dtrain, "label")
+        labels = get_label(dtrain)
         preds = 1.0 ./ (1.0 + exp(-preds))
         grad = preds - labels
         hess = preds .* (1. - preds)
@@ -59,7 +59,7 @@ function logregobj(preds::Vector{Float32}, dtrain::DMatrix)
 end
 
 function evalerror(preds::Vector{Float32}, dtrain::DMatrix)
-    labels = get_info(dtrain, "label")
+    labels = get_label(dtrain)
     # return a pair metric_name, result
     # since preds are margin(before logistic transformation, cutoff at 0)
     return "self-error", sum((preds .> 0.0) .!= labels) / float(size(preds)[1])

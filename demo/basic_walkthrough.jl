@@ -59,15 +59,15 @@ bst = xgboost("../data/agaricus.txt.train", num_round, max_depth = 2, eta = 1,
 #--------------------basic prediction using XGBoost--------------
 # you can do prediction using the following line
 # you can put in Matrix, SparseMatrix or DMatrix
-preds = predict(bst, test_X)
+preds = predict(bst, DMatrix(test_X))
 print("test-error=", sum((preds .> 0.5) .!= test_Y) / float(size(preds)[1]), "\n")
 
 #-------------------save and load models-------------------------
 # save model to binary local file
-save(bst, "xgb.model")
+save_model(bst, "xgb.model")
 # load binary model to julia
 bst2 = Booster(model_file = "xgb.model")
-preds2 = predict(bst2, test_X)
+preds2 = predict(bst2, DMatrix(test_X))
 print("sum(abs(pred2-pred))=", sum(abs(preds2 .- preds)), "\n")
 
 #----------------Advanced features --------------
@@ -84,16 +84,16 @@ bst = xgboost(dtrain, num_round, param = param, watchlist = watchlist,
               metrics = ["logloss", "error"])
 
 # we can also save DMatrix into binary file, then we can load it faster next time
-save(dtest, "dtest.buffer")
-save(dtrain, "dtrain.buffer")
+save_binary(dtest, "dtest.buffer")
+save_binary(dtrain, "dtrain.buffer")
 
 # load model and data
 dtrain = DMatrix("dtrain.buffer")
 dtest = DMatrix("dtest.buffer")
 bst = Booster(model_file = "xgb.model")
 
-# information can be extracted from DMatrix using get_info
-label = get_info(dtest, "label")
+# information can be extracted from DMatrix using the get_ functions
+label = get_label(dtest)
 pred = predict(bst, dtest)
 print("test-error=", sum((pred .> 0.5) .!= label) / float(size(pred)[1]), "\n")
 

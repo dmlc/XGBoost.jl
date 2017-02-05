@@ -32,6 +32,6 @@ num_round = 4
 bst = xgboost(dtrain, num_round, param=param, watchlist=watchlist)
 
 preds = predict(bst, dtest)
-labels = get_info(dtest, "label")
+labels = get_label(dtest)
 
 print("test-error=", sum((preds .> 0.5) .!= labels) / float(size(preds)[1]), "\n")

@@ -14,7 +14,7 @@ bst = xgboost(dtrain, num_round, param = param, watchlist = watchlist)
 
 
 print ("start testing prediction from first n trees\n")
-labels = get_info(dtest, "label")
+labels = get_label(dtest)
 
 ### predict using first 1 tree
 pred1 = predict(bst, dtest, ntree_limit = 1)

@@ -11,7 +11,7 @@ facts("Sparse matrices") do
 
     X = sparse(convert(Matrix{Float32}, randn(10,100) .* bitrand(10,100)))
     y = randn(100)
-    DMatrix(X, true)
+    DMatrix(X, transposed = true)
 
     X = sparse(randn(100,10) .* bitrand(100,10))
     y = randn(100)
@@ -23,7 +23,7 @@ facts("DMatrix loading") do
     train_X, train_Y = readlibsvm("../data/agaricus.txt.train", (6513, 126))
     @fact dtrain --> not(nothing)
 
-    labels = get_info(dtrain, "label")
+    labels = get_label(dtrain)
 
     @fact train_Y --> labels
 end
@@ -39,7 +39,7 @@ facts("Agaricus training") do
 
     preds = XGBoost.predict(bst, dtest)
 
-    labels = get_info(dtest, "label")
+    labels = get_label(dtest)
     @fact size(preds) --> size(labels)
 
     err = countnz((preds .> 0.5) .!= labels) / length(preds)

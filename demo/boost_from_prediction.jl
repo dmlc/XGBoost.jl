@@ -16,8 +16,8 @@ bst = xgboost(dtrain, 1, param=param, watchlist=watchlist)
 # Note: we need the margin value instead of transformed prediction in set_base_margin
 # do predict with output_margin=True, will always give you margin values before logistic transformation
 
-ptrain = predict(bst, dtrain, output_margin=true)
-ptest  = predict(bst, dtest, output_margin=true)
+ptrain = predict(bst, dtrain, output_margin = true)
+ptest  = predict(bst, dtest, output_margin = true)
 
 # set the base_margin property of dtrain and dtest
 # base margin is the base prediction we will boost from

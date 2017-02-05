@@ -17,7 +17,7 @@ watchlist  = [(dtest,"eval"), (dtrain,"train")]
 num_round = 2
 
 function logregobj(preds::Vector{Float32}, dtrain::DMatrix)
-    labels = get_info(dtrain, "label")
+    labels = get_label(dtrain)
     preds = 1.0 ./ (1.0 + exp(-preds))
     grad = preds - labels
     hess = preds .* (1.0-preds)
@@ -31,7 +31,7 @@ end
 # the buildin evaluation error assumes input is after logistic transformation
 # Take this in mind when you use the customization, and maybe you need write customized evaluation function
 function evalerror(preds::Vector{Float32}, dtrain::DMatrix)
-    labels = get_info(dtrain, "label")
+    labels = get_label(dtrain)
     # return a pair metric_name, result
     # since preds are margin(before logistic transformation, cutoff at 0)
     return ("self-error", sum((preds .> 0.0) .!= labels) / float(size(preds)[1]))
