@@ -31,8 +31,8 @@ type DMatrix
 
 
     function DMatrix{T<:Real}(data::Matrix{T};
-        label = nothing, missing::Real = NaN32,
-        weight = nothing, transposed::Bool = false)
+                              label = nothing, missing::Real = NaN32,
+                              weight = nothing, transposed::Bool = false)
 
         if !transposed
             handle = XGDMatrixCreateFromMat(data, missing)
