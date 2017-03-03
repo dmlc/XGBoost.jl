@@ -38,10 +38,10 @@ end
 function XGDMatrixCreateFromCSC(data::SparseMatrixCSC)
     out = Ref{DMatrixHandle}()
     @xgboost(:XGDMatrixCreateFromCSC,
-             data.colptr - 1 => Ptr{Bst_ulong},
-             data.rowval - 1 => Ptr{Cuint},
-             data.nzval => Ptr{Cfloat},
-             size(data.colptr)[1] => Bst_ulong,
+             convert(Vector{Bst_ulong}, data.colptr - 1) => Ref{Bst_ulong},
+             convert(Vector{Cuint}, data.rowval - 1) => Ref{Cuint},
+             convert(Vector{Cfloat}, data.nzval) => Ref{Cfloat},
+             length(data.colptr) => Bst_ulong,
              nnz(data) => Bst_ulong,
              out => Ref{DMatrixHandle})
     return out[]
@@ -49,28 +49,29 @@ end
 
 
 function XGDMatrixCreateFromCSCT(data::SparseMatrixCSC)
-    handle = Ref{DMatrixHandle}()
+    out = Ref{DMatrixHandle}()
     @xgboost(:XGDMatrixCreateFromCSR,
-             data.colptr - 1 => Ptr{Bst_ulong},
-             data.rowval - 1 => Ptr{Cuint},
-             data.nzval => Ptr{Cfloat},
-             size(data.colptr)[1] => Bst_ulong,
+             convert(Vector{Bst_ulong}, data.colptr - 1) => Ref{Bst_ulong},
+             convert(Vector{Cuint}, data.rowval - 1) => Ref{Cuint},
+             convert(Vector{Cfloat}, data.nzval) => Ref{Cfloat},
+             length(data.colptr) => Bst_ulong,
              nnz(data) => Bst_ulong,
-             handle => Ref{DMatrixHandle})
-    return handle[]
+             out => Ref{DMatrixHandle})
+    return out[]
 end
 
 
 function XGDMatrixCreateFromMat{T<:Real}(data::Matrix{T}, missing::Real)
-    XGDMatrixCreateFromMatT(transpose(data), missing)
+    t_data = transpose(data)
+    return XGDMatrixCreateFromMatT(t_data, missing)
 end
 
 
-function XGDMatrixCreateFromMatT{T<:Real}(data::Matrix{T}, missing::Real)
+function XGDMatrixCreateFromMatT(data::Matrix{Cfloat}, missing::Real)
     ncol, nrow = size(data)
     handle = Ref{DMatrixHandle}()
     @xgboost(:XGDMatrixCreateFromMat,
-             data => Ptr{Cfloat},
+             data => Ref{Cfloat},
              nrow => Bst_ulong,
              ncol => Bst_ulong,
              missing => Cfloat,
@@ -79,14 +80,26 @@ function XGDMatrixCreateFromMatT{T<:Real}(data::Matrix{T}, missing::Real)
 end
 
 
-function XGDMatrixSliceDMatrix{T<:Integer}(handle::DMatrixHandle, idxset::Vector{T}, len::Integer)
+function XGDMatrixCreateFromMatT{T<:Real}(data::Matrix{T}, missing::Real)
+    c_data = convert(Matrix{Cfloat}, data)
+    return XGDMatrixCreateFromMatT(c_data, missing)
+end
+
+
+function XGDMatrixSliceDMatrix(handle::DMatrixHandle, idxset::Vector{Cint}, len::Integer)
     ret = Ref{DMatrixHandle}()
     @xgboost(:XGDMatrixSliceDMatrix,
              handle => DMatrixHandle,
-             idxset => Ptr{Cint},
+             idxset => Ref{Cint},
              len => Bst_ulong,
              ret => Ref{DMatrixHandle})
     return ret[]
+end
+
+
+function XGDMatrixSliceDMatrix{T<:Integer}(handle::DMatrixHandle, idxset::Vector{T}, len::Integer)
+    c_idxset = convert(Vector{Cint}, idxset)
+    return XGDMatrixSliceDMatrix(handle, c_idxset, len)
 end
 
 
@@ -104,31 +117,51 @@ function XGDMatrixSaveBinary(handle::DMatrixHandle, fname::String, silent::Bool)
 end
 
 
-function XGDMatrixSetFloatInfo{T<:Real}(handle::DMatrixHandle, field::String, array::Vector{T},
-                                        len::Integer)
+function XGDMatrixSetFloatInfo(handle::DMatrixHandle, field::String, array::Vector{Cfloat},
+                               len::Integer)
     @xgboost(:XGDMatrixSetFloatInfo,
              handle => DMatrixHandle,
              field => Cstring,
-             array => Ptr{Cfloat},
+             array => Ref{Cfloat},
+             len => Bst_ulong)
+end
+
+
+function XGDMatrixSetFloatInfo{T<:Real}(handle::DMatrixHandle, field::String, array::Vector{T},
+                                        len::Integer)
+    c_array = convert(Vector{Cfloat}, array)
+    XGDMatrixSetFloatInfo(handle, field, c_array, len)
+end
+
+
+function XGDMatrixSetUIntInfo(handle::DMatrixHandle, field::String, array::Vector{Cuint},
+                              len::Integer)
+    @xgboost(:XGDMatrixSetUIntInfo,
+             handle => DMatrixHandle,
+             field => Cstring,
+             array => Ref{Cuint},
              len => Bst_ulong)
 end
 
 
 function XGDMatrixSetUIntInfo{T<:Integer}(handle::DMatrixHandle, field::String, array::Vector{T},
                                        len::Integer)
-    @xgboost(:XGDMatrixSetUIntInfo,
+    c_array = convert(Vector{Cuint}, array)
+    XGDMatrixSetUIntInfo(handle, field, c_array, len)
+end
+
+
+function XGDMatrixSetGroup(handle::DMatrixHandle, array::Vector{Cuint}, len::Integer)
+    @xgboost(:XGDMatrixSetGroup,
              handle => DMatrixHandle,
-             field => Cstring,
-             array => Ptr{Cuint},
+             array => Ref{Cuint},
              len => Bst_ulong)
 end
 
 
 function XGDMatrixSetGroup{T<:Integer}(handle::DMatrixHandle, array::Vector{T}, len::Integer)
-    @xgboost(:XGDMatrixSetGroup,
-             handle => DMatrixHandle,
-             array => Ptr{Cuint},
-             len => Bst_ulong)
+    c_array = convert(Vector{Cuint}, array)
+    XGDMatrixSetGroup(handle, c_array, len)
 end
 
 
@@ -206,14 +239,22 @@ function XGBoosterUpdateOneIter(handle::BoosterHandle, iter::Integer, dtrain::DM
 end
 
 
-function XGBoosterBoostOneIter{G<:Real,H<:Real}(handle::BoosterHandle, dtrain::DMatrixHandle,
-                                                grad::Vector{G}, hess::Vector{H}, len::Integer)
+function XGBoosterBoostOneIter(handle::BoosterHandle, dtrain::DMatrixHandle, grad::Vector{Cfloat},
+                               hess::Vector{Cfloat}, len::Integer)
     @xgboost(:XGBoosterBoostOneIter,
              handle => BoosterHandle,
              dtrain => DMatrixHandle,
-             grad => Ptr{Cfloat},
-             hess => Ptr{Cfloat},
+             grad => Ref{Cfloat},
+             hess => Ref{Cfloat},
              len => Bst_ulong)
+end
+
+
+function XGBoosterBoostOneIter{G<:Real,H<:Real}(handle::BoosterHandle, dtrain::DMatrixHandle,
+                                                grad::Vector{G}, hess::Vector{H}, len::Integer)
+    c_grad = convert(Vector{Cfloat}, grad)
+    c_hess = convert(Vector{Cfloat}, hess)
+    XGBoosterBoostOneIter(handle, dtrain, c_grad, c_hess, len)
 end
 
 
@@ -223,8 +264,8 @@ function XGBoosterEvalOneIter(handle::BoosterHandle, iter::Integer, dmats::Vecto
     @xgboost(:XGBoosterEvalOneIter,
              handle => BoosterHandle,
              iter => Cint,
-             dmats => Ptr{DMatrixHandle},
-             evnames => Ptr{Cstring},
+             dmats => Ref{DMatrixHandle},
+             evnames => Ref{Cstring},
              len => Bst_ulong,
              out_result => Ref{Cstring})
     return unsafe_string(out_result[])
