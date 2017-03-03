@@ -61,7 +61,7 @@ end
 
 function eval(bst::Booster, data::DMatrix;
               name::String = "eval", iteration::Int = 0)
-    return eval_set(bst, [(DMatrix, name)], iteration)
+    return eval_set(bst, [(data, name)], iteration)
 end
 
 
@@ -311,7 +311,7 @@ type CVPack
         for itm in param
             XGBoosterSetParam(bst.handle, string(itm[1]), string(itm[2]))
         end
-        watchlist = [(dtrain,"train"), (dtest, "test")]
+        watchlist = [(dtrain, "train"), (dtest, "test")]
         new(dtrain, dtest, watchlist, bst)
     end
 end
@@ -376,7 +376,7 @@ end
 
 
 function nfold_cv(data, num_boost_round::Integer = 10, nfold::Integer = 3; label = nothing,
-                  param=[], metrics=[], obj = nothing, feval = nothing, fpreproc = nothing,
+                  param = [], metrics = [], obj = nothing, feval = nothing, fpreproc = nothing,
                   show_stdv = true, seed::Integer = 0, kwargs...)
     dtrain = makeDMatrix(data, label)
     results = String[]
