@@ -68,7 +68,7 @@ save_model(bst, "xgb.model")
 # load binary model to julia
 bst2 = Booster(model_file = "xgb.model")
 preds2 = predict(bst2, DMatrix(test_X))
-print("sum(abs(pred2-pred))=", sum(abs(preds2 .- preds)), "\n")
+print("sum(abs.(pred2-pred))=", sum(abs.(preds2 .- preds)), "\n")
 
 #----------------Advanced features --------------
 # to use advanced features, we need to put data in xgb.DMatrix
