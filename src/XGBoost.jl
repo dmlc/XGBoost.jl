@@ -3,7 +3,7 @@ __precompile__()
 module XGBoost
 
 include("libxgboost.jl")
-include("data.jl")
+include("core.jl")
 include("learning.jl")
 
 export DMatrix
