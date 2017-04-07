@@ -309,15 +309,14 @@ function XGBoosterLoadModelFromBuffer(handle::BoosterHandle, buf::Ptr{Void}, len
 end
 
 
-# TODO: implement test for this!
 function XGBoosterGetModelRaw(handle::BoosterHandle)
     out_len = Ref{Bst_ulong}()
-    out_dptr = Ref{Cstring}()
+    out_dptr = Ref{Ptr{UInt8}}()
     @xgboost(:XGBoosterGetModelRaw,
              handle => BoosterHandle,
              out_len => Ref{Bst_ulong},
-             out_dptr => Ref{Cstring})
-    return out_dptr[], out_len[]
+             out_dptr => Ref{Ptr{UInt8}})
+    return deepcopy(unsafe_wrap(Array, out_dptr[], out_len[]))
 end
 
 

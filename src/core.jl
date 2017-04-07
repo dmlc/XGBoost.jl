@@ -320,9 +320,9 @@ end
 # function save_rabit_checkpoint()
 
 
-# function save_raw(bst::Booster)
-#     return XGBoosterGetModelRaw(bst.handle)
-# end
+function save_raw(bst::Booster)
+    return XGBoosterGetModelRaw(bst.handle)
+end
 
 
 function set_attr(bst::Booster;
