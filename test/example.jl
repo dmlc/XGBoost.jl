@@ -37,10 +37,6 @@ print("training xgboost with DMatrix")
 dtrain = DMatrix(train_X, label = train_Y)
 bst = xgboost(dtrain, num_round, eta = 1, objective = "binary:logistic")
 
-# you can also specify data as file path to a LibSVM format input
-bst = xgboost(Pkg.dir("XGBoost") * "/data/agaricus.txt.train", num_round, max_depth = 2, eta = 1,
-              objective = "binary:logistic")
-
 #--------------------basic prediction using XGBoost--------------
 # you can do prediction using the following line
 # you can put in Matrix, SparseMatrix or DMatrix

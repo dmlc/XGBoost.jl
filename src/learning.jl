@@ -94,7 +94,8 @@ function xgboost{T<:Any}(data, nrounds::Integer;
                          label = nothing, param::Dict{String,T} = Dict{String,String}(),
                          watchlist = [], metrics = [],
                          obj = nothing, feval = nothing, group = [], kwargs...)
-    dtrain = makeDMatrix(data, label)
+    dtrain = DMatrix(data, label = label)
+
     if length(group) > 0
       set_info(dtrain, "group", group)
     end
@@ -209,7 +210,7 @@ end
 function nfold_cv(data, num_boost_round::Integer = 10, nfold::Integer = 3; label = nothing,
                   param = [], metrics = [], obj = nothing, feval = nothing, fpreproc = nothing,
                   show_stdv = true, seed::Integer = 0, kwargs...)
-    dtrain = makeDMatrix(data, label)
+    dtrain = DMatrix(data, label = label)
     results = String[]
     cvfolds = mknfold(dtrain, nfold, param, seed, metrics, fpreproc = fpreproc, kwargs = kwargs)
     for i in 1:num_boost_round

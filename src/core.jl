@@ -156,27 +156,6 @@ function slice{T<:Integer}(dmat::DMatrix, rindex::Vector{T})
 end
 
 
-# TODO: Deprecate
-function makeDMatrix(data, label)
-    # running converts
-    if typeof(data) != DMatrix
-        if typeof(data) == String
-            if label != nothing
-                warning("label will be ignored when data is a file")
-            end
-            return DMatrix(data)
-        else
-            if label == nothing
-                error("label argument must be present for training, unless you pass in a DMatrix")
-            end
-            return DMatrix(data, label = label)
-        end
-    else
-        return data
-    end
-end
-
-
 type Booster
     handle::BoosterHandle
 
