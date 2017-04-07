@@ -1,7 +1,7 @@
 using XGBoost
 using FactCheck
 
-include("utils.jl")
+include(Pkg.dir("XGBoost") * "/test/utils.jl")
 
 
 facts("Sparse matrices") do
