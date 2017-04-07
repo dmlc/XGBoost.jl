@@ -19,8 +19,8 @@ facts("Sparse matrices") do
 end
 
 facts("DMatrix loading") do
-    dtrain = DMatrix("../data/agaricus.txt.train")
-    train_X, train_Y = readlibsvm("../data/agaricus.txt.train", (6513, 126))
+    dtrain = DMatrix(Pkg.dir("XGBoost") * "/data/agaricus.txt.train")
+    train_X, train_Y = readlibsvm(Pkg.dir("XGBoost") * "/data/agaricus.txt.train", (6513, 126))
     @fact dtrain --> not(nothing)
 
     labels = get_label(dtrain)
@@ -29,8 +29,8 @@ facts("DMatrix loading") do
 end
 
 facts("Agaricus training") do
-    dtrain = DMatrix("../data/agaricus.txt.train")
-    dtest = DMatrix("../data/agaricus.txt.test")
+    dtrain = DMatrix(Pkg.dir("XGBoost") * "/data/agaricus.txt.train")
+    dtest = DMatrix(Pkg.dir("XGBoost") * "/data/agaricus.txt.test")
     watchlist = [(dtest, "eval"), (dtrain, "train")]
 
     bst = xgboost(dtrain, 2, watchlist=watchlist, eta = 1, max_depth = 2,
@@ -47,8 +47,8 @@ facts("Agaricus training") do
 end
 
 facts("Cross validation") do
-    dtrain = DMatrix("../data/agaricus.txt.train")
-    dtest = DMatrix("../data/agaricus.txt.test")
+    dtrain = DMatrix(Pkg.dir("XGBoost") * "/data/agaricus.txt.train")
+    dtest = DMatrix(Pkg.dir("XGBoost") * "/data/agaricus.txt.test")
     watchlist = [(dtest, "eval"), (dtrain, "train")]
 
     bst = nfold_cv(dtrain, 5, 3, eta = 1, max_depth = 2, objective = "binary:logistic", silent = 1,
@@ -60,8 +60,8 @@ facts("Cross validation") do
 end
 
 facts("Feature importance") do
-    dtrain = DMatrix("../data/agaricus.txt.train")
-    dtest = DMatrix("../data/agaricus.txt.test")
+    dtrain = DMatrix(Pkg.dir("XGBoost") * "/data/agaricus.txt.train")
+    dtest = DMatrix(Pkg.dir("XGBoost") * "/data/agaricus.txt.test")
     watchlist = [(dtest, "eval"), (dtrain, "train")]
 
     bst = xgboost(dtrain, 5, watchlist = watchlist, eta = 1, max_depth = 2,

@@ -1,13 +1,13 @@
 using XGBoost
 
-include("utils.jl")
+include(Pkg.dir("XGBoost") * "/test/utils.jl")
 
 # we load in the agaricus dataset
 # In this example, we are aiming to predict whether a mushroom can be eated
 
 # we use auxiliary function to read LIBSVM format into julia Matrix
-train_X, train_Y = readlibsvm("../data/agaricus.txt.train", (6513, 126))
-test_X, test_Y = readlibsvm("../data/agaricus.txt.test", (1611, 126))
+train_X, train_Y = readlibsvm(Pkg.dir("XGBoost") * "/data/agaricus.txt.train", (6513, 126))
+test_X, test_Y = readlibsvm(Pkg.dir("XGBoost") * "/data/agaricus.txt.test", (1611, 126))
 
 #-------------Basic Training using XGBoost-----------------
 # note: xgboost naturally handles sparse input
@@ -38,7 +38,7 @@ dtrain = DMatrix(train_X, label = train_Y)
 bst = xgboost(dtrain, num_round, eta = 1, objective = "binary:logistic")
 
 # you can also specify data as file path to a LibSVM format input
-bst = xgboost("../data/agaricus.txt.train", num_round, max_depth = 2, eta = 1,
+bst = xgboost(Pkg.dir("XGBoost") * "/data/agaricus.txt.train", num_round, max_depth = 2, eta = 1,
               objective = "binary:logistic")
 
 #--------------------basic prediction using XGBoost--------------
@@ -85,7 +85,8 @@ print("test-error=", sum((pred .> 0.5) .!= label) / float(size(pred)[1]), "\n")
 # You can dump the tree you learned using dump_model into a text file
 dump_model(bst, "dump.raw.txt")
 # If you have feature map file, you can dump the model in a more readable way
-dump_model(bst, "dump.nice.txt", fmap = "../data/featmap.txt", with_stats = true)
+dump_model(bst, "dump.nice.txt", fmap = Pkg.dir("XGBoost") * "/data/featmap.txt",
+           with_stats = true)
 
 # You can also get information about feature importances in the model
-dump(importance(bst, fmap = "../data/featmap.txt"))
+dump(importance(bst, fmap = Pkg.dir("XGBoost") * "/data/featmap.txt"))

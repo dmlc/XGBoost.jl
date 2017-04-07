@@ -1,7 +1,8 @@
 using XGBoost
 
-# we load in the agaricus dataset
-# In this example, we are aiming to predict whether a mushroom can be eated
+# In this example, we will predict whether a mushroom is safe to eat.
+
+# Load the agaricus dataset using the readlibsvm helper function.
 function readlibsvm(fname::ASCIIString, shape)
     dmx = zeros(Float32, shape)
     label = Float32[]
@@ -13,7 +14,7 @@ function readlibsvm(fname::ASCIIString, shape)
         line = line[2:end]
         for itm in line
             itm = split(itm, ":")
-            dmx[cnt, int(itm[1]) + 1] = float(int(itm[2]))
+            dmx[cnt, Int(itm[1]) + 1] = float(Int(itm[2]))
         end
         cnt += 1
     end
@@ -21,14 +22,13 @@ function readlibsvm(fname::ASCIIString, shape)
     return (dmx, label)
 end
 
-# we use auxiliary function to read LIBSVM format into julia Matrix
-train_X, train_Y = readlibsvm("../data/agaricus.txt.train", (6513, 126))
-test_X, test_Y = readlibsvm("../data/agaricus.txt.test", (1611, 126))
+train_X, train_Y = readlibsvm(Pkg.dir("XGBoost") * "/data/agaricus.txt.train", (6513, 126))
+test_X, test_Y = readlibsvm(Pkg.dir("XGBoost") * "/data/agaricus.txt.test", (1611, 126))
 
 #-------------Basic Training using XGBoost-----------------
-# note: xgboost naturally handles sparse input
-# use sparse matrix when your feature is sparse(e.g. when you using one-hot encoding vector)
-# model parameters can be set as parameters for ```xgboost``` function, or use a Vector{String} / Dict()
+# Note: xgboost naturally handles sparse input.
+# Use sparse matrix when your features are sparse (e.g. when using one-hot encoding).
+# Model parameters can be set as parameters for the `xgboost` function, or with a Dict.
 num_round = 2
 
 print("training xgboost with dense matrix\n")
@@ -53,7 +53,7 @@ dtrain = DMatrix(train_X, label = train_Y)
 bst = xgboost(dtrain, num_round, eta = 1, objective = "binary:logistic")
 
 # you can also specify data as file path to a LibSVM format input
-bst = xgboost("../data/agaricus.txt.train", num_round, max_depth = 2, eta = 1,
+bst = xgboost(Pkg.dir("XGBoost") * "/data/agaricus.txt.train", num_round, max_depth = 2, eta = 1,
               objective = "binary:logistic")
 
 #--------------------basic prediction using XGBoost--------------
@@ -100,4 +100,4 @@ print("test-error=", sum((pred .> 0.5) .!= label) / float(size(pred)[1]), "\n")
 # Finally, you can dump the tree you learned using dump_model into a text file
 dump_model(bst, "dump.raw.txt")
 # If you have feature map file, you can dump the model in a more readable way
-dump_model(bst, "dump.nice.txt", fmap = "../data/featmap.txt")
+dump_model(bst, "dump.nice.txt", fmap = Pkg.dir("XGBoost") * "/data/featmap.txt")

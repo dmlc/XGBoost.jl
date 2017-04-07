@@ -1,7 +1,7 @@
 using XGBoost
 
-dtrain = DMatrix("../data/agaricus.txt.train")
-dtest = DMatrix("../data/agaricus.txt.test")
+dtrain = DMatrix(Pkg.dir("XGBoost") * "/data/agaricus.txt.train")
+dtest = DMatrix(Pkg.dir("XGBoost") * "/data/agaricus.txt.test")
 
 param = ["max_depth" => 2,
          "eta" => 1,
@@ -13,7 +13,7 @@ num_round = 3
 bst = xgboost(dtrain, num_round, param = param, watchlist = watchlist)
 
 
-print ("start testing prediction from first n trees\n")
+print("start testing prediction from first n trees\n")
 labels = get_label(dtest)
 
 ### predict using first 1 tree

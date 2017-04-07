@@ -1,7 +1,7 @@
 using XGBoost
 
-dtrain = DMatrix("../data/agaricus.txt.train")
-dtest = DMatrix("../data/agaricus.txt.test")
+dtrain = DMatrix(Pkg.dir("XGBoost") * "data/agaricus.txt.train")
+dtest = DMatrix(Pkg.dir("XGBoost") * "data/agaricus.txt.test")
 watchlist  = [(dtest,"eval"), (dtrain,"train")]
 
 
@@ -10,7 +10,10 @@ watchlist  = [(dtest,"eval"), (dtrain,"train")]
 ##
 
 print ("start running example to start from a initial prediction\n")
-param = ["max_depth"=>2, "eta"=>1, "silent"=>1, "objective"=>"binary:logistic"]
+param = ["max_depth" => 2,
+         "eta" => 1,
+         "silent" => 1,
+         "objective" => "binary:logistic"]
 
 bst = xgboost(dtrain, 1, param=param, watchlist=watchlist)
 # Note: we need the margin value instead of transformed prediction in set_base_margin

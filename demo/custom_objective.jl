@@ -4,15 +4,17 @@ using XGBoost
 # advanced: cutomsized loss function
 #
 
-dtrain = DMatrix("../data/agaricus.txt.train")
-dtest = DMatrix("../data/agaricus.txt.test")
+dtrain = DMatrix(Pkg.dir("XGBoost") * "/data/agaricus.txt.train")
+dtest = DMatrix(Pkg.dir("XGBoost") * "/data/agaricus.txt.test")
 
 
 # note: for customized objective function, we leave objective as default
 # note: what we are getting is margin value in prediction
 # you must know what you are doing
 
-param = ["max_depth"=>2, "eta"=>1, "silent"=>1]
+param = ["max_depth" => 2,
+         "eta" => 1,
+         "silent" => 1]
 watchlist  = [(dtest,"eval"), (dtrain,"train")]
 num_round = 2
 
