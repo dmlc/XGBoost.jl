@@ -219,7 +219,9 @@ function boost(bst::Booster, dtrain::DMatrix, grad::Vector{Float32}, hess::Vecto
 end
 
 
-# function copy(bst::Booster)
+function copy(bst::Booster)
+    return Booster(model_file = save_raw(bst))
+end
 
 
 function dump_model(bst::Booster, fout::String;
@@ -283,6 +285,14 @@ end
 function load_model(fname::String)
     bst = Booster()
     XGBoosterLoadModel(bst.handle, fname)
+    return bst
+end
+
+
+function load_model(fname::Vector{UInt8})
+    bst = Booster()
+    len = length(fname)
+    XGBoosterLoadModelFromBuffer(bst.handle, fname, len)
     return bst
 end
 

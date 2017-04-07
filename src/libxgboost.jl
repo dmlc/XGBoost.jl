@@ -301,10 +301,10 @@ function XGBoosterSaveModel(handle::BoosterHandle, fname::String)
 end
 
 
-function XGBoosterLoadModelFromBuffer(handle::BoosterHandle, buf::Ptr{Void}, len::Integer)
+function XGBoosterLoadModelFromBuffer(handle::BoosterHandle, buf::Vector{UInt8}, len::Integer)
     @xgboost(:XGBoosterLoadModelFromBuffer,
              handle => BoosterHandle,
-             buf => Ptr{Void},
+             buf => Ref{UInt8},
              len => Bst_ulong)
 end
 
