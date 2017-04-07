@@ -203,10 +203,10 @@ end
 
 
 function attributes(bst::Booster)
-    names = XGBoosterGetAttrNames(bst)
+    attr_names = XGBoosterGetAttrNames(bst)
     result = Dict{String,String}()
-    for name in names
-        result[name] = XGBoosterGetAttr(bst.handle, name)
+    for attr_name in attr_names
+        result[attr_name] = XGBoosterGetAttr(bst.handle, attr_name)
     end
     return result
 end
