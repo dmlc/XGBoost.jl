@@ -307,12 +307,6 @@ function aggcv(rlist; show_stdv = true)
         k = item[1]
         v = item[2]
 
-        #if show_stdv == true
-        #    res = [res; [k; mean(v)]]
-        #else
-        #    res = [res; [k; mean(v); std(v)]]
-        #end
-
         if show_stdv == true
             res = [res k mean(v)]
         else
