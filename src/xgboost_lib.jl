@@ -155,11 +155,17 @@ function xgboost(data, nrounds::Integer; label = Union{}, param = [], watchlist 
     end
     bst = Booster(cachelist = cache)
     XGBoosterSetParam(bst.handle, "silent", "1")
+    
     silent = false
+    print_every_n = 1
+
     for itm in kwargs
         XGBoosterSetParam(bst.handle, string(itm[1]), string(itm[2]))
         if itm[1] == :silent
             silent = itm[2] != 0
+        end
+        if itm[1] == :print_every_n
+            print_every_n = itm[2]
         end
     end
     for itm in param
@@ -173,7 +179,7 @@ function xgboost(data, nrounds::Integer; label = Union{}, param = [], watchlist 
     end
     for i = 1:nrounds
         update(bst, 1, dtrain, obj=obj)
-        if !silent
+        if !silent & ((i == 1) || (i % print_every_n == 0) || (i == nrounds))
             @printf(STDERR, "%s", eval_set(bst, watchlist, i, feval = feval))
         end
     end
@@ -294,33 +300,84 @@ function aggcv(rlist; show_stdv = true)
     end
     items = [item for item in cvmap]
     sort!(items, by = x -> x[1])
+
+    res = [ret]
+
     for item in items
         k = item[1]
         v = item[2]
+
+        #if show_stdv == true
+        #    res = [res; [k; mean(v)]]
+        #else
+        #    res = [res; [k; mean(v); std(v)]]
+        #end
+
         if show_stdv == true
-            ret *= @sprintf("\tcv-%s:%f+%f", k, mean(v), std(v))
+            res = [res k mean(v)]
         else
-            ret *= @sprintf("\tcv-%s:%f", k, mean(v))
+            res = [res k mean(v) std(v)]
         end
     end
-    return ret
+
+    res
 end
 
 function nfold_cv(data, num_boost_round::Integer = 10, nfold::Integer = 3; label = Union{},
                   param=[], metrics=[], obj = Union{}, feval = Union{}, fpreproc = Union{},
                   show_stdv = true, seed::Integer = 0, kwargs...)
     dtrain = makeDMatrix(data, label)
-    results = String[]
+    results = []
     cvfolds = mknfold(dtrain, nfold, param, seed, metrics, fpreproc=fpreproc, kwargs = kwargs)
+
+    silent = false
+    print_every_n = 1
+    early_stopping_rounds = -1
+
+    for itm in kwargs
+        if itm[1] == :silent
+            silent = itm[2] != 0
+        end
+        if itm[1] == :print_every_n
+            print_every_n = itm[2]
+        end
+        if itm[1] == :early_stopping_rounds
+            early_stopping_rounds = itm[2]
+        end
+    end
+
     for i in 1:num_boost_round
+
         for f in cvfolds
             update(f.bst, 1, f.dtrain, obj = obj)
         end
         res = aggcv([eval_set(f.bst, f.watchlist, i, feval = feval) for f in cvfolds],
                     show_stdv = show_stdv)
-        push!(results, res)
-        @printf(STDERR, "%s\n", res)
+
+        # push!(results, res)
+        
+        if (size(results, 1) == 0)
+            results = res
+        else
+            results = vcat(results, res)
+        end
+
+        best_iteration = indmin(results[:, 3])
+
+        if (i > early_stopping_rounds > 0) & (best_iteration < (i - early_stopping_rounds))
+            
+            if !silent
+                @printf(STDERR, "Stopping. Best iteration: %s\n", best_iteration)
+            end
+
+            break
+        end
+
+        if !silent & ((i == 1) || (i % print_every_n == 0) || (i == num_boost_round))
+            @printf(STDERR, "%s\n", res)
+        end
     end
+    results
 end
 
 immutable FeatureImportance
