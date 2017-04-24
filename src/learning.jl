@@ -1,103 +1,138 @@
-# function train(bst::Booster, params::Dict, dtrain::DMatrix;
-#                num_boost_round::Int = 10,
-#                evals::Vector{Tuple{DMatrix,String}} = Vector{Tuple{DMatrix,String}}(),
-#                obj::Union{Function,Void} = nothing, feval::Union{Function,Void} = nothing,
-#                maximize::Bool = false, early_stopping_rounds::Union{Int,Void} = nothing,
-#                evals_result::Union{Dict{String,Dict{String,String}},Void} = nothing,
-#                verbose_eval::Union{Bool,Int} = true, xgb_model::Union{String,Void} = nothing,
-#                callbacks::Union{Vector{Function},Void} = nothing)
+function train(bst::Booster, params::Dict{String,<:Any}, dtrain::DMatrix;
+               num_boost_round::Int = 10,
+               evals::Vector{Tuple{DMatrix,String}} = Vector{Tuple{DMatrix,String}}(),
+               obj::Union{Function,Void} = nothing, feval::Union{Function,Void} = nothing,
+               maximize::Bool = false, early_stopping_rounds::Union{Int,Void} = nothing,
+               verbose_eval::Union{Bool,Int} = true,
+               xgb_model::Union{Booster,String,Void} = nothing,
+               callbacks::Union{Vector{Function},Void} = nothing)
 
-#     callbacks_vec = typeof(callbacks) == Vector{Function} ? callbacks : Vector{Function}()
+    callbacks_vec = isa(callbacks, Vector{Function}) ? callbacks : Vector{Function}()
 
-#     if typeof(verbose_eval) == Bool && verbose_eval == true
-#         push!(callbacks_vec, cb_print_evaluation()) # TODO: Add this callback
-#     elseif typeof(verbose_eval) == Int
-#         push!(callbacks_vec, cb_print_evaluation(verbose_eval))
-#     end
+    if isa(verbose_eval, Bool) && verbose_eval == true
+        push!(callbacks_vec, cb_print_evaluation()) # TODO: Add this callback
+    elseif isa(verbose_eval, Int)
+        push!(callbacks_vec, cb_print_evaluation(verbose_eval))
+    end
 
-#     if typeof(early_stopping_rounds) != Void
-#         push!(callbacks_vec, cb_early_stop(early_stopping_rounds; maximize = maximize,
-#                                            verbose = verbose_eval))
-#     end
+    if !isa(early_stopping_rounds, Void)
+        push!(callbacks_vec, cb_early_stop(early_stopping_rounds; maximize = maximize,
+                                           verbose = verbose_eval))
+    end
 
-#     if typeof(evals_result) != Void
-#         push!(callbacks_vec, cb_record_evaluation(evals_result))
-#     end
+    # Initialize the Booster with the appropriate caches.
+    if isa(xgb_model, Void)
+        cache = unshift!([eval[1] for eval in evals], dtrain)
+        bst = Booster(params = params, cache = cache)
+        num_boost = 0
+    else
+        if isa(xgb_model, String)
+            _xgb_model = xgb_model
+        else isa(xgb_model, Booster)
+            _xgb_model = xgb_model.save_raw()
+        end
+        cache = unshift!([eval[1] for eval in evals], dtrain)
+        bst = Booster(params = params, cache = cache;
+                      model_file = _xgb_model)
+        num_boost = length(get_dump(bst))
+    end
 
-#     if typeof(xgb_model) != Void
-#         bst = Booster(params, unshift!([eval[1] for eval in evals], dtrain); model_file = xgb_model)
-#         num_boost = length(get_dump(bst))
-#     else
-#         bst = Booster(params, unshift!([eval[1] for eval in evals], dtrain))
-#         num_boost = 0
-#     end
+    if haskey(params, "num_parallel_tree")
+        num_parallel_tree = params["num_parallel_tree"]
+        num_boost /= num_parallel_tree
+    else
+        num_parallel_tree = 1
+    end
+
+    if haskey(params, "num_class")
+        num_boost /= params["num_class"]
+    end
+
+    # Add distributed code support.
+    start_iteration = 1
+
+    callbacks_before_iter = [cb for cb in callbacks_vec if cb.cb_timing == "before"]
+    callbacks_after_iter = [cb for cb in callbacks_vec if cb.cb_timing == "after"]
+
+    for iter in start_iteration:num_boost_round
+        for cb in callbacks_before_iter
+            cb(CallbackEnv(bst, CVPack[], iter, start_iteration, num_boost_round, rank,
+                           Dict{String,Matrix{Float64}}()))
+        end
+
+        # Add distributed code support.
+
+        num_boost += 1
+
+        if length(evals) > 0
+            bst_eval_set = eval_set(bst, evals, iter, feval) # string("\t", evnames[eval_idx], "-", name, ":", val)
+            evaluation_results = split_eval(bst_eval_set, iter, start_iteration, num_boost_round)
+        else
+            evaluation_results = Dict{String,Dict{String,Vector{Float64}}}()
+        end
+
+        try
+            for cb in callbacks_after_iter
+                cb(callbackenv)
+            end
+        catch err
+            if isa(err, EarlyStopException)
+                break
+            else
+                throw(err)
+            end
+        end
+        # Add distributed code
+    end
+
+    # if attr(bst, "best_score") != ""
+    #     bst.best_score = float(attr(bst, "best_score"))
+    #     bst.best_iteration = parse(Int, attr(bst, "best_iteration"))
+    # else
+    #     bst.best_iteration = num_boost - 1
+    # end
+    # bst.best_ntree_limit = (bst.best_iteration + 1) * num_parallel_tree
+
+    return bst
+end
 
 
-#     # Add support for parallel tree
-#     num_parallel_tree = 1
-#     # Add support for num_class
-#     # Add distributed code support
-#     start_iteration = 1
+function split_evals(bst_eval_set::String, iter::Int, start_iteration::Int, num_boost_round::Int)
+    evaluation_results = Dict{String,Dict{String,Vector{Float64}}}()
+    split_eval_set = split(bst_eval_set, ['\t', '-', ':'], keep = false)
+    num_evals = div(length(split_eval_set), 3)
 
-#     callbacks_before_iter = [cb for cb in callbacks_vec if cb("before")]
-#     callbacks_after_iter = [cb for cb in callbacks_vec if cb("after")]
+    for eval_idx in 1:num_evals
+        split_idx_offset = 1 + 3 * (eval_idx - 1)
+        eval_name = split_eval_set[split_idx_offset]
+        metric_name = split_eval_set[split_idx_offset + 1]
+        metric_value = split_eval_set[split_idx_offset + 2]
 
-#     for i in start_iteration:num_boost_round
-#         # for cb in callbacks_before_iter
-#         #     cb(CallbackEnv(bst, CVPack[], i, start_iteration, num_boost_round, rank,
-#         #                    Dict{String,Matrix{Float64}}())
-#         # end
+        if !haskey(evaluation_results, eval_name)
+            evaluation_results[eval_name] = Dict{String,Vector{Float64}}()
+        end
 
-#         # Add distributed code support
+        curr_eval = evaluation_results[eval_name]
+        if !haskey(curr_eval, metric_name)
+            curr_eval[metric_name] = Vector{Float64}(1 + num_boost_round - start_iteration)
+        end
 
-#         num_boost += 1
+        curr_eval[metric_name][1 + iter - start_iteration] = float(metric_value)
+    end
 
-#         evaluation_result_list = []
-#         if length(evals) > 0
-#             bst_eval_set = eval_set(bst, evals, i, feval)
-#             if typeof(bst_eval_set) == String
-#                 msg = bst_eval_set
-#             else
-#                 msg = decode(bst_eval_set) # TODO: implement decode
-#             end
-#             res = [split(x, ':') for x in split(msg)]
-#             evaluation_result_list = [(k, float(v)) for (k, v) in res] # TODO: res starts at idx 2?
-#         end
+    return evaluation_results
+end
 
-#         try
-#             for cb in callbacks_after_iter
-#                 cb(callbackenv)
-#             end
-#         catch err
-#             if typeof(err) == EarlyStopException
-#                 break
-#             else
-#                 throw(err)
-#             end
-#         end
-#         # Add distributed code
-#     end
-
-#     if typeof(attr(bst, "best_score")) != Void
-#         bst.best_score = float(attr(bst, "best_score"))
-#         bst.best_iteration = parse(Int, attr(bst, "best_iteration"))
-#     else
-#         bst.best_iteration = num_boost - 1
-#     end
-#     bst.best_ntree_limit = (bst.best_iteration + 1) * num_parallel_tree
-
-#     return bst
-# end
 
 ### train ###
 function xgboost(data, nrounds::Integer;
                  label = nothing, param::Dict{String,<:Any} = Dict{String,String}(),
                  watchlist = [], metrics = [],
                  obj = nothing, feval = nothing, group = [], kwargs...)
-    if typeof(data) != DMatrix
-        dtrain = DMatrix(data, label = label)
-    else
+    if isa(data, DMatrix)
         dtrain = data
+    else
+        dtrain = DMatrix(data, label = label)
     end
 
     if length(group) > 0
@@ -108,7 +143,7 @@ function xgboost(data, nrounds::Integer;
     for itm in watchlist
         push!(cache, itm[1])
     end
-    bst = Booster(cachelist = cache)
+    bst = Booster(cache = cache)
     XGBoosterSetParam(bst.handle, "silent", "1")
     silent = false
     for itm in kwargs
@@ -129,7 +164,7 @@ function xgboost(data, nrounds::Integer;
     for i in 1:nrounds
         update(bst, dtrain, i, fobj = obj)
         if !silent
-            @printf(STDERR, "%s", eval_set(bst, watchlist, i, feval = feval))
+            println(eval_set(bst, watchlist, i, feval = feval))
         end
     end
     return bst
@@ -143,7 +178,7 @@ type CVPack
     bst::Booster
 
     function CVPack(dtrain::DMatrix, dtest::DMatrix, param)
-        bst = Booster(cachelist = [dtrain, dtest])
+        bst = Booster(cache = [dtrain, dtest])
         for itm in param
             XGBoosterSetParam(bst.handle, string(itm[1]), string(itm[2]))
         end
@@ -169,7 +204,7 @@ function mknfold(dall::DMatrix, nfold::Integer, param, seed::Integer, evals=[]; 
         end
         dtrain = slice(dall, selected)
         dtest = slice(dall, idset[k])
-        if typeof(fpreproc) == Function
+        if isa(fpreproc, Function)
             dtrain, dtest, tparam = fpreproc(dtrain, dtest, deepcopy(param))
         else
             tparam = param
@@ -214,11 +249,12 @@ end
 function nfold_cv(data, num_boost_round::Integer = 10, nfold::Integer = 3; label = nothing,
                   param = [], metrics = [], obj = nothing, feval = nothing, fpreproc = nothing,
                   show_stdv = true, seed::Integer = 0, kwargs...)
-    if typeof(data) != DMatrix
-        dtrain = DMatrix(data, label = label)
+    if isa(data, DMatrix)
+       dtrain = data
     else
-        dtrain = data
+        dtrain = DMatrix(data, label = label)
     end
+
     results = String[]
     cvfolds = mknfold(dtrain, nfold, param, seed, metrics, fpreproc = fpreproc, kwargs = kwargs)
     for i in 1:num_boost_round
@@ -228,7 +264,7 @@ function nfold_cv(data, num_boost_round::Integer = 10, nfold::Integer = 3; label
         res = aggcv([eval_set(f.bst, f.watchlist, i, feval = feval) for f in cvfolds],
                     show_stdv = show_stdv)
         push!(results, res)
-        @printf(STDERR, "%s\n", res)
+        println(res)
     end
 end
 
@@ -275,7 +311,7 @@ function importance(bst::Booster; fmap::String = "")
     for i in 1:length(data)
         for line in split(unsafe_string(data[i]), '\n')
             m = match(lineMatch, line)
-            if typeof(m) != Void
+            if !isa(m, Void)
                 fname = replace(m.captures[1], nameStrip, "")
 
                 gain = parse(Float64, m.captures[4])

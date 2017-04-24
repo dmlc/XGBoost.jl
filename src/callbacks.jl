@@ -5,22 +5,24 @@ type CallbackEnv
     begin_iteration::Int
     end_iteration::Int
     rank::Int
-    evaluation_results::Dict{String,Matrix{Float64}}
+    evaluation_results::Dict{String,Dict{String,Vector{Float64}}}
 end
+
 
 type EarlyStopException <: Exception
     best_iteration::Int
 end
 
 
-function cb_print_evalution(; period::Int = 1, show_stdv::Bool = true)
+function cb_print_evaluation(period::Int = 1, show_stdv::Bool = true)
+    cb_timing = "after"
 
     function callback(env::CallbackEnv)
         if env.rank != 0 || length(evaluation_result_list) == 0 || period == false
             return nothing
         end
         i = env.iteration
-        if i % period == 0 || i + 1 == env.begin_iteration
+        if (i - 1) % period == 0 || i == env.begin_iteration || i == env.end_iteration
             # TODO: Add print script here
         end
 
@@ -31,39 +33,10 @@ function cb_print_evalution(; period::Int = 1, show_stdv::Bool = true)
 end
 
 
-function cb_record_evaluation(eval_result)
-    for key in keys(eval_result)
-        delete!(eval_result, key)
-    end
-
-    function init(env)
-        for k in keys(env.evaluation_result_list)
-            key, metric = split(k, '-')
-            if !in(key, eval_result)
-                eval_result[key] = # TODO: Add the eval_result type here
-            end
-            if !in(metric) in eval_result[key]
-                eval_result[key][metric] = # TODO: Add the eval_result type here
-            end
-        end
-    end
-
-    function callback(env::CallbackEnv)
-        if length(eval_result) == 0
-            init(env) # TODO: Check that this form of initializing works correctly.
-        end
-        for (k, v) in env.evaluation_result_list
-            key, metric = split(k, '-')
-            eval_result[key][metric] # TODO: make sure v is added to this result list
-        end
-    end
-
-    return callback
-end
-
-
 function cb_early_stop(env::CallbackEnv, early_stopping_rounds::Integer,
                        early_stopping_metric::String, maximize::Bool = false, verbose = true)
+    cb_timing = "after"
+
     if length(env.evaluation_result_list) == 0
         error("For early stopping you need at least one set in evals.")
     end

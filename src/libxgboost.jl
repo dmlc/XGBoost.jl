@@ -207,10 +207,10 @@ function XGDMatrixNumCol(handle::DMatrixHandle)
 end
 
 
-function XGBoosterCreate(cachelist::Vector{BoosterHandle}, len::Integer)
+function XGBoosterCreate(dmats::Vector{DMatrixHandle}, len::Integer)
     out = Ref{BoosterHandle}()
     @xgboost(:XGBoosterCreate,
-             cachelist => Ptr{BoosterHandle},
+             dmats => Ptr{DMatrixHandle},
              len => Bst_ulong,
              out => Ref{BoosterHandle})
     return out[]

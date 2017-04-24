@@ -19,10 +19,10 @@ type DMatrix
         dmat = new(handle)
         finalizer(dmat, JLFree)
 
-        if typeof(label) != Void
+        if !isa(label, Void)
             XGDMatrixSetFloatInfo(dmat.handle, "label", label, length(label))
         end
-        if typeof(weight) != Void
+        if !isa(weight, Void)
             XGDMatrixSetFloatInfo(dmat.handle, "weight", weight, length(weight))
         end
 
@@ -43,10 +43,10 @@ type DMatrix
         dmat = new(handle)
         finalizer(dmat, JLFree)
 
-        if typeof(label) != Void
+        if !isa(label, Void)
             XGDMatrixSetFloatInfo(dmat.handle, "label", label, length(label))
         end
-        if typeof(weight) != Void
+        if !isa(weight, Void)
             XGDMatrixSetFloatInfo(dmat.handle, "weight", weight, length(weight))
         end
 
@@ -297,13 +297,22 @@ type Booster
     handle::BoosterHandle
 
     function Booster(;
-                     cachelist::Vector{DMatrix} = DMatrix[], model_file::String = "")
-        handle = XGBoosterCreate([itm.handle for itm in cachelist], length(cachelist))
+                     params::Dict{String,<:Any} = Dict{String,Any}(),
+                     cache::Vector{DMatrix} = DMatrix[], model_file::String = "")
+        # TODO: add _validate_features for cache when storing feature_names and types in DMatrix.
+        dmats = [dmat.handle for dmat in cache]
+        handle = XGBoosterCreate(dmats, length(dmats))
+
         if model_file != ""
             XGBoosterLoadModel(handle, model_file)
         end
+
         bst = new(handle)
         finalizer(bst, JLFree)
+
+        set_param(bst, "seed", 0)
+        set_param(bst, params)
+
         return bst
     end
 
@@ -406,7 +415,7 @@ end
 """
     eval(bst, data; [name = "eval", iteration = 0])
 
-Return an evaluation of the model on the data as String.
+Return an evaluation of the model on the data as a string.
 
 # Arguments
 * `bst::Booster`: the Booster.
@@ -423,7 +432,7 @@ end
 """
     eval_set(bst, evals, iteration; [feval = nothing])
 
-Return multiple evaluations of the model as String.
+Return multiple evaluations of the model as a string.
 
 # Arguments
 * `bst::Booster`: the Booster.
@@ -433,22 +442,19 @@ Return multiple evaluations of the model as String.
 """
 function eval_set(bst::Booster, evals::Vector{Tuple{DMatrix,String}}, iteration::Integer;
                   feval::Union{Function,Void} = nothing)
-    dmats = DMatrix[eval[1] for eval in evals]
-    evnames = String[eval[2] for eval in evals]
+    dmats = DMatrix[i[1] for i in evals]
+    evnames = String[i[2] for i in evals]
 
-    result = ""
-    if typeof(feval) == Function
-        result *= @sprintf("[%d]", iteration)
+    if isa(feval, Function)
+        result = string("[", iteration, "]")
         for eval_idx in 1:length(dmats)
             pred = predict(bst, dmats[eval_idx])
             name, val = feval(pred, dmats[eval_idx])
-            result *= @sprintf("\t%s-%s:%f", evnames[eval_idx], name, val)
+            result *= string("\t", evnames[eval_idx], "-", name, ":", val)
         end
-        result *= @sprintf("\n")
     else
-        result *= @sprintf("%s\n", XGBoosterEvalOneIter(bst.handle, iteration,
-                                                        [dmat.handle for dmat in dmats], evnames,
-                                                        length(dmats)))
+        result = XGBoosterEvalOneIter(bst.handle, iteration, [dmat.handle for dmat in dmats],
+                                      evnames, length(dmats))
     end
     return result
 end
@@ -615,14 +621,20 @@ Set parameters into the Booster.
 """
 function set_param(bst::Booster, params::Dict{String,<:Any})
     for (param, value) in params
-        XGBoosterSetParam(bst.handle, param, string(value))
+        if isa(value, Array) # Automatically handle array values for eval_metrics
+            for value_entry in value
+                XGBoosterSetParam(bst.handle, param, string(value_entry))
+            end
+        else
+            XGBoosterSetParam(bst.handle, param, string(value))
+        end
     end
     return nothing
 end
 
 
 """
-    set_param(bst, param; [value = nothing])
+    set_param(bst, param, value)
 
 Set a parameter in the Booster.
 
@@ -631,8 +643,7 @@ Set a parameter in the Booster.
 * `param::String`: key of the parameter to set.
 * `value::Any`: the value to set the parameter to.
 """
-function set_param(bst::Booster, param::String;
-                   value::Any = nothing)
+function set_param(bst::Booster, param::String, value::Any)
     XGBoosterSetParam(bst.handle, param, string(value))
     return nothing
 end
@@ -651,7 +662,7 @@ Update the Booster for one iteration, with objective function calculated interna
 """
 function update(bst::Booster, dtrain::DMatrix, iteration::Integer;
                 fobj::Union{Function,Void} = nothing)
-    if typeof(fobj) == Function
+    if isa(fobj, Function)
         pred = predict(bst, dtrain)
         grad, hess = fobj(pred, dtrain)
         @assert size(grad) == size(hess)
