@@ -12,7 +12,7 @@ type DMatrix
     end
 
 
-    function DMatrix{K<:Real,V<:Integer}(data::SparseMatrixCSC{K,V};
+    function DMatrix(data::SparseMatrixCSC{<:Real,<:Integer};
         label = nothing, weight = nothing, transposed::Bool = false)
 
         handle = transposed ? XGDMatrixCreateFromCSCT(data) : XGDMatrixCreateFromCSC(data)
@@ -30,9 +30,9 @@ type DMatrix
     end
 
 
-    function DMatrix{T<:Real}(data::Matrix{T};
-                              label = nothing, missing::Real = NaN32,
-                              weight = nothing, transposed::Bool = false)
+    function DMatrix(data::Matrix{<:Real};
+                     label = nothing, missing::Real = NaN32,
+                     weight = nothing, transposed::Bool = false)
 
         if !transposed
             handle = XGDMatrixCreateFromMat(data, missing)
@@ -193,9 +193,9 @@ put in value before logistic transformation.
 
 # Arguments
 * `dmat::DMatrix`: the DMatrix.
-* `margin::Vector{T<:Real}`: prediction margin of each datapoint.
+* `margin::Vector{<:Real}`: prediction margin of each datapoint.
 """
-function set_base_margin{T<:Real}(dmat::DMatrix, margin::Vector{T})
+function set_base_margin(dmat::DMatrix, margin::Vector{<:Real})
     XGDMatrixSetFloatInfo(dmat.handle, "base_margin", margin, length(margin))
     return nothing
 end
@@ -209,9 +209,9 @@ Set float type property into the DMatrix.
 # Arguments
 * `dmat::DMatrix`: the DMatrix.
 * `field::String`: the field name of the information.
-* `data::Vector{T<:Real}`: the array of data to be set.
+* `data::Vector`: the array of data to be set.
 """
-function set_float_info{T<:Real}(dmat::DMatrix, field::String, data::Vector{T})
+function set_float_info(dmat::DMatrix, field::String, data::Vector{<:Real})
     XGDMatrixSetFloatInfo(dmat.handle, field, data, length(data))
     return nothing
 end
@@ -224,9 +224,9 @@ Set group size of DMatrix (used for ranking).
 
 # Arguments
 * `dmat::DMatrix`: the DMatrix.
-* `group::Vector{T<:Integer}`: group size of each group.
+* `group::Vector`: group size of each group.
 """
-function set_group{T<:Integer}(dmat::DMatrix, group::Vector{T})
+function set_group(dmat::DMatrix, group::Vector{<:Integer})
     XGDMatrixSetGroup(dmat.handle, group, length(group))
     return nothing
 end
@@ -239,9 +239,9 @@ Set label of DMatrix.
 
 # Arguments
 * `dmat::DMatrix`: the DMatrix.
-* `label::Vector{T<:Real}`: the label information to be set into DMatrix.
+* `label::Vector`: the label information to be set into DMatrix.
 """
-function set_label{T<:Real}(dmat::DMatrix, label::Vector{T})
+function set_label(dmat::DMatrix, label::Vector{<:Real})
     XGDMatrixSetFloatInfo(dmat.handle, "label", label, length(label))
     return nothing
 end
@@ -255,9 +255,9 @@ Set uint type property into the DMatrix.
 # Arguments
 * `dmat::DMatrix`: the DMatrix.
 * `field::String`: the field name of the information.
-* `data::Vector{T<:Integer}`: the array of data to be set.
+* `data::Vector`: the array of data to be set.
 """
-function set_uint_info{T<:Integer}(dmat::DMatrix, field::String, data::Vector{T})
+function set_uint_info(dmat::DMatrix, field::String, data::Vector{<:Integer})
     XGDMatrixSetUIntInfo(dmat.handle, field, data, length(data))
     return nothing
 end
@@ -270,9 +270,9 @@ Set weight of each instance.
 
 # Arguments
 * `dmat::DMatrix`: the DMatrix.
-* `weight::Vector{T<:Real}`: weight for each data point.
+* `weight::Vector`: weight for each data point.
 """
-function set_weight{T<:Real}(dmat::DMatrix, weight::Vector{T})
+function set_weight(dmat::DMatrix, weight::Vector{<:Real})
     XGDMatrixSetFloatInfo(dmat.handle, "weight", weight, length(weight))
     return nothing
 end
@@ -285,9 +285,9 @@ Slice the DMatrix and return a new DMatrix that only contains rindex.
 
 # Arguments
 * `dmat::DMatrix`: the DMatrix.
-* `rindex::Vector{T<:Integer}`: list of indices to be selected.
+* `rindex::Vector`: list of indices to be selected.
 """
-function slice{T<:Integer}(dmat::DMatrix, rindex::Vector{T})
+function slice(dmat::DMatrix, rindex::Vector{<:Integer})
     handle = XGDMatrixSliceDMatrix(dmat.handle, rindex - 1, length(rindex))
     return DMatrix(handle)
 end
@@ -613,7 +613,7 @@ Set parameters into the Booster.
 * `bst::Booster`: the Booster.
 * `params::Dict{String,T<:Any}`: dictionary of (key, value) pairs.
 """
-function set_param{T<:Any}(bst::Booster, params::Dict{String,T})
+function set_param(bst::Booster, params::Dict{String,<:Any})
     for (param, value) in params
         XGBoosterSetParam(bst.handle, param, string(value))
     end

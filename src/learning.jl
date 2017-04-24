@@ -90,10 +90,10 @@
 # end
 
 ### train ###
-function xgboost{T<:Any}(data, nrounds::Integer;
-                         label = nothing, param::Dict{String,T} = Dict{String,String}(),
-                         watchlist = [], metrics = [],
-                         obj = nothing, feval = nothing, group = [], kwargs...)
+function xgboost(data, nrounds::Integer;
+                 label = nothing, param::Dict{String,<:Any} = Dict{String,String}(),
+                 watchlist = [], metrics = [],
+                 obj = nothing, feval = nothing, group = [], kwargs...)
     if typeof(data) != DMatrix
         dtrain = DMatrix(data, label = label)
     else
