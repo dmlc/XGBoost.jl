@@ -2,7 +2,7 @@ using XGBoost
 
 dtrain = DMatrix(Pkg.dir("XGBoost") * "data/agaricus.txt.train")
 dtest = DMatrix(Pkg.dir("XGBoost") * "data/agaricus.txt.test")
-watchlist  = [(dtest,"eval"), (dtrain,"train")]
+watchlist  = [(dtest, "eval"), (dtrain, "train")]
 
 
 ###
@@ -28,7 +28,7 @@ ptest  = predict(bst, dtest, output_margin = true)
 set_info(dtrain, "base_margin", ptrain)
 set_info(dtest, "base_margin", ptest)
 
-watchlist  = [(dtest,"eval2"), (dtrain,"train2")]
+watchlist  = [(dtest, "eval2"), (dtrain, "train2")]
 print ("this is result of running from initial prediction\n")
 
-bst = xgboost(dtrain, 1, param=param, watchlist=watchlist)
+bst = xgboost(dtrain, 1, param = param, watchlist = watchlist)

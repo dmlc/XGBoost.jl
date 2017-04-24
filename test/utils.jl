@@ -14,5 +14,5 @@ function readlibsvm(fname::String, shape)
         cnt += 1
     end
     close(fi)
-    return (dmx, label)
+    return dmx, label
 end

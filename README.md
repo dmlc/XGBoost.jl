@@ -64,7 +64,7 @@ bst = xgboost(train_X, num_round, label = train_Y, eta = 1, max_depth = 2)
 ## Predict
 ```julia
 pred = predict(bst, DMatrix(test_X))
-print("test-error=", sum((pred .> 0.5) .!= test_Y) / float(size(pred)[1]), "\n")
+print("test-error=", sum((pred .> .5) .!= test_Y) / float(length(pred)), "\n")
 ```
 
 ## Cross-Validation

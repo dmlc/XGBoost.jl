@@ -11,4 +11,3 @@ Notes
 ====
 * Contributing examples or benchmarks is highly appreciated!
 * If you like to share how you use xgboost to solve your problem, send a pull request :)
-

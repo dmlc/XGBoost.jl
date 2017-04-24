@@ -24,7 +24,7 @@ param = ["booster" => "gblinear",
 # there could be affection on convergence with parallelization on certain cases
 # setting eta to be smaller value, e.g .5 can make the optimization more stable.
 
-watchlist  = [(dtest,"eval"), (dtrain,"train")]
+watchlist  = [(dtest, "eval"), (dtrain, "train")]
 num_round = 4
 
 bst = xgboost(dtrain, num_round, param=param, watchlist=watchlist)
@@ -32,4 +32,4 @@ bst = xgboost(dtrain, num_round, param=param, watchlist=watchlist)
 preds = predict(bst, dtest)
 labels = get_label(dtest)
 
-print("test-error=", sum((preds .> 0.5) .!= labels) / float(size(preds)[1]), "\n")
+print("test-error=", sum((preds .> .5) .!= labels) / float(length(preds)), "\n")

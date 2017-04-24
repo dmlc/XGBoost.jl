@@ -15,15 +15,15 @@ dtest = DMatrix(Pkg.dir("XGBoost") * "/data/agaricus.txt.test")
 param = ["max_depth" => 2,
          "eta" => 1,
          "silent" => 1]
-watchlist  = [(dtest,"eval"), (dtrain,"train")]
+watchlist  = [(dtest, "eval"), (dtrain, "train")]
 num_round = 2
 
 function logregobj(preds::Vector{Float32}, dtrain::DMatrix)
     labels = get_label(dtrain)
-    preds = 1.0 ./ (1.0 + exp(-preds))
+    preds = 1. ./ (1. + exp(-preds))
     grad = preds - labels
-    hess = preds .* (1.0-preds)
-    return (grad, hess)
+    hess = preds .* (1. - preds)
+    return grad, hess
 end
 
 # user defined evaluation function, return a pair metric_name, result
@@ -36,12 +36,12 @@ function evalerror(preds::Vector{Float32}, dtrain::DMatrix)
     labels = get_label(dtrain)
     # return a pair metric_name, result
     # since preds are margin(before logistic transformation, cutoff at 0)
-    return ("self-error", sum((preds .> 0.0) .!= labels) / float(size(preds)[1]))
+    return ("self-error", sum((preds .> 0.) .!= labels) / float(length(preds)))
 end
 
 
 # training with customized objective, we can also do step by step training
 # simply look at xgboost_lib.jl's implementation of train
-bst = xgboost(dtrain, num_round, param=param, watchlist=watchlist,
-              obj=logregobj, feval=evalerror)
+bst = xgboost(dtrain, num_round, param = param, watchlist = watchlist,
+              obj = logregobj, feval = evalerror)
 
