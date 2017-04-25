@@ -5,7 +5,7 @@ module XGBoost
 include("libxgboost.jl")
 include("core.jl")
 include("learning.jl")
-# include("callbacks.jl")
+include("callbacks.jl")
 
 export DMatrix
 export get_base_margin, get_float_info, get_label, get_uint_info, get_weight, num_col, num_row,

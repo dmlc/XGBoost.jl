@@ -1,4 +1,4 @@
-function train(bst::Booster, params::Dict{String,<:Any}, dtrain::DMatrix;
+function train(params::Dict{String,<:Any}, dtrain::DMatrix;
                num_boost_round::Int = 10,
                evals::Vector{Tuple{DMatrix,String}} = Vector{Tuple{DMatrix,String}}(),
                obj::Union{Function,Void} = nothing, feval::Union{Function,Void} = nothing,
@@ -10,14 +10,14 @@ function train(bst::Booster, params::Dict{String,<:Any}, dtrain::DMatrix;
     callbacks_vec = isa(callbacks, Vector{Function}) ? callbacks : Vector{Function}()
 
     if isa(verbose_eval, Bool) && verbose_eval == true
-        push!(callbacks_vec, cb_print_evaluation()) # TODO: Add this callback
+        push!(callbacks_vec, cb_print_evaluation())
     elseif isa(verbose_eval, Int)
         push!(callbacks_vec, cb_print_evaluation(verbose_eval))
     end
 
     if !isa(early_stopping_rounds, Void)
-        push!(callbacks_vec, cb_early_stop(early_stopping_rounds; maximize = maximize,
-                                           verbose = verbose_eval))
+        push!(callbacks_vec, cb_early_stop(early_stopping_rounds, maximize, verbose_eval, params,
+                                           evals, feval)) # TODO: Add "early_stopping_metric"
     end
 
     # Initialize the Booster with the appropriate caches.
@@ -29,7 +29,7 @@ function train(bst::Booster, params::Dict{String,<:Any}, dtrain::DMatrix;
         if isa(xgb_model, String)
             _xgb_model = xgb_model
         else isa(xgb_model, Booster)
-            _xgb_model = xgb_model.save_raw()
+            _xgb_model = save_raw(xgb_model)
         end
         cache = unshift!([eval[1] for eval in evals], dtrain)
         bst = Booster(params = params, cache = cache;
@@ -49,37 +49,41 @@ function train(bst::Booster, params::Dict{String,<:Any}, dtrain::DMatrix;
     end
 
     # Add distributed code support.
+    rank = 0
     start_iteration = 1
 
     callbacks_before_iter = [cb for cb in callbacks_vec if cb.cb_timing == "before"]
     callbacks_after_iter = [cb for cb in callbacks_vec if cb.cb_timing == "after"]
 
+    results = init_results(evals)
+    env = CallbackEnv(bst, CVPack[], 0, start_iteration, num_boost_round, rank, results)
+
     for iter in start_iteration:num_boost_round
+        env.iteration = iter
         for cb in callbacks_before_iter
-            cb(CallbackEnv(bst, CVPack[], iter, start_iteration, num_boost_round, rank,
-                           Dict{String,Matrix{Float64}}()))
+            cb(env)
         end
 
+        update(bst, dtrain, iter, fobj = obj)
+        num_boost += 1
         # Add distributed code support.
 
-        num_boost += 1
-
         if length(evals) > 0
-            bst_eval_set = eval_set(bst, evals, iter, feval) # string("\t", evnames[eval_idx], "-", name, ":", val)
-            evaluation_results = split_eval(bst_eval_set, iter, start_iteration, num_boost_round)
-        else
-            evaluation_results = Dict{String,Dict{String,Vector{Float64}}}()
+            evalstring = eval_set(bst, evals, iter, feval = feval)
+            row = 1 + iter - start_iteration
+            num_rows = 1 + num_boost_round - start_iteration
+            insert_evals!(results, evalstring, row, 1, num_rows, 1)
         end
 
         try
             for cb in callbacks_after_iter
-                cb(callbackenv)
+                cb(env)
             end
         catch err
             if isa(err, EarlyStopException)
                 break
             else
-                throw(err)
+                rethrow(err)
             end
         end
         # Add distributed code
@@ -97,30 +101,34 @@ function train(bst::Booster, params::Dict{String,<:Any}, dtrain::DMatrix;
 end
 
 
-function split_evals(bst_eval_set::String, iter::Int, start_iteration::Int, num_boost_round::Int)
-    evaluation_results = Dict{String,Dict{String,Vector{Float64}}}()
-    split_eval_set = split(bst_eval_set, ['\t', '-', ':'], keep = false)
-    num_evals = div(length(split_eval_set), 3)
+# Return a results dictionary with a dictionary entry for each eval_name.
+function init_results(evals::Vector{Tuple{DMatrix,String}})
+    results = Dict(i[2] => Dict{String,Matrix{Float64}}() for i in evals)
+    return results
+end
+
+
+# Insert the entries in the evalstring into the results dictionary.
+function insert_evals!(results::Dict{String,Dict{String,Matrix{Float64}}}, evalstring::String,
+                       row::Int, col::Int, num_rows::Int, num_cols::Int)
+    split_eval_set = split(evalstring, ['\t', '-', ':'], keep = false)
+    num_evals = div(length(split_eval_set) + 1, 3)
 
     for eval_idx in 1:num_evals
-        split_idx_offset = 1 + 3 * (eval_idx - 1)
-        eval_name = split_eval_set[split_idx_offset]
-        metric_name = split_eval_set[split_idx_offset + 1]
-        metric_value = split_eval_set[split_idx_offset + 2]
+        eval_name_idx = 2 + 3 * (eval_idx - 1)
+        eval_name = split_eval_set[eval_name_idx]
+        metric_name = split_eval_set[eval_name_idx + 1]
+        metric_value = split_eval_set[eval_name_idx + 2]
 
-        if !haskey(evaluation_results, eval_name)
-            evaluation_results[eval_name] = Dict{String,Vector{Float64}}()
-        end
-
-        curr_eval = evaluation_results[eval_name]
+        curr_eval = results[eval_name]
         if !haskey(curr_eval, metric_name)
-            curr_eval[metric_name] = Vector{Float64}(1 + num_boost_round - start_iteration)
+            curr_eval[metric_name] = Matrix{Float64}(num_rows, num_cols)
         end
 
-        curr_eval[metric_name][1 + iter - start_iteration] = float(metric_value)
+        curr_eval[metric_name][row] = float(metric_value)
     end
 
-    return evaluation_results
+    return results
 end
 
 
@@ -250,7 +258,7 @@ function nfold_cv(data, num_boost_round::Integer = 10, nfold::Integer = 3; label
                   param = [], metrics = [], obj = nothing, feval = nothing, fpreproc = nothing,
                   show_stdv = true, seed::Integer = 0, kwargs...)
     if isa(data, DMatrix)
-       dtrain = data
+        dtrain = data
     else
         dtrain = DMatrix(data, label = label)
     end
