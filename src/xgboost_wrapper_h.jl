@@ -10,8 +10,8 @@ end
 macro xgboost(f, params...)
     return quote
         err = ccall(($f, _jl_libxgboost), Int64,
-                    ($((esc(i.args[3]) for i in params)...),),
-                    $((esc(i.args[2]) for i in params)...))
+                    ($((esc(i.args[end]) for i in params)...),),
+                    $((esc(i.args[end - 1]) for i in params)...))
         if err != 0
             err_msg = unsafe_string(ccall((:XGBGetLastError, _jl_libxgboost), Cstring, ()))
             error("Call to XGBoost C function ", string($(esc(f))), " failed: ", err_msg)
