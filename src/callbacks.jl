@@ -156,6 +156,7 @@ function cb_early_stop(early_stopping_rounds::Integer, maximize::Bool,
     return callback
 end
 
+
 function should_maximize(early_stopping_metric::String)
     maximize_metrics = ("auc", "map", "ndcg")
     if in(early_stopping_metric, maximize_metrics)

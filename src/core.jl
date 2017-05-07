@@ -62,6 +62,7 @@ type DMatrix
         return dmat
     end
 
+
     function JLFree(dmat::DMatrix)
         XGDMatrixFree(dmat.handle)
     end

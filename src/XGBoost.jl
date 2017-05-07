@@ -4,7 +4,9 @@ module XGBoost
 
 include("libxgboost.jl")
 include("core.jl")
-include("learning.jl")
+include("training.jl")
+include("crossvalidation.jl")
+include("legacy.jl")
 include("callbacks.jl")
 
 export DMatrix
