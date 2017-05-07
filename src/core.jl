@@ -1,6 +1,3 @@
-# TODO: Get rid of type-conversions where possible
-# TODO: Relax type requirements for exported functions
-
 type DMatrix
     handle::DMatrixHandle
 
@@ -363,10 +360,18 @@ Boost the Booster for one iteration, with customized gradient statistics.
 # Arguments
 * `bst::Booster`: the Booster.
 * `dtrain::DMatrix`: the training DMatrix.
-* `grad::Vector{Float32}`: the first order of the gradient.
-* `hess::Vector{Float32}`: the second order of the gradient.
+* `grad::Vector{<:Real}`: the first order of the gradient.
+* `hess::Vector{<:Real}`: the second order of the gradient.
 """
-function boost(bst::Booster, dtrain::DMatrix, grad::Vector{Float32}, hess::Vector{Float32})
+function boost(bst::Booster, dtrain::DMatrix, grad::Vector{<:Real}, hess::Vector{<:Real})
+    @assert size(grad) == size(hess)
+    XGBoosterBoostOneIter(bst.handle, dtrain.handle, convert(Vector{Cfloat}, grad),
+                          convert(Vector{Cfloat}, hess), length(hess))
+    return nothing
+end
+
+
+function boost(bst::Booster, dtrain::DMatrix, grad::Vector{Cfloat}, hess::Vector{Cfloat})
     @assert size(grad) == size(hess)
     XGBoosterBoostOneIter(bst.handle, dtrain.handle, grad, hess, length(hess))
     return nothing
@@ -481,7 +486,7 @@ Returns a dump of the model as a Vector{String}.
 * `with_stats::Bool`: controls whether the split statistics are output.
 """
 function get_dump(bst::Booster;
-                  fmap = "", with_stats = false)
+                  fmap::String = "", with_stats::Bool = false)
     raw_dump = XGBoosterDumpModel(bst.handle, fmap, with_stats)
     model = [unsafe_string(ptr) for ptr in raw_dump]
     return return model
