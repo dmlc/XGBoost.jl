@@ -31,28 +31,7 @@ function cb_print_evaluation(period::Int = 1, show_stdv::Bool = true)
         iter = env.iteration
         cur_results_idx = 1 + iter - env.begin_iteration
         if (iter - 1) % period == 0 || iter == env.begin_iteration || iter == env.end_iteration
-            print("[", iter, "]")
-            results = env.results
-            for eval_name in keys(results)
-                eval_results = results[eval_name]
-                for eval_metric in keys(eval_results)
-                    eval_metric_results = eval_results[eval_metric]
-                    num_cols = size(eval_metric_results, 2)
-                    if num_cols > 1
-                        metric_values = eval_metric_results[cur_results_idx, :]
-                        mean_metric_value = mean(metric_values)
-                        print("\t", eval_name, "-", eval_metric, ":", mean_metric_value)
-                        if show_stdv
-                            std_metric_value = std(metric_values)
-                            print("+", std_metric_value)
-                        end
-                    else
-                        metric_value = eval_metric_results[cur_results_idx, 1]
-                        print("\t", eval_name, "-", eval_metric, ":", metric_value)
-                    end
-                end
-            end
-            print("\n")
+            print_evaluation(env.results, iter, cur_results_idx, show_stdv)
         end
 
         return nothing
@@ -62,14 +41,40 @@ function cb_print_evaluation(period::Int = 1, show_stdv::Bool = true)
 end
 
 
+function print_evaluation(results::Dict{String,Dict{String,Matrix{Float64}}}, iter::Int,
+                          cur_results_idx::Int, show_stdv::Bool)
+    print("[", iter, "]")
+    for eval_name in keys(results)
+        eval_results = results[eval_name]
+        for eval_metric in keys(eval_results)
+            eval_metric_results = eval_results[eval_metric]
+            num_cols = size(eval_metric_results, 2)
+            if num_cols > 1
+                metric_values = eval_metric_results[cur_results_idx, :]
+                mean_metric_value = mean(metric_values)
+                print("\t", eval_name, "-", eval_metric, ":", mean_metric_value)
+                if show_stdv
+                    std_metric_value = std(metric_values)
+                    print("+", std_metric_value)
+                end
+            else
+                metric_value = eval_metric_results[cur_results_idx, 1]
+                print("\t", eval_name, "-", eval_metric, ":", metric_value)
+            end
+        end
+    end
+    print("\n")
+end
+
+
 function cb_early_stop(early_stopping_rounds::Integer, maximize::Bool,
                        verbose_eval::Union{Bool,Int}, params::Dict{String,<:Any},
                        evals::Vector{Tuple{DMatrix,String}}, feval::Union{Function,Void})
     cb_timing = "after"
-    cb_early_stopping_metric = [""]
-    cb_best_iteration = [0]
-    cb_best_score = [Inf]
-    cb_maximize = [maximize]
+    cb_early_stopping_metric = Ref{String}("")
+    cb_best_iteration = Ref{Int}(0)
+    cb_best_score = Ref{Float64}(Inf)
+    cb_maximize = Ref{Bool}(maximize)
 
     # Establish the eval_name to use for early_stopping.
     if length(evals) == 0
@@ -88,20 +93,20 @@ function cb_early_stop(early_stopping_rounds::Integer, maximize::Bool,
         if haskey(params, "eval_metric")
             params_eval_metric = params["eval_metric"]
             if isa(params_eval_metric, Array)
-                cb_early_stopping_metric[1] = string(params_eval_metric[end])
+                cb_early_stopping_metric[] = string(params_eval_metric[end])
             else
-                cb_early_stopping_metric[1] = string(params_eval_metric)
+                cb_early_stopping_metric[] = string(params_eval_metric)
             end
-            if should_maximize(cb_early_stopping_metric[1])
-                cb_maximize[1] = true
-                cb_best_score[1] = -Inf
+            if should_maximize(cb_early_stopping_metric[])
+                cb_maximize[] = true
+                cb_best_score[] = -Inf
             else
-                cb_maximize[1] = false
-                cb_best_score[1] = Inf
+                cb_maximize[] = false
+                cb_best_score[] = Inf
             end
             if verbose_eval > 0 # For distributed version, add && env.rank == 0
                 println("Will train until ", cb_early_stopping_eval, "'s ",
-                        cb_early_stopping_metric[1], " hasn't improved in ",
+                        cb_early_stopping_metric[], " hasn't improved in ",
                         early_stopping_rounds, " round(s).")
             end
         else
@@ -117,33 +122,33 @@ function cb_early_stop(early_stopping_rounds::Integer, maximize::Bool,
         cb_timing
 
         # If the early stopping metric isn't known yet, deduce it and reset scores.
-        if cb_early_stopping_metric[1] == ""
+        if cb_early_stopping_metric[] == ""
             metric_names = keys(env.results[cb_early_stopping_eval])
             @assert length(metric_names) == 1
             early_stopping_metric = first(metric_names)
-            cb_early_stopping_metric[1] = early_stopping_metric
-            cb_best_iteration[1] = 0
+            cb_early_stopping_metric[] = early_stopping_metric
+            cb_best_iteration[] = 0
             if should_maximize(early_stopping_metric)
-                cb_maximize[1] = true
-                cb_best_score[1] = -Inf
+                cb_maximize[] = true
+                cb_best_score[] = -Inf
             else
-                cb_maximize[1] = false
-                cb_best_score[1] = Inf
+                cb_maximize[] = false
+                cb_best_score[] = Inf
             end
         end
 
-        early_stopping_metric = cb_early_stopping_metric[1]
-        maximize = cb_maximize[1]
+        early_stopping_metric = cb_early_stopping_metric[]
+        maximize = cb_maximize[]
         iteration = env.iteration
-        best_score = cb_best_score[1]
-        best_iteration = cb_best_iteration[1]
+        best_score = cb_best_score[]
+        best_iteration = cb_best_iteration[]
 
         # TODO: This only looks at the first column, will have to adapt this when used in CV.
         score = env.results[cb_early_stopping_eval][early_stopping_metric][iteration, 1]
 
         if (maximize && (score > best_score)) || (!maximize && (score < best_score))
-            cb_best_score[1] = score
-            cb_best_iteration[1] = iteration
+            cb_best_score[] = score
+            cb_best_iteration[] = iteration
             set_attr(env.model,
                      best_score = score,
                      best_iteration = iteration)
@@ -152,7 +157,7 @@ function cb_early_stop(early_stopping_rounds::Integer, maximize::Bool,
                 println("Stopping. Best iteration: ", best_iteration, ", ", early_stopping_metric,
                         ": ", best_score)
             end
-            shrink!(results, iteration)
+            shrink!(env.results, iteration)
             throw(EarlyStopException(best_iteration))
         end
     end
@@ -165,7 +170,7 @@ end
 function shrink!(results::Dict{String,Dict{String,Matrix{Float64}}}, last_retained_iter::Int)
     for eval_name in keys(results)
         curr_eval = results[eval_name]
-        for metric_name in keys(test)
+        for metric_name in keys(curr_eval)
             curr_eval[metric_name] = curr_eval[metric_name][1:last_retained_iter, :]
         end
     end

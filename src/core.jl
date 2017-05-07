@@ -418,15 +418,6 @@ function dump_model(bst::Booster, fout::String;
 end
 
 
-function get_dump(bst::Booster;
-                  fmap = "", with_stats = false)
-    dump_ptrs = XGBoosterDumpModel(bst.handle, fmap, with_stats)
-    model = [unsafe_string(ptr) for ptr in dump_ptrs]
-    return return model
-end
-
-
-
 """
     eval(bst, data; [name = "eval", iteration = 0])
 
