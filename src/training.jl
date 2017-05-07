@@ -1,3 +1,33 @@
+"""
+    train(params, dtrain; [num_boost_round = 10, evals = Vector{Tuple{DMatrix,String}}(),
+          obj = nothing, feval = nothing, maximize = false, early_stopping_rounds = nothing,
+          verbose_eval = true, xgb_model = nothing, callbacks = nothing])
+
+Return a Booster trained with the given parameters.
+
+# Arguments
+* `params::Dict{String,<:Any}`: Booster params.
+* `dtrain::DMatrix`: Data to be trained.
+* `num_boost_round::Int`: Number of boosting iterations.
+* `evals::Vector{Tuple{DMatrix,String}}`: Vector of items to be evaluated during training, this
+    allows user to watch performance on the validation set.
+* `obj::Union{Function,Void}`: Customized objective function.
+* `feval::Union{Function,Void}`:  Customized evaluation function.
+* `maximize::Bool`: Whether to maximize feval.
+* `early_stopping_rounds::Union{Int,Void}`: Activates early stopping. Validation error needs to
+    decrease at least every `early_stopping_rounds` round(s) to continue training. Requires at
+    least one item in evals. If there’s more than one, will use the last.
+* `verbose_eval::Union{Bool,Int}`: Requires at least one item in evals. If `verbose_eval` is `true`
+    then the evaluation metric on the validation set is printed at each boosting stage. If
+    `verbose_eval` is an integer then the evaluation metric on the validation set is printed at
+    every given `verbose_eval` boosting stage. The last boosting stage / the boosting stage found
+    by using early_stopping_rounds is also printed.
+* `xgb_model::Union{Booster,String,Void}`: XGB model to be loaded before training (allows training
+    continuation).
+* `callbacks::Union{Vector{Function},Void}`: Vector of callback functions. Callback functions
+    should have a field `cb_timing` that indicates when the callback should run. Can be "before",
+    or "after" the training iteration.
+"""
 function train(params::Dict{String,<:Any}, dtrain::DMatrix;
                num_boost_round::Int = 10,
                evals::Vector{Tuple{DMatrix,String}} = Vector{Tuple{DMatrix,String}}(),
