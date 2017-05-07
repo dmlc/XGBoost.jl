@@ -593,7 +593,6 @@ function save_raw(bst::Booster)
 end
 
 
-# TODO: Make sure that deleting attributes works correctly.
 """
     set_attr(bst; [kwargs...])
 
