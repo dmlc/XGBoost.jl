@@ -17,7 +17,7 @@ function train(params::Dict{String,<:Any}, dtrain::DMatrix;
 
     if !isa(early_stopping_rounds, Void)
         push!(callbacks_vec, cb_early_stop(early_stopping_rounds, maximize, verbose_eval, params,
-                                           evals, feval)) # TODO: Add "early_stopping_metric"
+                                           evals, feval))
     end
 
     # Initialize the Booster with the appropriate caches.
@@ -61,9 +61,8 @@ function train(params::Dict{String,<:Any}, dtrain::DMatrix;
 
     for iter in start_iteration:num_boost_round
         env.iteration = iter
-        for cb in callbacks_before_iter
-            cb(env)
-        end
+
+        foreach(cb -> cb(env), callbacks_before_iter)
 
         update(bst, dtrain, iter, fobj = obj)
         num_boost += 1
@@ -77,9 +76,7 @@ function train(params::Dict{String,<:Any}, dtrain::DMatrix;
         end
 
         try
-            for cb in callbacks_after_iter
-                cb(env)
-            end
+            foreach(cb -> cb(env), callbacks_after_iter)
         catch err
             if isa(err, EarlyStopException)
                 break

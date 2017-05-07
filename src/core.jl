@@ -386,6 +386,7 @@ function copy(bst::Booster)
 end
 
 
+# TODO: Remove reliance on @printf.
 """
     dump_model(bst, fout; [fmap = "", with_stats = false])
 
@@ -426,7 +427,7 @@ Return an evaluation of the model on the data as a string.
 """
 function eval(bst::Booster, data::DMatrix;
               name::String = "eval", iteration::Int = 0)
-    return eval_set(bst, [(data, name)], iteration)
+    return XGBoosterEvalOneIter(bst.handle, iteration, [data.handle], [name], 1)
 end
 
 
@@ -443,8 +444,8 @@ Return multiple evaluations of the model as a string.
 """
 function eval_set(bst::Booster, evals::Vector{Tuple{DMatrix,String}}, iteration::Integer;
                   feval::Union{Function,Void} = nothing)
-    dmats = DMatrix[i[1] for i in evals]
-    evnames = String[i[2] for i in evals]
+    dmats = DMatrix[eval[1] for eval in evals]
+    evnames = String[eval[2] for eval in evals]
 
     if isa(feval, Function)
         result = string("[", iteration, "]")
@@ -604,9 +605,7 @@ Set the attribute of the Booster.
 """
 function set_attr(bst::Booster;
                   kwargs...)
-    for (attr, value) in kwargs
-        XGBoosterSetAttr(bst.handle, string(attr), string(value))
-    end
+    foreach((attr, value) -> XGBoosterSetAttr(bst.handle, string(attr), string(value)), kwargs)
     return nothing
 end
 
@@ -621,13 +620,11 @@ Set parameters into the Booster.
 * `params::Dict{String,T<:Any}`: dictionary of (key, value) pairs.
 """
 function set_param(bst::Booster, params::Dict{String,<:Any})
-    for (param, value) in params
+    for (param, values) in params
         if isa(value, Array) # Automatically handle array values for eval_metrics
-            for value_entry in value
-                XGBoosterSetParam(bst.handle, param, string(value_entry))
-            end
+            foreach(value -> XGBoosterSetParam(bst.handle, param, string(value)), values)
         else
-            XGBoosterSetParam(bst.handle, param, string(value))
+            XGBoosterSetParam(bst.handle, param, string(values))
         end
     end
     return nothing
