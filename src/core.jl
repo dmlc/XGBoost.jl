@@ -623,7 +623,7 @@ Set parameters into the Booster.
 """
 function set_param(bst::Booster, params::Dict{String,<:Any})
     for (param, values) in params
-        if isa(value, Array) # Automatically handle array values for eval_metrics
+        if isa(values, Array) # Automatically handle array values for eval_metrics
             foreach(value -> XGBoosterSetParam(bst.handle, param, string(value)), values)
         else
             XGBoosterSetParam(bst.handle, param, string(values))
