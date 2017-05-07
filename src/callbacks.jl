@@ -1,3 +1,7 @@
+const maximize_metrics = ("auc", "map", "ndcg")
+const maximize_at_n_metrics = ("auc@", "map@", "ndcg@")
+
+
 type CallbackEnv
     model::Booster
     cvfolds::Vector{CVPack}
@@ -76,7 +80,7 @@ function cb_early_stop(early_stopping_rounds::Integer, maximize::Bool,
 
     # Establish the metric_name to use for early_stopping.
     if isa(feval, Function)
-        if verbose_eval > 0 # For distributed version, add && env.rank == 0
+        if verbose_eval > 0 # For distributed version, add `&& env.rank == 0`.
             println("Will train until ", cb_early_stopping_eval, "'s feval hasn't improved in ",
                     early_stopping_rounds, " round(s).")
         end
@@ -134,7 +138,7 @@ function cb_early_stop(early_stopping_rounds::Integer, maximize::Bool,
         best_score = cb_best_score[1]
         best_iteration = cb_best_iteration[1]
 
-        # TODO: This only looks at the first column, make sure this also works with CV.
+        # TODO: This only looks at the first column, will have to adapt this when used in CV.
         score = env.results[cb_early_stopping_eval][early_stopping_metric][iteration, 1]
 
         if (maximize && (score > best_score)) || (!maximize && (score < best_score))
@@ -148,7 +152,7 @@ function cb_early_stop(early_stopping_rounds::Integer, maximize::Bool,
                 println("Stopping. Best iteration: ", best_iteration, ", ", early_stopping_metric,
                         ": ", best_score)
             end
-            # TODO: Automatically shrink env.results to get rid of #undef results.
+            shrink!(results, iteration)
             throw(EarlyStopException(best_iteration))
         end
     end
@@ -157,15 +161,23 @@ function cb_early_stop(early_stopping_rounds::Integer, maximize::Bool,
 end
 
 
-function should_maximize(early_stopping_metric::String)
-    maximize_metrics = ("auc", "map", "ndcg")
-    if in(early_stopping_metric, maximize_metrics)
-        maximize = true
+# Remove all the rows in the matrices in the results after `last_retained_iter`.
+function shrink!(results::Dict{String,Dict{String,Matrix{Float64}}}, last_retained_iter::Int)
+    for eval_name in keys(results)
+        curr_eval = results[eval_name]
+        for metric_name in keys(test)
+            curr_eval[metric_name] = curr_eval[metric_name][1:last_retained_iter, :]
+        end
     end
+    return nothing
+end
 
-    maximize_at_n_metrics = ("auc@", "map@", "ndcg@")
-    if any(i -> startswith(early_stopping_metric, i), maximize_at_n_metrics)
-        maximize = true
+
+# Return `true` if the metric should be maximized and `false` if it should be minimized.
+function should_maximize(early_stopping_metric::String)
+    if in(early_stopping_metric, maximize_metrics) ||
+        any(i -> startswith(early_stopping_metric, i), maximize_at_n_metrics)
+        return true
     end
-    return maximize
+    return false
 end
