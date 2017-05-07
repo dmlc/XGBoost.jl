@@ -386,7 +386,6 @@ function copy(bst::Booster)
 end
 
 
-# TODO: Remove reliance on @printf.
 """
     dump_model(bst, fout; [fmap = "", with_stats = false])
 
@@ -400,18 +399,27 @@ Dump the model in the Booster into a text file.
 """
 function dump_model(bst::Booster, fout::String;
                     fmap::String = "", with_stats::Bool = false)
-    model = XGBoosterDumpModel(bst.handle, fmap, with_stats)
+    dump_ptrs = XGBoosterDumpModel(bst.handle, fmap, with_stats)
     file = open(fout, "w")
     try
-        for i in 1:length(model)
-            @printf(file, "booster[%d]:\n", i)
-            @printf(file, "%s", unsafe_string(model[i]))
+        for (index, ptr) in enumerate(dump_ptrs)
+            dump_string = unsafe_string(ptr)
+            write(file, "booster[", index, "]:\n", dump_string)
         end
     finally
         close(file)
     end
     return nothing
 end
+
+
+function get_dump(bst::Booster;
+                  fmap = "", with_stats = false)
+    dump_ptrs = XGBoosterDumpModel(bst.handle, fmap, with_stats)
+    model = [unsafe_string(ptr) for ptr in dump_ptrs]
+    return return model
+end
+
 
 
 """
@@ -462,7 +470,6 @@ function eval_set(bst::Booster, evals::Vector{Tuple{DMatrix,String}}, iteration:
 end
 
 
-# TODO: Make sure this returns a Vector{String}.
 """
     get_dump(bst; [fmap = "", with_stats = false])
 
