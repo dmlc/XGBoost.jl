@@ -17,6 +17,6 @@ export Booster
 export attr, attributes, boost, dump_model, eval, eval_set, get_dump, load_model, predict,
     save_model, set_attr, set_param
 
-export xgboost, predict, nfold_cv, slice, dump_model, importance
+export xgboost, train, predict, nfold_cv, slice, dump_model, importance
 
 end # module XGBoost

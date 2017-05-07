@@ -7,7 +7,7 @@ XGBoost.jl
 eXtreme Gradient Boosting Package in Julia
 
 ## Abstract
-This package is a Julia interface of [XGBoost](https://github.com/tqchen/xgboost), which is short
+This package is a Julia interface of [XGBoost](https://github.com/dmlc/xgboost), which is short
 for eXtreme Gradient Boosting. It is an efficient and scalable implementation of gradient boosting
 framework. The package includes efficient linear model solver and tree learning algorithms. The
 library is parallelized using OpenMP, and it can be more than 10 times faster than some existing

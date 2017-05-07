@@ -25,8 +25,8 @@ include(Pkg.dir("XGBoost") * "/test/utils.jl")
                       "eval_metric" => ["error", "auc"])
 
         evals = [(dtrain, "train"), (dtest, "test")]
-        XGBoost.train(params, dtrain; num_boost_round = 100, evals = evals, verbose_eval = true,
-                      early_stopping_rounds = 2)
+        train(params, dtrain; num_boost_round = 100, evals = evals, verbose_eval = true,
+              early_stopping_rounds = 2)
     end
 
     @testset "Sparse matrices" begin
