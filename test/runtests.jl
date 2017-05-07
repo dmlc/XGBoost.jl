@@ -30,15 +30,15 @@ include(Pkg.dir("XGBoost") * "/test/utils.jl")
     end
 
     @testset "Sparse matrices" begin
-        X = sparse(randn(100,10) .* bitrand(100,10))
+        X = sparse(randn(100, 10) .* bitrand(100, 10))
         y = randn(100)
         DMatrix(X, label = y)
 
-        X = sparse(convert(Matrix{Float32}, randn(10,100) .* bitrand(10,100)))
+        X = sparse(convert(Matrix{Float32}, randn(10, 100) .* bitrand(10, 100)))
         y = randn(100)
         DMatrix(X, transposed = true)
 
-        X = sparse(randn(100,10) .* bitrand(100,10))
+        X = sparse(randn(100, 10) .* bitrand(100, 10))
         y = randn(100)
         DMatrix(X)
     end
@@ -67,8 +67,8 @@ include(Pkg.dir("XGBoost") * "/test/utils.jl")
         labels = get_label(dtest)
         @test size(preds) == size(labels)
 
-        err = countnz((preds .> 0.5) .!= labels) / length(preds)
-        @test err < 0.1
+        err = countnz((preds .> .5) .!= labels) / length(preds)
+        @test err < .1
     end
 
     @testset "Cross validation" begin
@@ -76,8 +76,8 @@ include(Pkg.dir("XGBoost") * "/test/utils.jl")
         dtest = DMatrix(Pkg.dir("XGBoost") * "/data/agaricus.txt.test")
         watchlist = [(dtest, "eval"), (dtrain, "train")]
 
-        bst = nfold_cv(dtrain, 5, 3, eta = 1, max_depth = 2, objective = "binary:logistic", silent = 1,
-                       seed = 12345)
+        bst = nfold_cv(dtrain, 5, 3, eta = 1, max_depth = 2, objective = "binary:logistic",
+                       silent = 1, seed = 12345)
         # important_features = importance(bst)
         #
         # @fact startswith(important_features[1].fname, "f28") --> true
