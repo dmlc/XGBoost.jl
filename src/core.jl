@@ -605,7 +605,9 @@ Set the attribute of the Booster.
 """
 function set_attr(bst::Booster;
                   kwargs...)
-    foreach((attr, value) -> XGBoosterSetAttr(bst.handle, string(attr), string(value)), kwargs)
+    for (attr, value) in kwargs
+        XGBoosterSetAttr(bst.handle, string(attr), value)
+    end
     return nothing
 end
 

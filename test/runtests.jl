@@ -4,6 +4,16 @@ using Base.Test
 include(Pkg.dir("XGBoost") * "/test/utils.jl")
 
 @testset "XGBoost.jl" begin
+    @testset "C_API wrapper" begin
+        bst = Booster()
+        set_attr(bst, test = 1)
+        @test attr(bst, "test") == "1"
+        set_attr(bst, test = 2)
+        @test attributes(bst)["test"] == "2"
+        set_attr(bst, test = nothing)
+        @test attr(bst, "test") == ""
+    end
+
     @testset "Training interface" begin
         dtrain = DMatrix(Pkg.dir("XGBoost") * "/data/agaricus.txt.train")
         dtest = DMatrix(Pkg.dir("XGBoost") * "/data/agaricus.txt.test")

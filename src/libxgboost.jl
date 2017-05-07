@@ -345,19 +345,19 @@ function XGBoosterGetAttr(handle::BoosterHandle, key::String)
 end
 
 
-function XGBoosterSetAttr(handle::BoosterHandle, key::String, value::String)
+function XGBoosterSetAttr(handle::BoosterHandle, key::String, value)
     @xgboost(:XGBoosterSetAttr,
              handle => BoosterHandle,
              key => Cstring,
-             value => Cstring)
+             string(value) => Cstring)
 end
 
 
-function XGBoosterSetAttr(handle::BoosterHandle, key::String, value::Ptr{Void})
+function XGBoosterSetAttr(handle::BoosterHandle, key::String, value::Void)
     @xgboost(:XGBoosterSetAttr,
              handle => BoosterHandle,
              key => Cstring,
-             value => Ptr{Void})
+             C_NULL => Ptr{Void})
 end
 
 
