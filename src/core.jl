@@ -346,7 +346,7 @@ Return all attributes stored in the Booster as a Dict{String,String}.
 * `bst::Booster`: the Booster.
 """
 function attributes(bst::Booster)
-    attr_names = XGBoosterGetAttrNames(bst)
+    attr_names = XGBoosterGetAttrNames(bst.handle)
     result = Dict{String,String}()
     for attr_name in attr_names
         result[attr_name] = XGBoosterGetAttr(bst.handle, attr_name)
