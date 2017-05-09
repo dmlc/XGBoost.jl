@@ -28,14 +28,14 @@ Return a Booster trained with the given parameters.
     should have a field `cb_timing` that indicates when the callback should run. Can be "before",
     or "after" the training iteration.
 """
-function train(params::Dict{String,<:Any}, dtrain::DMatrix;
-               num_boost_round::Int = 10,
-               evals::Vector{Tuple{DMatrix,String}} = Vector{Tuple{DMatrix,String}}(),
-               obj::Union{Function,Void} = nothing, feval::Union{Function,Void} = nothing,
-               maximize::Bool = false, early_stopping_rounds::Union{Int,Void} = nothing,
-               verbose_eval::Union{Bool,Int} = true,
-               xgb_model::Union{Booster,String,Void} = nothing,
-               callbacks::Union{Vector{Function},Void} = nothing)
+@compat function train(params::Dict{String,<:Any}, dtrain::DMatrix;
+                       num_boost_round::Int = 10,
+                       evals::Vector{Tuple{DMatrix,String}} = Vector{Tuple{DMatrix,String}}(),
+                       obj::Union{Function,Void} = nothing, feval::Union{Function,Void} = nothing,
+                       maximize::Bool = false, early_stopping_rounds::Union{Int,Void} = nothing,
+                       verbose_eval::Union{Bool,Int} = true,
+                       xgb_model::Union{Booster,String,Void} = nothing,
+                       callbacks::Union{Vector{Function},Void} = nothing)
 
     callbacks_vec = isa(callbacks, Vector{Function}) ? callbacks : Vector{Function}()
 

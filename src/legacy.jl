@@ -1,7 +1,7 @@
-function xgboost(data, nrounds::Integer;
-                 label = nothing, param::Dict{String,<:Any} = Dict{String,String}(),
-                 watchlist = [], metrics = [], obj = nothing, feval = nothing, group = [],
-                 kwargs...)
+@compat function xgboost(data, nrounds::Integer;
+                         label = nothing, param::Dict{String,<:Any} = Dict{String,String}(),
+                         watchlist = [], metrics = [], obj = nothing, feval = nothing, group = [],
+                         kwargs...)
     if isa(data, DMatrix)
         dtrain = data
     else

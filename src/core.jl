@@ -9,8 +9,8 @@ type DMatrix
     end
 
 
-    function DMatrix(data::SparseMatrixCSC{<:Real,<:Integer};
-        label = nothing, weight = nothing, transposed::Bool = false)
+    @compat function DMatrix(data::SparseMatrixCSC{<:Real,<:Integer};
+                             label = nothing, weight = nothing, transposed::Bool = false)
 
         handle = transposed ? XGDMatrixCreateFromCSCT(data) : XGDMatrixCreateFromCSC(data)
         dmat = new(handle)
@@ -27,9 +27,9 @@ type DMatrix
     end
 
 
-    function DMatrix(data::Matrix{<:Real};
-                     label = nothing, missing::Real = NaN32,
-                     weight = nothing, transposed::Bool = false)
+    @compat function DMatrix(data::Matrix{<:Real};
+                             label = nothing, missing::Real = NaN32,
+                             weight = nothing, transposed::Bool = false)
 
         if !transposed
             handle = XGDMatrixCreateFromMat(data, missing)
@@ -193,7 +193,7 @@ put in value before logistic transformation.
 * `dmat::DMatrix`: the DMatrix.
 * `margin::Vector{<:Real}`: prediction margin of each datapoint.
 """
-function set_base_margin(dmat::DMatrix, margin::Vector{<:Real})
+@compat function set_base_margin(dmat::DMatrix, margin::Vector{<:Real})
     XGDMatrixSetFloatInfo(dmat.handle, "base_margin", margin, length(margin))
     return nothing
 end
@@ -209,7 +209,7 @@ Set float type property into the DMatrix.
 * `field::String`: the field name of the information.
 * `data::Vector`: the array of data to be set.
 """
-function set_float_info(dmat::DMatrix, field::String, data::Vector{<:Real})
+@compat function set_float_info(dmat::DMatrix, field::String, data::Vector{<:Real})
     XGDMatrixSetFloatInfo(dmat.handle, field, data, length(data))
     return nothing
 end
@@ -224,7 +224,7 @@ Set group size of DMatrix (used for ranking).
 * `dmat::DMatrix`: the DMatrix.
 * `group::Vector`: group size of each group.
 """
-function set_group(dmat::DMatrix, group::Vector{<:Integer})
+@compat function set_group(dmat::DMatrix, group::Vector{<:Integer})
     XGDMatrixSetGroup(dmat.handle, group, length(group))
     return nothing
 end
@@ -239,7 +239,7 @@ Set label of DMatrix.
 * `dmat::DMatrix`: the DMatrix.
 * `label::Vector`: the label information to be set into DMatrix.
 """
-function set_label(dmat::DMatrix, label::Vector{<:Real})
+@compat function set_label(dmat::DMatrix, label::Vector{<:Real})
     XGDMatrixSetFloatInfo(dmat.handle, "label", label, length(label))
     return nothing
 end
@@ -255,7 +255,7 @@ Set uint type property into the DMatrix.
 * `field::String`: the field name of the information.
 * `data::Vector`: the array of data to be set.
 """
-function set_uint_info(dmat::DMatrix, field::String, data::Vector{<:Integer})
+@compat function set_uint_info(dmat::DMatrix, field::String, data::Vector{<:Integer})
     XGDMatrixSetUIntInfo(dmat.handle, field, data, length(data))
     return nothing
 end
@@ -270,7 +270,7 @@ Set weight of each instance.
 * `dmat::DMatrix`: the DMatrix.
 * `weight::Vector`: weight for each data point.
 """
-function set_weight(dmat::DMatrix, weight::Vector{<:Real})
+@compat function set_weight(dmat::DMatrix, weight::Vector{<:Real})
     XGDMatrixSetFloatInfo(dmat.handle, "weight", weight, length(weight))
     return nothing
 end
@@ -285,7 +285,7 @@ Slice the DMatrix and return a new DMatrix that only contains rindex.
 * `dmat::DMatrix`: the DMatrix.
 * `rindex::Vector`: list of indices to be selected.
 """
-function slice(dmat::DMatrix, rindex::Vector{<:Integer})
+@compat function slice(dmat::DMatrix, rindex::Vector{<:Integer})
     handle = XGDMatrixSliceDMatrix(dmat.handle, rindex - 1, length(rindex))
     return DMatrix(handle)
 end
@@ -294,9 +294,9 @@ end
 type Booster
     handle::BoosterHandle
 
-    function Booster(;
-                     params::Dict{String,<:Any} = Dict{String,Any}(),
-                     cache::Vector{DMatrix} = DMatrix[], model_file::String = "")
+    @compat function Booster(;
+                             params::Dict{String,<:Any} = Dict{String,Any}(),
+                             cache::Vector{DMatrix} = DMatrix[], model_file::String = "")
         # TODO: add _validate_features for cache when storing feature_names and types in DMatrix.
         dmats = [dmat.handle for dmat in cache]
         handle = XGBoosterCreate(dmats, length(dmats))
@@ -363,7 +363,7 @@ Boost the Booster for one iteration, with customized gradient statistics.
 * `grad::Vector{<:Real}`: the first order of the gradient.
 * `hess::Vector{<:Real}`: the second order of the gradient.
 """
-function boost(bst::Booster, dtrain::DMatrix, grad::Vector{<:Real}, hess::Vector{<:Real})
+@compat function boost(bst::Booster, dtrain::DMatrix, grad::Vector{<:Real}, hess::Vector{<:Real})
     @assert size(grad) == size(hess)
     XGBoosterBoostOneIter(bst.handle, dtrain.handle, convert(Vector{Cfloat}, grad),
                           convert(Vector{Cfloat}, hess), length(hess))
@@ -623,7 +623,7 @@ Set parameters into the Booster.
 * `bst::Booster`: the Booster.
 * `params::Dict{String,T<:Any}`: dictionary of (key, value) pairs.
 """
-function set_param(bst::Booster, params::Dict{String,<:Any})
+@compat function set_param(bst::Booster, params::Dict{String,<:Any})
     for (param, values) in params
         if isa(values, Array) # Automatically handle array values for eval_metrics
             foreach(value -> XGBoosterSetParam(bst.handle, param, string(value)), values)

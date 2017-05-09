@@ -67,9 +67,9 @@ function print_evaluation(results::Dict{String,Dict{String,Matrix{Float64}}}, it
 end
 
 
-function cb_early_stop(early_stopping_rounds::Integer, maximize::Bool,
-                       verbose_eval::Union{Bool,Int}, params::Dict{String,<:Any},
-                       evals::Vector{Tuple{DMatrix,String}}, feval::Union{Function,Void})
+@compat function cb_early_stop(early_stopping_rounds::Integer, maximize::Bool,
+                               verbose_eval::Union{Bool,Int}, params::Dict{String,<:Any},
+                               evals::Vector{Tuple{DMatrix,String}}, feval::Union{Function,Void})
     cb_timing = "after"
     cb_early_stopping_metric = Ref{String}("")
     cb_best_iteration = Ref{Int}(0)
