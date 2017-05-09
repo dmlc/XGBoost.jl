@@ -51,11 +51,11 @@ print("running cross validation, with customized loss function\n")
 ##
 
 function logregobj(preds::Vector{Float32}, dtrain::DMatrix)
-        labels = get_label(dtrain)
-        preds = 1. ./ (1. + exp(-preds))
-        grad = preds - labels
-        hess = preds .* (1. - preds)
-        return grad, hess
+    labels = get_label(dtrain)
+    preds = 1. ./ (1. + exp(-preds))
+    grad = preds - labels
+    hess = preds .* (1. - preds)
+    return grad, hess
 end
 
 function evalerror(preds::Vector{Float32}, dtrain::DMatrix)
