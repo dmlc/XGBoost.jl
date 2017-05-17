@@ -429,8 +429,8 @@ Return an evaluation of the model on the data as a string.
 * `name::String`: the name of the dataset.
 * `iteration::Int`: the current iteration number.
 """
-function eval(bst::Booster, data::DMatrix;
-              name::String = "eval", iteration::Int = 0)
+function Core.eval(bst::Booster, data::DMatrix;
+                   name::String = "eval", iteration::Int = 0)
     return XGBoosterEvalOneIter(bst.handle, iteration, [data.handle], [name], 1)
 end
 
