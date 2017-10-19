@@ -4,17 +4,15 @@ type DMatrix
 
     function DMatrix(handle::DMatrixHandle)
         dmat = new(handle)
-        finalizer(dmat, JLFree)
+        finalizer(dmat, finalizedmatrix)
         return dmat
     end
 
 
     @compat function DMatrix(data::SparseMatrixCSC{<:Real,<:Integer};
                              label = nothing, weight = nothing, transposed::Bool = false)
-
         handle = transposed ? XGDMatrixCreateFromCSCT(data) : XGDMatrixCreateFromCSC(data)
-        dmat = new(handle)
-        finalizer(dmat, JLFree)
+        dmat = DMatrix(handle)
 
         if !isa(label, Void)
             XGDMatrixSetFloatInfo(dmat.handle, "label", label, length(label))
@@ -30,15 +28,12 @@ type DMatrix
     @compat function DMatrix(data::Matrix{<:Real};
                              label = nothing, missing::Real = NaN32,
                              weight = nothing, transposed::Bool = false)
-
         if !transposed
             handle = XGDMatrixCreateFromMat(data, missing)
         else
             handle = XGDMatrixCreateFromMatT(data, missing)
         end
-
-        dmat = new(handle)
-        finalizer(dmat, JLFree)
+        dmat = DMatrix(handle)
 
         if !isa(label, Void)
             XGDMatrixSetFloatInfo(dmat.handle, "label", label, length(label))
@@ -54,15 +49,14 @@ type DMatrix
     function DMatrix(fname::String;
                      silent = false)
         handle = XGDMatrixCreateFromFile(fname, silent)
-        dmat = new(handle)
-        finalizer(dmat, JLFree)
+        dmat = DMatrix(handle)
         return dmat
     end
+end
 
 
-    function JLFree(dmat::DMatrix)
-        XGDMatrixFree(dmat.handle)
-    end
+function finalizedmatrix(dmat::DMatrix)
+    XGDMatrixFree(dmat.handle)
 end
 
 
@@ -294,6 +288,12 @@ end
 type Booster
     handle::BoosterHandle
 
+    function Booster(handle::BoosterHandle)
+        bst = new(handle)
+        finalizer(bst, finalizebooster)
+        return bst
+    end
+
     @compat function Booster(;
                              params::Dict{String,<:Any} = Dict{String,Any}(),
                              cache::Vector{DMatrix} = DMatrix[], model_file::String = "")
@@ -305,18 +305,18 @@ type Booster
             XGBoosterLoadModel(handle, model_file)
         end
 
-        bst = new(handle)
-        finalizer(bst, JLFree)
+        bst = Booster(handle)
 
         set_param(bst, "seed", 0)
         set_param(bst, params)
 
         return bst
     end
+end
 
-    function JLFree(bst::Booster)
-        XGBoosterFree(bst.handle)
-    end
+
+function finalizebooster(bst::Booster)
+    XGBoosterFree(bst.handle)
 end
 
 
