@@ -27,7 +27,7 @@ Pkg.add("XGBoost")
 ```
 or
 ```julia
-Pkg.clone("https://github.com/antinucleon/XGBoost.jl.git")
+Pkg.clone("https://github.com/dmlc/XGBoost.jl.git")
 Pkg.build("XGBoost")
 ```
 
