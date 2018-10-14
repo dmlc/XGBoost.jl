@@ -1,7 +1,8 @@
 using XGBoost
 
-dtrain = DMatrix("../data/agaricus.txt.train")
-dtest = DMatrix("../data/agaricus.txt.test")
+const DATAPATH = joinpath(@__DIR__, "../data")
+dtrain = DMatrix(joinpath(DATAPATH, "agaricus.txt.train"))
+dtest = DMatrix(joinpath(DATAPATH, "agaricus.txt.test"))
 watchlist  = [(dtest,"eval"), (dtrain,"train")]
 
 
@@ -9,7 +10,7 @@ watchlist  = [(dtest,"eval"), (dtrain,"train")]
 # advanced: start from a initial base prediction
 ##
 
-print ("start running example to start from a initial prediction\n")
+print("start running example to start from a initial prediction\n")
 param = ["max_depth"=>2, "eta"=>1, "silent"=>1, "objective"=>"binary:logistic"]
 
 bst = xgboost(dtrain, 1, param=param, watchlist=watchlist)
@@ -26,6 +27,6 @@ set_info(dtrain, "base_margin", ptrain)
 set_info(dtest, "base_margin", ptest)
 
 watchlist  = [(dtest,"eval2"), (dtrain,"train2")]
-print ("this is result of running from initial prediction\n")
+print("this is result of running from initial prediction\n")
 
 bst = xgboost(dtrain, 1, param=param, watchlist=watchlist)

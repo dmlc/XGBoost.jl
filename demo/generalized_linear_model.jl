@@ -6,8 +6,9 @@ using XGBoost
 #  basically, we are using linear model, instead of tree for our boosters
 ##
 
-dtrain = DMatrix("../data/agaricus.txt.train")
-dtest = DMatrix("../data/agaricus.txt.test")
+const DATAPATH = joinpath(@__DIR__, "../data")
+dtrain = DMatrix(joinpath(DATAPATH, "agaricus.txt.train"))
+dtest = DMatrix(joinpath(DATAPATH, "agaricus.txt.test"))
 
 # change booster to gblinear, so that we are fitting a linear model
 # alpha is the L1 regularizer

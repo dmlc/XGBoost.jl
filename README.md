@@ -23,12 +23,12 @@ allowed to define their own objectives easily.
 
 ## Installation
 ```julia
-Pkg.add("XGBoost")
+] add XGBoost
 ```
 or
 ```julia
-Pkg.clone("https://github.com/dmlc/XGBoost.jl.git")
-Pkg.build("XGBoost")
+] develop "https://github.com/dmlc/XGBoost.jl.git"
+] build XGBoost
 ```
 
 By default, the package builds the latest stable version of the XGBoost library. To build the
