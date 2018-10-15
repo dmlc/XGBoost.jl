@@ -4,9 +4,9 @@ using XGBoost
 # advanced: cutomsized loss function
 #
 
-dtrain = DMatrix("../data/agaricus.txt.train")
-dtest = DMatrix("../data/agaricus.txt.test")
-
+const DATAPATH = joinpath(@__DIR__, "../data")
+dtrain = DMatrix(joinpath(DATAPATH, "agaricus.txt.train"))
+dtest = DMatrix(joinpath(DATAPATH, "agaricus.txt.test"))
 
 # note: for customized objective function, we leave objective as default
 # note: what we are getting is margin value in prediction

@@ -2,11 +2,11 @@ include("xgboost_wrapper_h.jl")
 
 # TODO: Use reference instead of array for length
 
-type DMatrix
-    handle::Ptr{Void}
+mutable struct DMatrix
+    handle::Ptr{Nothing}
     _set_info::Function
 
-    function _setinfo{T<:Number}(ptr::Ptr{Void}, name::String, array::Vector{T})
+    function _setinfo(ptr::Ptr{Nothing}, name::String, array::Vector{<: Number})
         if name == "label" || name == "weight" || name == "base_margin"
             XGDMatrixSetFloatInfo(ptr, name,
                                   convert(Vector{Float32}, array),
@@ -20,31 +20,31 @@ type DMatrix
         end
     end
 
-    function DMatrix(handle::Ptr{Void})
+    function DMatrix(handle::Ptr{Nothing})
         dmat = new(handle, _setinfo)
-        finalizer(dmat, JLFree)
+        finalizer(JLFree, dmat)
         return dmat
     end
 
     function DMatrix(fname::String; silent = false)
         handle = XGDMatrixCreateFromFile(fname, convert(Int32, silent))
         dmat = new(handle, _setinfo)
-        finalizer(dmat, JLFree)
+        finalizer(JLFree, dmat)
         return dmat
     end
 
-    function DMatrix{K<:Real, V<:Integer}(data::SparseMatrixCSC{K,V}, transposed::Bool = false;
-                                          kwargs...)
+    function DMatrix(data::SparseMatrixCSC{K,V}, transposed::Bool = false;
+                                          kwargs...) where {K<:Real, V<:Integer}
         handle = (transposed ? XGDMatrixCreateFromCSCT(data) : XGDMatrixCreateFromCSC(data))
         for itm in kwargs
             _setinfo(handle, string(itm[1]), itm[2])
         end
         dmat = new(handle, _setinfo)
-        finalizer(dmat, JLFree)
+        finalizer(JLFree, dmat)
         return dmat
     end
 
-    function DMatrix{T<:Real}(data::Matrix{T}, transposed::Bool = false, missing = NaN32;
+    function DMatrix(data::Matrix{<:Real}, transposed::Bool = false, missing = NaN32;
                               kwargs...)
         handle = nothing
         if !transposed
@@ -59,7 +59,7 @@ type DMatrix
             _setinfo(handle, string(itm[1]), itm[2])
         end
         dmat = new(handle, _setinfo)
-        finalizer(dmat, JLFree)
+        finalizer(JLFree, dmat)
         return dmat
     end
 
@@ -72,7 +72,7 @@ function get_info(dmat::DMatrix, field::String)
     JLGetFloatInfo(dmat.handle, field)
 end
 
-function set_info{T<:Real}(dmat::DMatrix, field::String, array::Vector{T})
+function set_info(dmat::DMatrix, field::String, array::Vector{<:Real})
     dmat._set_info(dmat.handle, field, array)
 end
 
@@ -81,14 +81,14 @@ function save(dmat::DMatrix, fname::String; silent = true)
 end
 
 ### slice ###
-function slice{T<:Integer}(dmat::DMatrix, idxset::Vector{T})
-    handle = XGDMatrixSliceDMatrix(dmat.handle, convert(Vector{Int32}, idxset - 1),
+function slice(dmat::DMatrix, idxset::Vector{<:Real})
+    handle = XGDMatrixSliceDMatrix(dmat.handle, convert(Vector{Int32}, idxset .- 1),
                                    convert(UInt64, size(idxset)[1]))
     return DMatrix(handle)
 end
 
-type Booster
-    handle::Ptr{Void}
+mutable struct Booster
+    handle::Ptr{Nothing}
 
     function Booster(; cachelist::Vector{DMatrix} = convert(Vector{DMatrix}, []),
                      model_file::String = "")
@@ -97,7 +97,7 @@ type Booster
             XGBoosterLoadModel(handle, model_file)
         end
         bst = new(handle)
-        finalizer(bst, JLFree)
+        finalizer(JLFree, bst)
         return bst
     end
 
@@ -174,7 +174,7 @@ function xgboost(data, nrounds::Integer; label = Union{}, param = [], watchlist 
     for i = 1:nrounds
         update(bst, 1, dtrain, obj=obj)
         if !silent
-            @printf(STDERR, "%s", eval_set(bst, watchlist, i, feval = feval))
+            @printf(stderr, "%s", eval_set(bst, watchlist, i, feval = feval))
         end
     end
     return bst
@@ -208,7 +208,7 @@ function eval_set(bst::Booster, watchlist::Vector{Tuple{DMatrix,String}}, iter::
     res = ""
     if typeof(feval) == Function
         res *= @sprintf("[%d]", iter)
-        #@printf(STDERR, "[%d]", iter)
+        #@printf(stderr, "[%d]", iter)
         for j in 1:size(dmats)[1]
             pred = predict(bst, dmats[j])
             name, val = feval(pred, dmats[j])
@@ -235,7 +235,7 @@ function predict(bst::Booster, data; output_margin::Bool = false, ntree_limit::I
     return deepcopy(unsafe_wrap(Array, ptr, len[1]))
 end
 
-type CVPack
+mutable struct CVPack
     dtrain::DMatrix
     dtest::DMatrix
     watchlist::Vector{Tuple{DMatrix,String}}
@@ -252,7 +252,7 @@ end
 
 function mknfold(dall::DMatrix, nfold::Integer, param, seed::Integer, evals=[]; fpreproc = Union{},
                  kwargs = [])
-    srand(seed)
+    seed!(seed)
     randidx = randperm(XGDMatrixNumRow(dall.handle))
     kstep = size(randidx)[1] / nfold
     idset = [randidx[round(Int64, (i-1) * kstep) + 1 : min(size(randidx)[1],round(Int64, i * kstep))] for i in 1:nfold]
@@ -289,7 +289,7 @@ function aggcv(rlist; show_stdv = true)
             if !haskey(cvmap, k)
                 cvmap[k] = Float64[]
             end
-            push!(cvmap[k], float(v))
+            push!(cvmap[k], parse(Float64, v))
         end
     end
     items = [item for item in cvmap]
@@ -319,11 +319,11 @@ function nfold_cv(data, num_boost_round::Integer = 10, nfold::Integer = 3; label
         res = aggcv([eval_set(f.bst, f.watchlist, i, feval = feval) for f in cvfolds],
                     show_stdv = show_stdv)
         push!(results, res)
-        @printf(STDERR, "%s\n", res)
+        @printf(stderr, "%s\n", res)
     end
 end
 
-immutable FeatureImportance
+struct FeatureImportance
     fname::String
     gain::Float64
     cover::Float64
@@ -361,8 +361,8 @@ function importance(bst::Booster; fmap::String = "")
     for i in 1:length(data)
         for line in split(unsafe_string(data[i]), '\n')
             m = match(lineMatch, line)
-            if typeof(m) != Void
-                fname = replace(m.captures[1], nameStrip, "")
+            if typeof(m) != Nothing
+                fname = replace(m.captures[1], nameStrip => "")
 
                 gain = parse(Float64, m.captures[4])
                 totalGain += gain

@@ -3,7 +3,7 @@ using XGBoost
 const DATAPATH = joinpath(dirname(@__FILE__()), "..", "data")
 
 # we load in the agaricus dataset
-# In this example, we are aiming to predict whether a mushroom can be eated
+# In this example, we are aiming to predict whether a mushroom can be eaten
 function readlibsvm(fname::String, shape)
     dmx = zeros(Float32, shape)
     label = Float32[]
@@ -11,7 +11,7 @@ function readlibsvm(fname::String, shape)
     cnt = 1
     for line in eachline(fi)
         line = split(line, " ")
-        push!(label, float(line[1]))
+        push!(label, parse(Float64, line[1]))
         line = line[2:end]
         for itm in line
             itm = split(itm, ":")
@@ -41,6 +41,7 @@ bst = xgboost(train_X, num_round, label = train_Y, eta = 1, max_depth = 2,
 
 
 print("training xgboost with sparse matrix\n")
+using SparseArrays: sparse
 sptrain = sparse(train_X)
 # alternatively, you can pass parameters in as a map
 param = ["max_depth" => 2,

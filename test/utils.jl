@@ -5,7 +5,7 @@ function readlibsvm(fname::String, shape)
     cnt = 1
     for line in eachline(fi)
         line = split(line, " ")
-        push!(label, float(line[1]))
+        push!(label, parse(Float64, line[1]))
         line = line[2:end]
         for itm in line
             itm = split(itm, ":")
