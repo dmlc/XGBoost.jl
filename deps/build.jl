@@ -1,8 +1,9 @@
 using BinDeps
+using Libdl
 
 @BinDeps.setup
 
-xgboost = library_dependency("xgboost", aliases = ["libxgboost.so"])
+xgboost = library_dependency("xgboost", aliases = ["libxgboost.$(Libdl.dlext)"])
 
 if haskey(ENV, "XGBOOST_BUILD_VERSION") && ENV["XGBOOST_BUILD_VERSION"] == "master"
     libcheckout = `git checkout master`
@@ -15,7 +16,7 @@ else
 end
 
 provides(BuildProcess,
-    FileRule(joinpath(BinDeps.libdir(xgboost), "libxgboost.so"),
+    FileRule(joinpath(BinDeps.libdir(xgboost), "libxgboost.$(Libdl.dlext)"),
         @build_steps begin
             CreateDirectory(BinDeps.srcdir(xgboost))
             @build_steps begin
@@ -29,7 +30,7 @@ provides(BuildProcess,
                 libcheckout
                 `bash build.sh`
                 CreateDirectory(BinDeps.libdir(xgboost))
-                `cp lib/libxgboost.so $(BinDeps.libdir(xgboost))`
+                `cp lib/libxgboost.$(Libdl.dlext) $(BinDeps.libdir(xgboost))`
             end
         end), xgboost, os = :Unix, onload = onload)
 
