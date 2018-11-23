@@ -182,7 +182,7 @@ end
 
 ### update ###
 function update(bst::Booster, nrounds::Integer, dtrain::DMatrix; obj = Union{})
-    if typeof(obj) == Function
+    if isa(obj, Function)
         pred = predict(bst, dtrain)
         grad, hess = obj(pred, dtrain)
         @assert size(grad) == size(hess)
@@ -206,7 +206,7 @@ function eval_set(bst::Booster, watchlist::Vector{Tuple{DMatrix,String}}, iter::
         push!(evnames, itm[2])
     end
     res = ""
-    if typeof(feval) == Function
+    if isa(feval, Function)
         res *= @sprintf("[%d]", iter)
         #@printf(stderr, "[%d]", iter)
         for j in 1:size(dmats)[1]
