@@ -2,7 +2,6 @@ XGBoost.jl
 ==========
 
 [![Build Status](https://travis-ci.org/dmlc/XGBoost.jl.svg?branch=master)](https://travis-ci.org/dmlc/XGBoost.jl)
-[![XGBoost](http://pkg.julialang.org/badges/XGBoost_0.5.svg)](http://pkg.julialang.org/?pkg=XGBoost&ver=0.5)
 
 eXtreme Gradient Boosting Package in Julia
 
