@@ -1,5 +1,3 @@
-include("../deps/deps.jl")
-
 const Bst_ulong = if build_version == "master"
     Culonglong
 else

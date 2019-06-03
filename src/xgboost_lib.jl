@@ -1,5 +1,3 @@
-include("xgboost_wrapper_h.jl")
-
 # TODO: Use reference instead of array for length
 
 mutable struct DMatrix

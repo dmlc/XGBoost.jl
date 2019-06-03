@@ -79,4 +79,8 @@ end
     include("example.jl")
 end
 
+@testset "Rabit" begin
+    include("rabit.jl")
+end
+
 end
