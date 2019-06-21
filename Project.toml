@@ -1,6 +1,6 @@
 name = "XGBoost"
 uuid = "009559a3-9522-5dbb-924b-0b6ed2b22bb9"
-version = "0.4.0"
+version = "0.4.1"
 
 [deps]
 BinaryProvider = "b99e7846-7c00-51b0-8f62-c81ae34c0232"
