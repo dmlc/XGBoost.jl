@@ -49,7 +49,7 @@ print("test-error=", sum((preds .> 0.5) .!= test_Y) / float(size(preds)[1]), "\n
 
 #-------------------save and load models-------------------------
 # save model to binary local file
-save(bst, "xgb.model")
+XGBoost.save(bst, "xgb.model")
 # load binary model to julia
 bst2 = Booster(model_file = "xgb.model")
 preds2 = predict(bst2, test_X)
