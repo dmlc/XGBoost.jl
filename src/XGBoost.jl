@@ -1,5 +1,7 @@
 module XGBoost
 
+using XGBoost_jll
+
 using Printf
 using Random: randperm, seed!
 using SparseArrays: SparseMatrixCSC, nnz
