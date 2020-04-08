@@ -1,6 +1,6 @@
 name = "XGBoost"
 uuid = "009559a3-9522-5dbb-924b-0b6ed2b22bb9"
-version = "0.4.2"
+version = "0.4.3"
 
 [deps]
 XGBoost_jll = "a5c6f535-4255-5ca2-a466-0e519f119c46"
@@ -13,6 +13,7 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [compat]
 julia = "≥ 1.3.0"
+XGBoost_jll = "0.82"
 
 [extras]
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
