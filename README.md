@@ -3,11 +3,11 @@ XGBoost.jl
 
 [![Build Status](https://travis-ci.org/dmlc/XGBoost.jl.svg?branch=master)](https://travis-ci.org/dmlc/XGBoost.jl)
 
-eXtreme Gradient Boosting Package in Julia
+eXtreme Gradient Boosting in Julia
 
 ## Abstract
-This package is a Julia interface of [XGBoost](https://github.com/tqchen/xgboost), which is short
-for eXtreme Gradient Boosting. It is an efficient and scalable implementation of gradient boosting
+This package is a Julia interface of [XGBoost](https://github.com/dmlc/xgboost). 
+It is an efficient and scalable implementation of distributed gradient boosting
 framework. The package includes efficient linear model solver and tree learning algorithms. The
 library is parallelized using OpenMP, and it can be more than 10 times faster than some existing
 gradient boosting packages. It supports various objective functions, including regression,
@@ -30,9 +30,7 @@ or
 ] build XGBoost
 ```
 
-By default, the package builds the latest stable version of the XGBoost library. To build the
-latest master, set the environment variable XGBOOST_BUILD_VERSION to "master" prior to installing
-or building the package (e.g. `ENV["XGBOOST_BUILD_VERSION"] = "master"`).
+By default, the package installs prebuilt binaries for XGBoost `v0.82.0` on Linux, MacOS and Windows. Only the linux version is built with OpenMP. 
 
 
 ## Minimal examples
@@ -88,4 +86,4 @@ Check [demo](https://github.com/antinucleon/XGBoost.jl/blob/master/demo/)
 
 
 ## Model Parameter Setting
-Check [XGBoost Wiki](https://github.com/tqchen/xgboost/wiki)
+Check [XGBoost Documentation](https://xgboost.readthedocs.io/en/latest/parameter.html)
