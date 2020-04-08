@@ -19,6 +19,11 @@ matrix:
       os: osx
     - julia: nightly
       os: windows
+ 
+branches:
+  only:
+  - master
+  - release-*
 
 notifications:
     email: false
