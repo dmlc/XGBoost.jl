@@ -229,13 +229,15 @@ function XGBoosterSaveModel(handle::Ptr{Nothing}, fname::String)
              fname => Cstring)
 end
 
-function XGBoosterDumpModel(handle::Ptr{Nothing}, fmap::String, with_stats::Int64)
+
+function XGBoosterDumpModel(handle::Ptr{Nothing}, fmap::String, with_stats::Int64, dump_format::String="text")
     out_dump_array = Ref{Ptr{Cstring}}()
     out_len = Ref{Bst_ulong}(0)
-    @xgboost(:XGBoosterDumpModel,
+    @xgboost(:XGBoosterDumpModelEx,
              handle => Ptr{Nothing},
              fmap => Cstring,
              with_stats => Cint,
+             dump_format => Cstring,
              out_len => Ref{Bst_ulong},
              out_dump_array => Ref{Ptr{Cstring}})
     return unsafe_wrap(Array, out_dump_array[], out_len[])

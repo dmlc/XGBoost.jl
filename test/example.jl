@@ -84,8 +84,13 @@ print("test-error=", sum((pred .> 0.5) .!= label) / float(size(pred)[1]), "\n")
 
 # You can dump the tree you learned using dump_model into a text file
 dump_model(bst, "dump.raw.txt")
+# You can also dump the trees in JSON format
+dump_model(bst, "dump.raw.json", dump_format="json")
+
 # If you have feature map file, you can dump the model in a more readable way
 dump_model(bst, "dump.nice.txt", fmap = "../data/featmap.txt", with_stats = true)
+# You can also dump the trees in JSON format
+dump_model(bst, "dump.nice.json", fmap = "../data/featmap.txt", with_stats = true, dump_format="json")
 
 # You can also get information about feature importances in the model
 dump(importance(bst, fmap = "../data/featmap.txt"))
