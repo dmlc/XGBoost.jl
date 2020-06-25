@@ -1,8 +1,4 @@
-const Bst_ulong = if build_version == "master"
-    Culonglong
-else
-    Culong
-end
+const Bst_ulong = Culonglong
 
 "Calls an xgboost API function and correctly reports errors."
 macro xgboost(f, params...)
@@ -26,26 +22,30 @@ function XGDMatrixCreateFromFile(fname::String, silent::Int32)
     return out[]
 end
 
-function XGDMatrixCreateFromCSC(data::SparseMatrixCSC)
+@deprecate XGDMatrixCreateFromCSC(data) XGDMatrixCreateFromCSCEx(data) false
+
+function XGDMatrixCreateFromCSCEx(data::SparseMatrixCSC)
     out = Ref{Ptr{Nothing}}()
-    @xgboost(:XGDMatrixCreateFromCSC,
-             convert(Vector{UInt64}, data.colptr .- 1) => Ptr{Bst_ulong},
+    @xgboost(:XGDMatrixCreateFromCSCEx,
+             convert(Vector{UInt64}, data.colptr .- 1) => Ptr{Csize_t},
              convert(Vector{UInt32}, data.rowval .- 1) => Ptr{Cuint},
              convert(Vector{Float32}, data.nzval) => Ptr{Cfloat},
-             convert(UInt64, size(data.colptr)[1]) => Bst_ulong,
-             convert(UInt64, nnz(data)) => Bst_ulong,
+             convert(UInt64, size(data.colptr)[1]) => Csize_t,
+             convert(UInt64, nnz(data)) => Csize_t,
+             0 => Csize_t, #num_rows, guess from data
              out => Ref{Ptr{Nothing}})
     return out[]
 end
 
 function XGDMatrixCreateFromCSCT(data::SparseMatrixCSC)
     handle = Ref{Ptr{Nothing}}()
-    @xgboost(:XGDMatrixCreateFromCSR,
-             convert(Vector{UInt64}, data.colptr .- 1) => Ptr{Bst_ulong},
+    @xgboost(:XGDMatrixCreateFromCSREx,
+             convert(Vector{UInt64}, data.colptr .- 1) => Ptr{Csize_t},
              convert(Vector{UInt32}, data.rowval .- 1) => Ptr{Cuint},
              convert(Vector{Float32}, data.nzval) => Ptr{Cfloat},
-             convert(UInt64, size(data.colptr)[1]) => Bst_ulong,
-             convert(UInt64, nnz(data)) => Bst_ulong,
+             convert(UInt64, size(data.colptr)[1]) => Csize_t,
+             convert(UInt64, nnz(data)) => Csize_t,
+             0 => Csize_t,  #num_column, guess from data 
              handle => Ref{Ptr{Nothing}})
     return handle[]
 end
@@ -205,13 +205,14 @@ function XGBoosterEvalOneIter(handle::Ptr{Nothing}, iter::Int32, dmats::Vector{P
 end
 
 function XGBoosterPredict(handle::Ptr{Nothing}, dmat::Ptr{Nothing}, option_mask::Int32,
-                          ntree_limit::UInt32, out_len::Vector{UInt64})
+                          ntree_limit::UInt32, training::Int32, out_len::Vector{UInt64})
     out_result = Ref{Ptr{Float32}}()
     @xgboost(:XGBoosterPredict,
              handle => Ptr{Nothing},
              dmat => Ptr{Nothing},
              option_mask => Cint,
              ntree_limit => Cuint,
+             training => Cint, 
              out_len => Ptr{Bst_ulong},
              out_result => Ref{Ptr{Cfloat}})
     return out_result[]
