@@ -2,3 +2,4 @@
 deps.jl
 deps
 test/*.buffer
+Manifest.toml
