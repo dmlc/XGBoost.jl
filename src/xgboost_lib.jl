@@ -33,7 +33,7 @@ mutable struct DMatrix
 
     function DMatrix(data::SparseMatrixCSC{K,V}, transposed::Bool = false;
                                           kwargs...) where {K<:Real, V<:Integer}
-        handle = (transposed ? XGDMatrixCreateFromCSCT(data) : XGDMatrixCreateFromCSC(data))
+        handle = (transposed ? XGDMatrixCreateFromCSCT(data) : XGDMatrixCreateFromCSCEx(data))
         for itm in kwargs
             _setinfo(handle, string(itm[1]), itm[2])
         end
@@ -234,14 +234,14 @@ function eval_set(bst::Booster, watchlist::Vector{Tuple{DMatrix,String}}, iter::
 end
 
 ### predict ###
-function predict(bst::Booster, data; output_margin::Bool = false, ntree_limit::Integer = 0)
+function predict(bst::Booster, data; output_margin::Bool = false, ntree_limit::Integer = 0, training::Integer=0)
     if typeof(data) != DMatrix
         data = DMatrix(data)
     end
 
     len = UInt64[1]
     ptr = XGBoosterPredict(bst.handle, data.handle, convert(Int32, output_margin),
-                           convert(UInt32, ntree_limit), len)
+                           convert(UInt32, ntree_limit), convert(Int32, training), len)
     return deepcopy(unsafe_wrap(Array, ptr, len[1]))
 end
 
