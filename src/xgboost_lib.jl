@@ -110,15 +110,27 @@ function save(bst::Booster, fname::String)
 end
 
 ### dump model ###
-function dump_model(bst::Booster, fname::String; fmap::String="", with_stats::Bool = false)
-    data = XGBoosterDumpModel(bst.handle, fmap, convert(Int64, with_stats))
+function dump_model(bst::Booster, fname::String; fmap::String="", with_stats::Bool = false, dump_format::String="text")
+    data = XGBoosterDumpModel(bst.handle, fmap, convert(Int64, with_stats), dump_format)
     fo = open(fname, "w")
-    for i in 1:length(data)
-        @printf(fo, "booster[%d]:\n", i)
-        @printf(fo, "%s", unsafe_string(data[i]))
+    if dump_format == "json"
+        @printf(fo,"[\n");
+        for i in 1:length(data)
+            @printf(fo, "%s", unsafe_string(data[i]))
+            if i < length(data)
+                @printf(fo,",\n");
+            end
+        end
+        @printf(fo,"\n]");  
+    else
+        for i in 1:length(data)
+            @printf(fo, "booster[%d]:\n", i)
+            @printf(fo, "%s", unsafe_string(data[i]))
+        end
     end
     close(fo)
 end
+
 
 function makeDMatrix(data, label)
     # running converts
