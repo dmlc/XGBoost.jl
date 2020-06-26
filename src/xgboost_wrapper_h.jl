@@ -32,7 +32,7 @@ function XGDMatrixCreateFromCSCEx(data::SparseMatrixCSC)
              convert(Vector{Float32}, data.nzval) => Ptr{Cfloat},
              convert(UInt64, size(data.colptr)[1]) => Csize_t,
              convert(UInt64, nnz(data)) => Csize_t,
-             0 => Csize_t, #num_rows, guess from data
+             convert(UInt64, size(data)[1]) => Csize_t, #num_rows
              out => Ref{Ptr{Nothing}})
     return out[]
 end
@@ -45,7 +45,7 @@ function XGDMatrixCreateFromCSCT(data::SparseMatrixCSC)
              convert(Vector{Float32}, data.nzval) => Ptr{Cfloat},
              convert(UInt64, size(data.colptr)[1]) => Csize_t,
              convert(UInt64, nnz(data)) => Csize_t,
-             0 => Csize_t,  #num_column, guess from data 
+             convert(UInt64, size(data)[2]) => Csize_t, #num_cols
              handle => Ref{Ptr{Nothing}})
     return handle[]
 end
