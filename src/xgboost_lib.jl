@@ -262,8 +262,8 @@ end
 
 function mknfold(dall::DMatrix, nfold::Integer, param, seed::Integer, evals=[]; fpreproc = Union{},
                  kwargs = [])
-    seed!(seed)
-    randidx = randperm(XGDMatrixNumRow(dall.handle))
+    rng = MersenneTwister(seed)
+    randidx = randperm(rng, XGDMatrixNumRow(dall.handle))
     kstep = size(randidx)[1] / nfold
     idset = [randidx[round(Int64, (i-1) * kstep) + 1 : min(size(randidx)[1],round(Int64, i * kstep))] for i in 1:nfold]
     ret = CVPack[]
