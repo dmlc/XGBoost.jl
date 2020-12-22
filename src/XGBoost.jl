@@ -3,7 +3,7 @@ module XGBoost
 using XGBoost_jll
 
 using Printf
-using Random: randperm, seed!
+using Random: randperm, MersenneTwister
 using SparseArrays: SparseMatrixCSC, nnz
 using Statistics: mean, std
 
