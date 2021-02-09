@@ -152,13 +152,15 @@ function makeDMatrix(data, label)
 end
 
 ### train ###
-function xgboost(data, nrounds::Integer; label = Union{}, param = [], watchlist = [], metrics = [],
-                 obj = Union{}, feval = Union{}, group = [], kwargs...)
+function xgboost(data, nrounds::Integer; label = Union{}, group = [], kwargs...)
     dtrain = makeDMatrix(data, label)
     if length(group) > 0
       set_info(dtrain, "group", group)
     end
-
+    xgboost(dtrain, nrounds; kwargs...)
+end
+function xgboost(dtrain::DMatrix, nrounds::Integer; param = [], watchlist = [], metrics = [],
+                 obj = Union{}, feval = Union{}, kwargs...)
     cache = [dtrain]
     for itm in watchlist
         push!(cache, itm[1])
