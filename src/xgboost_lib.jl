@@ -121,7 +121,7 @@ function dump_model(bst::Booster, fname::String; fmap::String="", with_stats::Bo
                 @printf(fo,",\n");
             end
         end
-        @printf(fo,"\n]");  
+        @printf(fo,"\n]");
     else
         for i in 1:length(data)
             @printf(fo, "booster[%d]:\n", i)
@@ -158,7 +158,8 @@ function xgboost(data, nrounds::Integer; label = Union{}, param = [], watchlist 
     if length(group) > 0
       set_info(dtrain, "group", group)
     end
-
+    save_period = 0
+    model_dir = "models/"
     cache = [dtrain]
     for itm in watchlist
         push!(cache, itm[1])
@@ -170,10 +171,22 @@ function xgboost(data, nrounds::Integer; label = Union{}, param = [], watchlist 
         XGBoosterSetParam(bst.handle, string(itm[1]), string(itm[2]))
         if itm[1] == :silent
             silent = itm[2] != 0
+        elseif itm[1] == :save_period
+            save_period = itm[2]
+        elseif itm[1] == :model_dir
+            model_dir = itm[2]
         end
     end
     for itm in param
         XGBoosterSetParam(bst.handle, string(itm[1]), string(itm[2]))
+        if itm[1] == "save_period"
+            save_period = itm[2]
+        elseif itm[1] == :model_dir
+            model_dir = itm[2]
+        end
+    end
+    if save_period > 0
+        mkpath(model_dir)
     end
     if size(watchlist)[1] == 0
         watchlist = [(dtrain, "train")]
@@ -183,6 +196,9 @@ function xgboost(data, nrounds::Integer; label = Union{}, param = [], watchlist 
     end
     for i = 1:nrounds
         update(bst, 1, dtrain, obj=obj)
+        if save_period != 0 && i%save_period == 0
+            XGBoost.save(bst, joinpath(model_dir, "$(i).model")) # call to xgboost C++ module fails to save model periodically so lets do it here
+        end
         if !silent
             @printf(stderr, "%s", eval_set(bst, watchlist, i, feval = feval))
         end
