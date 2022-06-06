@@ -388,7 +388,7 @@ function importance(bst::Booster; fmap::String = "", sort_by::Symbol = :gain)
         end
     end
 
-    # compile these gains into list of features sorted by gain value
+    # compile these gains into sorted list of features
     res = FeatureImportance[]
     for fname in keys(gains)
         push!(res, FeatureImportance(fname,
