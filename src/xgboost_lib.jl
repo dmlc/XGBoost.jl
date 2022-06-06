@@ -396,14 +396,17 @@ function importance(bst::Booster; fmap::String = "", sort_by::Symbol = :gain)
                                      covers[fname] / totalCover,
                                      freqs[fname] / totalFreq))
     end
-    if sort_by == :name
-        sort!(res, by = x -> parse(Int64, x.fname[2:end]) + 1)
+
+    if sort_by == :gain        
+        sort!(res, by = x -> -x.gain)
     elseif sort_by == :cover
         sort!(res, by = x -> -x.cover)                                                                                                                  
     elseif sort_by == :freq
         sort!(res, by = x -> -x.freq)                                                                                                                  
-    else        
-        sort!(res, by = x -> -x.gain)
+    elseif sort_by == :name
+        sort!(res, by = x -> parse(Int64, x.fname[2:end]) + 1)
+    else
+        throw(ArgumentError("The sort_by can be only :gain, :cover, :freq or :name! You used :$(sort_by)."))
     end
 end
 
