@@ -356,7 +356,7 @@ end
 
 Base.show(io::IO, ::MIME"text/plain", arr::Vector{FeatureImportance}) = show(io, arr)
 
-function importance(bst::Booster; fmap::String = "")
+function importance(bst::Booster; fmap::String = "", sort_by::Symbol = :gain)
     data = XGBoosterDumpModel(bst.handle, fmap, 1)
 
     # get the total gains for each feature and the whole model
@@ -396,11 +396,19 @@ function importance(bst::Booster; fmap::String = "")
                                      covers[fname] / totalCover,
                                      freqs[fname] / totalFreq))
     end
-    sort!(res, by = x -> -x.gain)
+    if sort_by == :name
+        sort!(res, by = x -> parse(Int64, x.fname[2:end]) + 1)
+    elseif sort_by == :cover
+        sort!(res, by = x -> -x.cover)                                                                                                                  
+    elseif sort_by == :freq
+        sort!(res, by = x -> -x.freq)                                                                                                                  
+    else        
+        sort!(res, by = x -> -x.gain)
+    end
 end
 
-function importance(bst::Booster, feature_names::Vector{String})
-    res = importance(bst)
+function importance(bst::Booster, feature_names::Vector{String}; sort_by::Symbol = :gain)
+    res = importance(bst, sort_by)
 
     result = FeatureImportance[]
     for old_importance in res
