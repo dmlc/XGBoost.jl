@@ -1,19 +1,19 @@
 [
-  { "nodeid": 0, "depth": 0, "split": "odor=none", "yes": 2, "no": 1, "gain": 4000.53101, "cover": 1628.25, "children": [
-    { "nodeid": 1, "depth": 1, "split": "stalk-root=club", "yes": 4, "no": 3, "gain": 1158.21204, "cover": 924.5, "children": [
-      { "nodeid": 3, "leaf": 1.71217716, "cover": 812 },
-      { "nodeid": 4, "leaf": -1.70044053, "cover": 112.5 }
-    ]},
-    { "nodeid": 2, "depth": 1, "split": "spore-print-color=green", "yes": 6, "no": 5, "gain": 198.173828, "cover": 703.75, "children": [
-      { "nodeid": 5, "leaf": -1.94070864, "cover": 690.5 },
-      { "nodeid": 6, "leaf": 1.85964918, "cover": 13.25 }
+  { "nodeid": 0, "depth": 0, "split": "odor=none", "yes": 2, "no": 1 , "gain": 4000.53101, "cover": 1628.25, "children": [
+    { "nodeid": 1, "depth": 1, "split": "stalk-root=club", "yes": 4, "no": 3 , "gain": 1158.21204, "cover": 924.5, "children": [
+      { "nodeid": 3, "leaf": 1.71217716 , "cover": 812 }, 
+      { "nodeid": 4, "leaf": -1.70044053 , "cover": 112.5 }
+    ]}, 
+    { "nodeid": 2, "depth": 1, "split": "spore-print-color=green", "yes": 6, "no": 5 , "gain": 198.173828, "cover": 703.75, "children": [
+      { "nodeid": 5, "leaf": -1.94070864 , "cover": 690.5 }, 
+      { "nodeid": 6, "leaf": 1.85964918 , "cover": 13.25 }
     ]}
   ]},
-  { "nodeid": 0, "depth": 0, "split": "stalk-root=rooted", "yes": 2, "no": 1, "gain": 832.545044, "cover": 788.852051, "children": [
-    { "nodeid": 1, "depth": 1, "split": "odor=none", "yes": 4, "no": 3, "gain": 569.725098, "cover": 768.389709, "children": [
-      { "nodeid": 3, "leaf": 0.78471756, "cover": 458.936859 },
-      { "nodeid": 4, "leaf": -0.968530357, "cover": 309.45282 }
-    ]},
-    { "nodeid": 2, "leaf": -6.23624468, "cover": 20.462389 }
+  { "nodeid": 0, "depth": 0, "split": "stalk-root=rooted", "yes": 2, "no": 1 , "gain": 832.545044, "cover": 788.852051, "children": [
+    { "nodeid": 1, "depth": 1, "split": "odor=none", "yes": 4, "no": 3 , "gain": 569.725098, "cover": 768.389709, "children": [
+      { "nodeid": 3, "leaf": 0.78471756 , "cover": 458.936859 }, 
+      { "nodeid": 4, "leaf": -0.968530357 , "cover": 309.45282 }
+    ]}, 
+    { "nodeid": 2, "leaf": -6.23624468 , "cover": 20.462389 }
   ]}
 ]
