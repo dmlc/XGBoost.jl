@@ -1,6 +1,10 @@
 const Bst_ulong = Culonglong
 
-"Calls an xgboost API function and correctly reports errors."
+"""
+    @xgboost f params...
+
+Calls an xgboost API function and correctly reports errors.
+"""
 macro xgboost(f, params...)
     return quote
         err = ccall(($f, libxgboost), Int64,
@@ -21,8 +25,6 @@ function XGDMatrixCreateFromFile(fname::String, silent::Int32)
              out => Ref{Ptr{Nothing}})
     return out[]
 end
-
-@deprecate XGDMatrixCreateFromCSC(data) XGDMatrixCreateFromCSCEx(data) false
 
 function XGDMatrixCreateFromCSCEx(data::SparseMatrixCSC)
     out = Ref{Ptr{Nothing}}()
@@ -50,18 +52,16 @@ function XGDMatrixCreateFromCSCT(data::SparseMatrixCSC)
     return handle[]
 end
 
-function XGDMatrixCreateFromMat(data::Matrix{Float32}, missing::Float32)
-    XGDMatrixCreateFromMatT(Matrix(transpose(data)), missing)
-end
-
-function XGDMatrixCreateFromMatT(data::Matrix{Float32}, missing::Float32)
-    ncol, nrow = size(data)
+# need to transpose Julia matrices first...
+# sadly there is no C method for transpose
+function XGDMatrixCreateFromMat(data::Matrix{Float32}, missing_val::Float32)
+    (ncol, nrow) = size(data)
     handle = Ref{Ptr{Nothing}}()
     @xgboost(:XGDMatrixCreateFromMat,
              data => Ptr{Cfloat},
              nrow => Bst_ulong,
              ncol => Bst_ulong,
-             missing => Cfloat,
+             missing_val => Cfloat,
              handle => Ref{Ptr{Nothing}})
     return handle[]
 end
