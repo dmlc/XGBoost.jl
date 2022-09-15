@@ -5,6 +5,8 @@ using XGBoost_jll
 using Printf
 using LinearAlgebra
 using JSON3
+using Tables
+using OrderedCollections
 using Random: randperm, MersenneTwister
 using SparseArrays: SparseMatrixCSC, nnz
 using Statistics: mean, std
@@ -18,5 +20,6 @@ using .Lib: DMatrixHandle, BoosterHandle
 
 include("dmatrix.jl")
 include("booster.jl")
+include("importance.jl")
 
 end # module XGBoost

@@ -56,13 +56,12 @@ end
 
 save(b::Booster, io::IO; kw...) = write(io, save(b, Vector{UInt8}; kw...))
 
-#TODO: not yet sure if this is working right
 function dump(b::Booster, ::Type{Vector{String}}; fmap::AbstractString="", with_stats::Bool=false)
     olen = Ref{Lib.bst_ulong}()
     o = Ref{Ptr{Ptr{Cchar}}}()
     xgbcall(XGBoosterDumpModel, b.handle, fmap, convert(Cint, with_stats), olen, o)
     strs = unsafe_wrap(Array, o[], olen[])
-    map(s -> unsafe_string(s), strs)
+    map(unsafe_string, strs)
 end
 
 function predict(b::Booster, Xy::DMatrix;
@@ -78,15 +77,31 @@ function predict(b::Booster, Xy::DMatrix;
 end
 predict(b::Booster, Xy; kw...) = predict(b, DMatrix(Xy); kw...)
 
-#TODO: verbosity when updating
+function evaliter(b::Booster, watch, n::Integer=1)
+    o = Ref{Ptr{Int8}}()
+    names = collect(Iterators.map(string, keys(watch)))
+    watch = collect(Iterators.map(x -> x.handle, values(watch)))
+    xgbcall(XGBoosterEvalOneIter, b.handle, n, watch, names, length(watch), o)
+    unsafe_string(o[])
+end
 
-function updateone!(b::Booster, Xy::DMatrix; round_number::Integer=1)
-    xgbcall(XGBoostUpdateOneIter, b.handle, round_number, Xy.handle)
+printeval(io::IO, b::Booster, watch, n::Integer=1) = print(io, evaliter(b, watch, n))
+printeval(b::Booster, watch, n::Integer=1) = printeval(stderr, b, watch, n)
+
+logeval(b::Booster, watch, n::Integer=1) = @info(evaliter(b, watch, n))
+
+function updateone!(b::Booster, Xy::DMatrix;
+                    round_number::Integer=1,
+                    log_data_name::Union{Nothing,AbstractString}=nothing,
+                   )
+    xgbcall(XGBoosterUpdateOneIter, b.handle, round_number, Xy.handle)
+    isnothing(log_data_name) || logeval(b, Dict(log_data_name=>Xy), round_number)
     b
 end
 
 function updateone!(b::Booster, Xy::DMatrix, g::AbstractVector{<:Real}, h::AbstractVector{<:Real}; 
-                    round_number::Integer=1
+                    round_number::Integer=1,
+                    log_data_name::Union{Nothing,AbstractString}=nothing,
                    )
     if size(g) ≠ size(h)
         throw(ArgumentError("booster got gradient and hessian of incompatible sizes"))
@@ -94,6 +109,7 @@ function updateone!(b::Booster, Xy::DMatrix, g::AbstractVector{<:Real}, h::Abstr
     g = convert(Vector{Cfloat}, g)
     h = convert(Vector{Cfloat}, h)  # uh, why is this not a matrix?
     xgbcall(XGBoosterBoostOneIter(b.handle, Xy.handle, g, h, length(g)))
+    isnothing(log_data_name) || logeval(b, Dict(log_data_name=>Xy), round_number)
     b
 end
 
@@ -105,14 +121,21 @@ end
 
 function update!(b::Booster, Xy, nrounds::Integer, obj...; kw...)
     for j ∈ 1:nrounds
-        updateone!(b, Xy, obj...; kw...)
+        updateone!(b, Xy, obj...; round_number=j, kw...)
     end
     b
 end
 update!(b::Booster, Xy; kw...) = update!(b, Xy, 1; kw...)
 
-function xgboost(data, nrounds::Integer=10; kw...)
+function xgboost(data, nrounds::Integer=10;
+                 log_data_name::Union{Nothing,AbstractString}="train",
+                 kw...)
     Xy = DMatrix(data)
     b = Booster(Xy; kw...)
-    update!(b, Xy, nrounds)
+    isnothing(log_data_name) || @info("XGBoost: starting training:", data)
+    update!(b, Xy, nrounds; log_data_name)
+    isnothing(log_data_name) || @info("Training rounds complete.")
+    b
 end
+
+

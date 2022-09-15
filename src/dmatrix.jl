@@ -123,6 +123,7 @@ function Base.size(dm::DMatrix, ax::Integer)
     end
 end
 
+#TODO: show feature names if available (probably only for MIME)
 function Base.show(io::IO, dm::DMatrix)
     show(io, typeof(dm))
     print(io, "(", size(dm,1), ", ", size(dm,2), ")")
@@ -134,3 +135,24 @@ function save(dm::DMatrix, fname::AbstractString; silent::Bool=true)
     xgbcall(XGDMatrixSaveBinary, dm.handle, fname, convert(Cint, silent))
     fname
 end
+
+function setfeatureinfo!(dm::DMatrix, k::AbstractString, strs::AbstractVector{<:AbstractString})
+    strs = convert(Vector{String}, strs)
+    xgbcall(XGDMatrixSetStrFeatureInfo, dm.handle, k, strs, length(strs))
+    strs
+end
+
+setfeaturenames!(dm::DMatrix, names::AbstractVector{<:AbstractString}) = setfeatureinfo!(dm, "feature_name", names)
+
+function getfeatureinfo(dm::DMatrix, k::AbstractString)
+    olen = Ref{Lib.bst_ulong}()
+    o = Ref{Ptr{Ptr{Cchar}}}()
+    xgbcall(XGDMatrixGetStrFeatureInfo, dm.handle, k, olen, o)
+    strs = unsafe_wrap(Array, o[], olen[])
+    map(unsafe_string, strs)
+end
+
+getfeaturenames(dm::DMatrix) = getfeatureinfo(dm, "feature_name")
+
+
+#TODO: Tables.jl methods (input only)
