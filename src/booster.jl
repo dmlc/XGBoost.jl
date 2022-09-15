@@ -65,6 +65,21 @@ function dump(b::Booster, ::Type{Vector{String}}; fmap::AbstractString="", with_
     map(s -> unsafe_string(s), strs)
 end
 
+function predict(b::Booster, Xy::DMatrix;
+                 margin::Bool=false,  # whether to output margin
+                 training::Bool=false,
+                 ntree_limit::Integer=0,  # 0 corresponds to no limit
+                )
+    opts = margin ? 1 : 0
+    olen = Ref{Lib.bst_ulong}()
+    o = Ref{Ptr{Cfloat}}()
+    xgbcall(XGBoosterPredict, b.handle, Xy.handle, opts, ntree_limit, Int(training), olen, o)
+    unsafe_wrap(Array, o[], olen[])
+end
+predict(b::Booster, Xy; kw...) = predict(b, DMatrix(Xy); kw...)
+
+#TODO: verbosity when updating
+
 function updateone!(b::Booster, Xy::DMatrix; round_number::Integer=1)
     xgbcall(XGBoostUpdateOneIter, b.handle, round_number, Xy.handle)
     b
@@ -79,4 +94,25 @@ function updateone!(b::Booster, Xy::DMatrix, g::AbstractVector{<:Real}, h::Abstr
     g = convert(Vector{Cfloat}, g)
     h = convert(Vector{Cfloat}, h)  # uh, why is this not a matrix?
     xgbcall(XGBoosterBoostOneIter(b.handle, Xy.handle, g, h, length(g)))
+    b
+end
+
+function updateone!(b::Booster, Xy::DMatrix, obj; kw...)
+    ŷ = predict(b, Xy)
+    (g, h) = obj(ŷ, Xy)
+    updateone!(b, Xy, g, h; kw...)
+end
+
+function update!(b::Booster, Xy, nrounds::Integer, obj...; kw...)
+    for j ∈ 1:nrounds
+        updateone!(b, Xy, obj...; kw...)
+    end
+    b
+end
+update!(b::Booster, Xy; kw...) = update!(b, Xy, 1; kw...)
+
+function xgboost(data, nrounds::Integer=10; kw...)
+    Xy = DMatrix(data)
+    b = Booster(Xy; kw...)
+    update!(b, Xy, nrounds)
 end

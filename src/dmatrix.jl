@@ -94,6 +94,10 @@ function DMatrix(dm::DMatrix, idx::AbstractVector{<:Integer}; kw...)
     DMatrix(o[]; kw...)
 end
 
+DMatrix(X::AbstractMatrix, y::AbstractVector; kw...) = DMatrix(X; label=y, kw...)
+
+DMatrix(Xy::Tuple{TX,Ty}; kw...) where {TX,Ty} = DMatrix(Xy[1], Xy[2]; kw...)
+
 DMatrix(dm::DMatrix) = dm
 
 function nrows(dm::DMatrix)
