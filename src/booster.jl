@@ -12,6 +12,8 @@ end
 setparam!(b::Booster, name::AbstractString, val) = setparam!(b, name, string(val))
 setparam!(b::Booster, name::Symbol, val) = setparam!(b, string(name), val)
 
+setparams!(b::Booster; kw...) = foreach(kv -> setparam!(b, kv[1], kv[2]), kw)
+
 #TODO: are we sure we are using all threads by default?
 
 function Booster(cache::AbstractVector{<:DMatrix};
@@ -27,7 +29,7 @@ function Booster(cache::AbstractVector{<:DMatrix};
     elseif !isempty(model_file)
         load!(b, model_file)
     end
-    foreach(kv -> setparam!(b, kv[1], kv[2]), kw)
+    setparams!(b; kw...)
     b
 end
 Booster(dm::DMatrix; kw...) = Booster([dm]; kw...)

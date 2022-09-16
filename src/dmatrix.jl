@@ -3,11 +3,9 @@ mutable struct DMatrix
     handle::DMatrixHandle
 
     function DMatrix(handle::Ptr{Nothing}; kw...)
-        dmat = new(handle)
-        for (k,v) ∈ kw
-            setinfo!(dmat, string(k), v)
-        end
-        finalizer(x -> XGDMatrixFree(x.handle), dmat)
+        dm = new(handle)
+        setinfos!(dm; kw...)
+        finalizer(x -> XGDMatrixFree(x.handle), dm)
     end
 end
 
@@ -20,6 +18,10 @@ function setinfo!(dm::DMatrix, name::AbstractString, info::AbstractVector{<:Inte
     xgbcall(XGDMatrixSetUIntInfo, dm.handle, name, convert(Vector{Cuint}, info), length(info))
     info
 end
+
+setinfo!(dm::DMatrix, name::Symbol, info) = setinfo!(dm, string(name), info)
+
+setinfos!(dm::DMatrix; kw...) = foreach(kv -> setinfo!(dm, kv[1], kv[2]), kw)
 
 _getinfo_call(::Type{<:AbstractFloat}) = XGDMatrixGetFloatInfo
 _getinfo_call(::Type{<:Integer}) = XGDMatrixGetUIntInfo
@@ -202,16 +204,14 @@ end
 setproxy!(dm::DMatrix, X::AbstractMatrix, y::AbstractVector; kw...) = setproxy!(dm, X; label=y, kw...)
 
 
-#TODO: is it ok to free data after we set it in proxy??
-
-using Base.Iterators: Stateful, reset!
-
 mutable struct DataIterator{T<:Stateful}
     iter::T
     proxy::DMatrix
 
     DataIterator(iter::Stateful) = new{typeof(iter)}(iter, proxy(DMatrix))
 end
+
+DataIterator(x) = DataIterator(Stateful(x))
 
 Iterators.reset!(itr::DataIterator) = reset!(itr.iter)
 
@@ -251,23 +251,36 @@ function _unsafe_dataiter_reset(ptr::Ptr)
     nothing
 end
 
-#TODO: deal with cache files
+function _dmatrix_caching_config_json(;cache_prefix::AbstractString,
+                                      nthreads::Union{Integer,Nothing},
+                                     )
+    d = Dict("missing"=>"__NAN_STR__",
+             "cache_prefix"=>cache_prefix,
+            )
+    isnothing(nthreads) || (d["nthreads"] = nthreads)
+    # xgboost allows this which JSON3 thinks is invalid
+    replace(JSON3.write(d), "\"__NAN_STR__\""=>"NaN")
+end
 
-function DMatrix(itr::DataIterator; kw...)
+function DMatrix(itr::DataIterator;
+                 cache_prefix::AbstractString=joinpath(tempdir(),"xgb-cache"),
+                 nthreads::Union{Integer,Nothing}=nothing,
+                 kw...
+                )
     o = Ref{DMatrixHandle}()
 
     ptr_rst = @cfunction(_unsafe_dataiter_reset, Cvoid, (Ptr{Cvoid},))
     ptr_next = @cfunction(_unsafe_dataiter_next, Cint, (Ptr{Cvoid},))
 
-    # not entirely sure this is always ok
-    cfg = "{\"missing\": NaN, \"cache_prefix\": \"cache\", \"nthread\": 4}"
-
     xgbcall(XGDMatrixCreateFromCallback, pointer_from_objref(itr),
             itr.proxy.handle,
             ptr_rst, ptr_next,
-            cfg,
+            _dmatrix_caching_config_json(;cache_prefix, nthreads),
             o,
            )
 
     DMatrix(o[]; kw...)
 end
+
+# this is so we don't have endless confusing constructor methods
+fromiterator(::Type{DMatrix}, itr; kw...) = DMatrix(DataIterator(itr); kw...)

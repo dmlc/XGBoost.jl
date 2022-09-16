@@ -11,6 +11,8 @@ using Random: randperm, MersenneTwister
 using SparseArrays: SparseMatrixCSC, nnz
 using Statistics: mean, std
 
+using Base.Iterators: Stateful, reset!
+
 export DMatrix, Booster
 export xgboost, predict, save, nfold_cv, slice, get_info, set_info, dump_model, importance
 
