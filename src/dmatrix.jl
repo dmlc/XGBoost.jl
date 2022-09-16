@@ -1,11 +1,13 @@
 
+#FUCK: matrices are getting scrambled somehow!!!
+
 mutable struct DMatrix
     handle::DMatrixHandle
 
     function DMatrix(handle::Ptr{Nothing}; kw...)
         dm = new(handle)
         setinfos!(dm; kw...)
-        finalizer(x -> XGDMatrixFree(x.handle), dm)
+        finalizer(x -> xgbcall(XGDMatrixFree, x.handle), dm)
     end
 end
 
@@ -40,15 +42,25 @@ function load(::Type{DMatrix}, fname::AbstractString; silent::Bool=true, kw...)
     DMatrix(o[], kw...)
 end
 
-function DMatrix(x::Transpose{T}, missing_val::T=convert(T, NaN); kw...) where {T<:Real}
+function _dmatrix(x::AbstractMatrix{T}, missing_val::T=convert(T, NaN); kw...) where {T<:Real}
     o = Ref{DMatrixHandle}()
-    xp = convert(Matrix{Cfloat}, parent(x))
-    xgbcall(XGDMatrixCreateFromMat, xp, size(x,2), size(x,1), missing_val, o)
+    sz = reverse(size(x))
+    xp = convert(Matrix{Cfloat}, x)
+    xgbcall(XGDMatrixCreateFromMat, xp, sz[1], sz[2], missing_val, o)
     DMatrix(o[]; kw...)
 end
 
 function DMatrix(x::AbstractMatrix{T}, missing_val::T=convert(T, NaN); kw...) where {T<:Real}
-    DMatrix(transpose(x), missing_val; kw...)
+    # sadly, this copying is unavoidable
+    _dmatrix(Matrix(transpose(x)), missing_val; kw...)
+end
+
+# ideally these would be recursive but can't be bothered
+function DMatrix(x::Transpose{T}, missing_val::T=convert(T, NaN); kw...) where {T<:Real}
+    _dmatrix(parent(x), missing_val; kw...)
+end
+function DMatrix(x::Adjoint{T}, missing_val::T=convert(T, NaN); kw...) where {T<:Real}
+    _dmatrix(parent(x), missing_val; kw...)
 end
 
 function DMatrix(x::AbstractMatrix{Union{Missing,T}}; kw...) where {T<:Real}
@@ -56,7 +68,7 @@ function DMatrix(x::AbstractMatrix{Union{Missing,T}}; kw...) where {T<:Real}
     x′ = map(ξ -> ismissing(ξ) ? NaN32 : Float32(ξ), transpose(x))
     x′ = convert(Matrix{Cfloat}, x′)
     o = Ref{DMatrixHandle}()
-    XGDMatrixCreateFromMat(x′, size(x′,1), size(x′,2), NaN32, o)
+    xgbcall(XGDMatrixCreateFromMat, x′, size(x′,1), size(x′,2), NaN32, o)
     DMatrix(o[]; kw...)
 end
 
@@ -77,16 +89,7 @@ function DMatrix(x::SparseMatrixCSC{<:Real,<:Integer}; kw...)
     DMatrix(o[]; kw...)
 end
 
-function DMatrix(x::Transpose{<:Real,<:SparseMatrixCSC}; kw...)
-    x′ = parent(x)
-    o = Ref{DMatrixHandle}()
-    (colptr, rowval, nzval) = _sparse_csc_components(x)
-    xgbcall(XGDMatrixCreateFromCSREx, colptr, rowval, nzval,
-            size(colptr,1), nnz(x), size(x,2),
-            o,
-           )
-    DMatrix(o[]; kw...)
-end
+#TODO: transpose sparse method
 
 # this method takes a slice
 function DMatrix(dm::DMatrix, idx::AbstractVector{<:Integer}; kw...)
@@ -94,6 +97,11 @@ function DMatrix(dm::DMatrix, idx::AbstractVector{<:Integer}; kw...)
     idx = convert(Vector{Cint}, idx .- 1)
     XGDMatrixSliceDMatrix(dm.handle, idx, length(idx), o)
     DMatrix(o[]; kw...)
+end
+
+# we require the colon for consistent array semantics
+function Base.getindex(dm::DMatrix, idx::AbstractVector{<:Integer}, ::Colon; kw...)
+    DMatrix(dm, idx; kw...)
 end
 
 DMatrix(X::AbstractMatrix, y::AbstractVector; kw...) = DMatrix(X; label=y, kw...)

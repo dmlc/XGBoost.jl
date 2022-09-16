@@ -2,7 +2,7 @@
 mutable struct Booster
     handle::BoosterHandle
 
-    Booster(h::BoosterHandle) = finalizer(x -> XGBoosterFree(x.handle), new(h))
+    Booster(h::BoosterHandle) = finalizer(x -> xgbcall(XGBoosterFree, x.handle), new(h))
 end
 
 function setparam!(b::Booster, name::AbstractString, val::AbstractString)
@@ -69,6 +69,26 @@ function dump(b::Booster, ::Type{Vector{String}}; fmap::AbstractString="", with_
     xgbcall(XGBoosterDumpModel, b.handle, fmap, convert(Cint, with_stats), olen, o)
     strs = unsafe_wrap(Array, o[], olen[])
     map(unsafe_string, strs)
+end
+
+#TODO: may need to serialize model to update? very confused about that, see python code
+
+function serialize(b::Booster)
+    olen = Ref{Lib.bst_ulong}()
+    o = Ref{Ptr{Int8}}()  # don't know why it insists on Int8
+    xgbcall(XGBoosterSerializeToBuffer, b.handle, olen, o)
+    unsafe_wrap(Array, convert(Ptr{UInt8}, o[]), olen[])
+end
+
+function deserialize(b::Booster, buf::AbstractVector{UInt8})
+    buf = convert(Vector{UInt8}, buf)
+    xgbcall(XGBoosterUnserializeFromBuffer, b.handle, buf, length(buf))
+    b
+end
+
+function deserialize(::Type{Booster}, buf::AbstractVector{UInt8}, data...; kw...)
+    b = Booster(data...; kw...)
+    deserialize(b, buf)
 end
 
 function predict(b::Booster, Xy::DMatrix;
