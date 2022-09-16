@@ -38,3 +38,5 @@ function importance(b::Booster; type::AbstractString="gain")
 
     OrderedDict(_parse_out_feature_name.(names[p]) .=> fim[p])
 end
+
+#TODO: duplicate the python versions `get_split_value_histogram`

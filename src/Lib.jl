@@ -11,6 +11,11 @@ struct XGBoostError <: Exception
     message::String
 end
 
+function Base.showerror(io::IO, err::XGBoostError)
+    println(io, "XGBoostError: (caller: $(string(err.caller)))")
+    print(io, err.message)
+end
+
 """
     xgbcall(𝒻, a...)
 

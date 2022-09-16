@@ -32,7 +32,7 @@ function getinfo(dm::DMatrix, ::Type{T}, name::AbstractString) where {T<:Real}
     convert(Vector{T}, x)
 end
 
-function DMatrix(fname::AbstractString; silent::Bool=false, kw...)
+function load(::Type{DMatrix}, fname::AbstractString; silent::Bool=true, kw...)
     o = Ref{DMatrixHandle}()
     xgbcall(XGDMatrixCreateFromFile, fname, silent, o)
     DMatrix(o[], kw...)
@@ -155,4 +155,48 @@ end
 getfeaturenames(dm::DMatrix) = getfeatureinfo(dm, "feature_name")
 
 
-#TODO: Tables.jl methods (input only)
+#====================================================================================================
+       proxy stuff
+
+Proxy is for setting data later, typically for external memory stuff
+====================================================================================================#
+
+function proxy(::Type{DMatrix})
+    o = Ref{DMatrixHandle}()
+    xgbcall(XGProxyDMatrixCreate, o)
+    DMatrix(o[])
+end
+
+_numpy_json_typestr(::Type{<:AbstractFloat}) = "f"
+_numpy_json_typestr(::Type{<:Integer}) = "i"
+_numpy_json_typestr(::Type{Bool}) = "b"
+_numpy_json_typestr(::Type{<:Complex{<:AbstractFloat}}) = "c"
+
+numpy_json_typestr(::Type{T}) where {T<:Number} = string("<",_numpy_json_typestr(T),sizeof(T))
+
+function numpy_json_info(x::Transpose; read_only::Bool=false)
+    info = Dict("data"=>(convert(Csize_t, pointer(parent(x))), read_only),
+                "shape"=>reverse(size(x)),
+                "typestr"=>numpy_json_typestr(eltype(x)),
+                "version"=>3,
+               )
+    JSON3.write(info)
+end
+numpy_json_info(x::Array) = x |> transpose |> numpy_json_info
+
+#TODO: this is not nearly done... I'm very worried about data ownership
+
+#NOTE: I'm assuming the dmatrix will take ownership but I have no idea if that's true
+# maybe our data iterator thing is supposed to take ownership?
+function setproxy!(dm::DMatrix, x::AbstractMatrix; kw...)
+    x = convert(Matrix, x)
+    GC.@preserve x begin
+        info = numpy_json_info(x)
+        xgbcall(XGProxyDMatrixSetDataDense, dm.handle, info)
+    end
+    for (k,v) ∈ kw
+        setinfo!(dm, string(k), v)
+    end
+    dm
+end
+setproxy!(dm::DMatrix, X::AbstractMatrix, y::AbstractVector; kw...) = setproxy!(dm, X; label=y, kw...)

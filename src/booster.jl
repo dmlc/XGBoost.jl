@@ -12,6 +12,7 @@ end
 setparam!(b::Booster, name::AbstractString, val) = setparam!(b, name, string(val))
 setparam!(b::Booster, name::Symbol, val) = setparam!(b, string(name), val)
 
+#TODO: are we sure we are using all threads by default?
 
 function Booster(cache::AbstractVector{<:DMatrix};
                  model_buffer=UInt8[],
@@ -24,7 +25,7 @@ function Booster(cache::AbstractVector{<:DMatrix};
     if model_buffer isa IO || !isempty(model_buffer)
         load!(b, model_buffer)
     elseif !isempty(model_file)
-        load!(b, model_file) 
+        load!(b, model_file)
     end
     foreach(kv -> setparam!(b, kv[1], kv[2]), kw)
     b
@@ -40,6 +41,10 @@ function load!(b::Booster, buf::AbstractVector{UInt8})
 end
 
 load!(b::Booster, io::IO) = load!(b, read(io))
+
+load(::Type{Booster}, fname::AbstractString) = Booster(DMatrix[], model_file=fanme)
+
+load(::Type{Booster}, io) = Booster(DMatrix[], model_buffer=io)
 
 function save(b::Booster, fname::AbstractString)
     xgbcall(XGBoosterSaveModel, b.handle, fname)
@@ -99,7 +104,7 @@ function updateone!(b::Booster, Xy::DMatrix;
     b
 end
 
-function updateone!(b::Booster, Xy::DMatrix, g::AbstractVector{<:Real}, h::AbstractVector{<:Real}; 
+function updateone!(b::Booster, Xy::DMatrix, g::AbstractVector{<:Real}, h::AbstractVector{<:Real};
                     round_number::Integer=1,
                     log_data_name::Union{Nothing,AbstractString}=nothing,
                    )

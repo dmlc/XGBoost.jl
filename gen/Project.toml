@@ -1,0 +1,3 @@
+[deps]
+Clang = "40e3b903-d033-50b4-a0cc-940c62c95e31"
+XGBoost_jll = "a5c6f535-4255-5ca2-a466-0e519f119c46"
