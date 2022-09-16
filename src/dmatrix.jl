@@ -200,3 +200,74 @@ function setproxy!(dm::DMatrix, x::AbstractMatrix; kw...)
     dm
 end
 setproxy!(dm::DMatrix, X::AbstractMatrix, y::AbstractVector; kw...) = setproxy!(dm, X; label=y, kw...)
+
+
+#TODO: is it ok to free data after we set it in proxy??
+
+using Base.Iterators: Stateful, reset!
+
+mutable struct DataIterator{T<:Stateful}
+    iter::T
+    proxy::DMatrix
+
+    DataIterator(iter::Stateful) = new{typeof(iter)}(iter, proxy(DMatrix))
+end
+
+Iterators.reset!(itr::DataIterator) = reset!(itr.iter)
+
+Base.isempty(itr::DataIterator) = isempty(itr.iter)
+
+function Base.popfirst!(itr::DataIterator)
+    x = popfirst!(itr.iter)
+    # TODO: make this a little more intelligent
+    args = haskey(x, :y) ? (x.X, x.y) : (x.X,)
+    kw = (;(k=>v for (k,v) ∈ pairs(x) if k ∉ (:X, :y))...)
+    setproxy!(itr.proxy, args...; kw...)
+    x
+end
+
+function _unsafe_dataiter_next(ptr::Ptr)
+    itr = unsafe_pointer_to_objref(ptr)::DataIterator
+    try
+        if isempty(itr)
+            Cint(0)
+        else
+            popfirst!(itr)
+            Cint(1)
+        end
+    catch err
+        @error("got error during C callback for next iteration state", exception=(err, catch_backtrace()))
+        Cint(-1)
+    end
+end
+
+function _unsafe_dataiter_reset(ptr::Ptr)
+    itr = unsafe_pointer_to_objref(ptr)::DataIterator
+    try
+        reset!(itr)
+    catch err
+        @error("got error during C callback for resetting iterator", exception=(err, catch_backtrace()))
+    end
+    nothing
+end
+
+#TODO: deal with cache files
+
+function DMatrix(itr::DataIterator; kw...)
+    o = Ref{DMatrixHandle}()
+
+    ptr_rst = @cfunction(_unsafe_dataiter_reset, Cvoid, (Ptr{Cvoid},))
+    ptr_next = @cfunction(_unsafe_dataiter_next, Cint, (Ptr{Cvoid},))
+
+    # not entirely sure this is always ok
+    cfg = "{\"missing\": NaN, \"cache_prefix\": \"cache\", \"nthread\": 4}"
+
+    xgbcall(XGDMatrixCreateFromCallback, pointer_from_objref(itr),
+            itr.proxy.handle,
+            ptr_rst, ptr_next,
+            cfg,
+            o,
+           )
+
+    DMatrix(o[]; kw...)
+end
