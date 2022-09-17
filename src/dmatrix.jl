@@ -2,9 +2,13 @@
 mutable struct DMatrix
     handle::DMatrixHandle
 
-    function DMatrix(handle::Ptr{Nothing}; kw...)
+    function DMatrix(handle::Ptr{Nothing};
+                     feature_names::AbstractVector{<:AbstractString}=String[],
+                     kw...
+                    )
         dm = new(handle)
         setinfos!(dm; kw...)
+        isempty(feature_names) || setfeaturenames!(dm, feature_names)
         finalizer(x -> xgbcall(XGDMatrixFree, x.handle), dm)
     end
 end
@@ -89,8 +93,7 @@ end
 
 #TODO: transpose sparse method
 
-# this method takes a slice
-function DMatrix(dm::DMatrix, idx::AbstractVector{<:Integer}; kw...)
+function slice(dm::DMatrix, idx::AbstractVector{<:Integer}; kw...)
     o = Ref{DMatrixHandle}()
     idx = convert(Vector{Cint}, idx .- 1)
     XGDMatrixSliceDMatrix(dm.handle, idx, length(idx), o)
@@ -107,6 +110,15 @@ DMatrix(X::AbstractMatrix, y::AbstractVector; kw...) = DMatrix(X; label=y, kw...
 DMatrix(Xy::Tuple{TX,Ty}; kw...) where {TX,Ty} = DMatrix(Xy[1], Xy[2]; kw...)
 
 DMatrix(dm::DMatrix) = dm
+
+function DMatrix(tbl; kw...)
+    if !Tables.istable(tbl)
+        throw(ArgumentError("DMatrix requires either an AbstractMatrix or table satisfying the Tables.jl interface"))
+    end
+    DMatrix(Tables.matrix(tbl); feature_names=string.(Tables.columnnames(tbl)), kw...)
+end
+
+DMatrix(tbl, y::AbstractVector; kw...) = DMatrix(tbl; label=y, kw...)
 
 function nrows(dm::DMatrix)
     o = Ref{Lib.bst_ulong}()
@@ -129,11 +141,6 @@ function Base.size(dm::DMatrix, ax::Integer)
     else
         throw(ArgumentError("size: DMatrix only has 2 indices"))
     end
-end
-
-function Base.show(io::IO, dm::DMatrix)
-    show(io, typeof(dm))
-    print(io, "(", size(dm,1), ", ", size(dm,2), ")")
 end
 
 getlabel(dm::DMatrix) = getinfo(dm, Float32, "label")
@@ -160,6 +167,15 @@ function getfeatureinfo(dm::DMatrix, k::AbstractString)
 end
 
 getfeaturenames(dm::DMatrix) = getfeatureinfo(dm, "feature_name")
+
+function getfeaturenames(dms::AbstractVector{DMatrix}; validate::Bool=false)
+    isempty(dms) && return String[]
+    fs = getfeaturenames(dms[1])
+    if validate && any(≠(fs), getfeaturenames.(dms))
+        throw(ArgumentError("got data with inconsistent feature names; use validate=false to ignore"))
+    end
+    fs
+end
 
 
 function proxy(::Type{DMatrix})
@@ -197,6 +213,9 @@ function setproxy!(dm::DMatrix, x::AbstractMatrix; kw...)
     dm
 end
 setproxy!(dm::DMatrix, X::AbstractMatrix, y::AbstractVector; kw...) = setproxy!(dm, X; label=y, kw...)
+
+
+#TODO: Tables.jl integration
 
 
 mutable struct DataIterator{T<:Stateful}

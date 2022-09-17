@@ -1,12 +1,20 @@
 
 mutable struct Booster
     handle::BoosterHandle
+    feature_names::Vector{String}  # sadly the C booster doesn't store this
 
-    Booster(h::BoosterHandle) = finalizer(x -> xgbcall(XGBoosterFree, x.handle), new(h))
+    # xgboost doesn't let us retrieve params, this dict is purely for the user to be able to figure
+    # out what the hell is happening, it's never used for program logic
+    params::Dict{Symbol,Any}
+
+    function Booster(h::BoosterHandle, fsn::AbstractVector{<:AbstractString}=String[], params::AbstractDict=Dict())
+        finalizer(x -> xgbcall(XGBoosterFree, x.handle), new(h, fsn, params))
+    end
 end
 
 function setparam!(b::Booster, name::AbstractString, val::AbstractString)
     xgbcall(XGBoosterSetParam, b.handle, name, val)
+    b.params[Symbol(name)] = val
     val
 end
 setparam!(b::Booster, name::AbstractString, val) = setparam!(b, name, string(val))
@@ -14,16 +22,15 @@ setparam!(b::Booster, name::Symbol, val) = setparam!(b, string(name), val)
 
 setparams!(b::Booster; kw...) = foreach(kv -> setparam!(b, kv[1], kv[2]), kw)
 
-#TODO: are we sure we are using all threads by default?
-
 function Booster(cache::AbstractVector{<:DMatrix};
+                 feature_names::AbstractVector{<:AbstractString}=getfeaturenames(cache),
                  model_buffer=UInt8[],
                  model_file::AbstractString="",
                  kw...
                 )
     o = Ref{BoosterHandle}()
     xgbcall(XGBoosterCreate, map(x -> x.handle, cache), length(cache), o)
-    b = Booster(o[])
+    b = Booster(o[], feature_names)
     if model_buffer isa IO || !isempty(model_buffer)
         load!(b, model_buffer)
     elseif !isempty(model_file)
@@ -33,6 +40,13 @@ function Booster(cache::AbstractVector{<:DMatrix};
     b
 end
 Booster(dm::DMatrix; kw...) = Booster([dm]; kw...)
+
+function getnrounds(b::Booster)
+    o = Ref{Cint}()
+    err = XGBoosterBoostedRounds(b.handle, o)
+    # xgboost will error in some circumstances when this really ought to be zero
+    err == 0 ? Int(o[]) : 0
+end
 
 load!(b::Booster, file::AbstractString) = (xgbcall(XGBoosterLoadModel, b.handle, file); b)
 
@@ -63,12 +77,24 @@ end
 
 save(b::Booster, io::IO; kw...) = write(io, save(b, Vector{UInt8}; kw...))
 
-function dump(b::Booster, ::Type{Vector{String}}; fmap::AbstractString="", with_stats::Bool=false)
+function dumpraw(b::Booster;
+                 format::AbstractString="json",  # known formats are json and text
+                 fmap::AbstractString="",
+                 with_stats::Bool=false
+                )
     olen = Ref{Lib.bst_ulong}()
     o = Ref{Ptr{Ptr{Cchar}}}()
-    xgbcall(XGBoosterDumpModel, b.handle, fmap, convert(Cint, with_stats), olen, o)
+    xgbcall(XGBoosterDumpModelEx, b.handle, fmap, convert(Cint, with_stats), format, olen, o)
     strs = unsafe_wrap(Array, o[], olen[])
     map(unsafe_string, strs)
+end
+
+function dump(b::Booster;
+              fmap::AbstractString="",
+              with_stats::Bool=false,
+             )
+    strs = dumpraw(b; fmap, with_stats)
+    JSON3.read.(strs)
 end
 
 #TODO: may need to serialize model to update? very confused about that, see python code
@@ -117,18 +143,29 @@ printeval(b::Booster, watch, n::Integer=1) = printeval(stderr, b, watch, n)
 
 logeval(b::Booster, watch, n::Integer=1) = @info(evaliter(b, watch, n))
 
+function _maybe_update_feature_names!(b::Booster, Xy::DMatrix, up::Bool)
+    if up
+        b.feature_names = getfeaturenames(Xy)
+    else
+        isempty(b.feature_names) && (b.feature_names = getfeaturenames(Xy))
+    end
+end
+
 function updateone!(b::Booster, Xy::DMatrix;
                     round_number::Integer=1,
                     log_data_name::Union{Nothing,AbstractString}=nothing,
+                    update_feature_names::Bool=false,
                    )
     xgbcall(XGBoosterUpdateOneIter, b.handle, round_number, Xy.handle)
     isnothing(log_data_name) || logeval(b, Dict(log_data_name=>Xy), round_number)
+    _maybe_update_feature_names!(b, Xy, update_feature_names)
     b
 end
 
 function updateone!(b::Booster, Xy::DMatrix, g::AbstractVector{<:Real}, h::AbstractVector{<:Real};
                     round_number::Integer=1,
                     log_data_name::Union{Nothing,AbstractString}=nothing,
+                    update_feature_names::Bool=false,
                    )
     if size(g) ≠ size(h)
         throw(ArgumentError("booster got gradient and hessian of incompatible sizes"))
@@ -137,6 +174,7 @@ function updateone!(b::Booster, Xy::DMatrix, g::AbstractVector{<:Real}, h::Abstr
     h = convert(Vector{Cfloat}, h)  # uh, why is this not a matrix?
     xgbcall(XGBoosterBoostOneIter(b.handle, Xy.handle, g, h, length(g)))
     isnothing(log_data_name) || logeval(b, Dict(log_data_name=>Xy), round_number)
+    _maybe_update_feature_names!(b, Xy, update_feature_names)
     b
 end
 
@@ -156,13 +194,13 @@ update!(b::Booster, Xy; kw...) = update!(b, Xy, 1; kw...)
 
 function xgboost(data, nrounds::Integer=10;
                  log_data_name::Union{Nothing,AbstractString}="train",
-                 kw...)
+                 kw...
+                )
     Xy = DMatrix(data)
     b = Booster(Xy; kw...)
-    isnothing(log_data_name) || @info("XGBoost: starting training:", data)
+    isnothing(log_data_name) || @info("XGBoost: starting training.")
     update!(b, Xy, nrounds; log_data_name)
     isnothing(log_data_name) || @info("Training rounds complete.")
     b
 end
-
 
