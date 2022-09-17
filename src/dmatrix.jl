@@ -1,6 +1,4 @@
 
-#FUCK: matrices are getting scrambled somehow!!!
-
 mutable struct DMatrix
     handle::DMatrixHandle
 
@@ -133,7 +131,6 @@ function Base.size(dm::DMatrix, ax::Integer)
     end
 end
 
-#TODO: show feature names if available (probably only for MIME)
 function Base.show(io::IO, dm::DMatrix)
     show(io, typeof(dm))
     print(io, "(", size(dm,1), ", ", size(dm,2), ")")
@@ -165,12 +162,6 @@ end
 getfeaturenames(dm::DMatrix) = getfeatureinfo(dm, "feature_name")
 
 
-#====================================================================================================
-       proxy stuff
-
-Proxy is for setting data later, typically for external memory stuff
-====================================================================================================#
-
 function proxy(::Type{DMatrix})
     o = Ref{DMatrixHandle}()
     xgbcall(XGProxyDMatrixCreate, o)
@@ -184,29 +175,25 @@ _numpy_json_typestr(::Type{<:Complex{<:AbstractFloat}}) = "c"
 
 numpy_json_typestr(::Type{T}) where {T<:Number} = string("<",_numpy_json_typestr(T),sizeof(T))
 
-function numpy_json_info(x::Transpose; read_only::Bool=false)
-    info = Dict("data"=>(convert(Csize_t, pointer(parent(x))), read_only),
+function numpy_json_info(x::AbstractMatrix; read_only::Bool=false)
+    info = Dict("data"=>(convert(Csize_t, pointer(x)), read_only),
                 "shape"=>reverse(size(x)),
                 "typestr"=>numpy_json_typestr(eltype(x)),
                 "version"=>3,
                )
     JSON3.write(info)
 end
-numpy_json_info(x::Array) = x |> transpose |> numpy_json_info
 
-#TODO: this is not nearly done... I'm very worried about data ownership
+#TODO: still a little worried about ownership here
+#TODO: sparse data for iterator and proper missings handling
 
-#NOTE: I'm assuming the dmatrix will take ownership but I have no idea if that's true
-# maybe our data iterator thing is supposed to take ownership?
 function setproxy!(dm::DMatrix, x::AbstractMatrix; kw...)
-    x = convert(Matrix, x)
+    x = convert(Matrix, transpose(x))
     GC.@preserve x begin
         info = numpy_json_info(x)
         xgbcall(XGProxyDMatrixSetDataDense, dm.handle, info)
     end
-    for (k,v) ∈ kw
-        setinfo!(dm, string(k), v)
-    end
+    setinfos!(dm; kw...)
     dm
 end
 setproxy!(dm::DMatrix, X::AbstractMatrix, y::AbstractVector; kw...) = setproxy!(dm, X; label=y, kw...)
