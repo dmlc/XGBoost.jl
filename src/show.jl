@@ -140,7 +140,7 @@ function Term.Panel(node::Node)
          )
 end
 
-function show(io::IO, node::Node)
+function Base.show(io::IO, node::Node)
     show(io, typeof(node))
     str = if isempty(children(node))
         "leaf=$(node.leaf)"
@@ -150,4 +150,4 @@ function show(io::IO, node::Node)
     print(io, "(", str, ")")
 end
 
-show(io::IO, mime::MIME"text/plain", node::Node) = show(io, mime, Panel(node))
+Base.show(io::IO, mime::MIME"text/plain", node::Node) = show(io, mime, Panel(node))
