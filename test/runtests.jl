@@ -111,10 +111,4 @@ end
     @test typeof(importancereport(bst)) <: XGBoost.Term.Tables.Table
 end
 
-#=
-@testset "Example" begin
-    include("example.jl")
-end
-=#
-
 end
