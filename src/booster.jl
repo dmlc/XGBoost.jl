@@ -221,6 +221,17 @@ function serialize(b::Booster)
 end
 
 """
+    nfeatures(b::Booster)
+
+Get the number of features on which `b` is being trained.
+"""
+function nfeatures(b::Booster)
+    o = Ref{Lib.bst_ulong}()
+    xgbcall(XGBoosterGetNumFeature, b.handle, o)
+    Int(o[])
+end
+
+"""
     deserialize!(b::Booster, buf)
 
 Deserialize a buffer created with [`serialize`](@ref) to the provided [`Booster`](@ref) object.
@@ -262,13 +273,21 @@ ŷ = predict(b, X)
 function predict(b::Booster, Xy::DMatrix;
                  margin::Bool=false,  # whether to output margin
                  training::Bool=false,
+                 ntree_lower_limit::Integer=0,
                  ntree_limit::Integer=0,  # 0 corresponds to no limit
                 )
-    opts = margin ? 1 : 0
-    olen = Ref{Lib.bst_ulong}()
+    opts = Dict("type"=>(margin ? 1 : 0),
+                "iteration_begin"=>ntree_lower_limit,
+                "iteration_end"=>ntree_limit,
+                "strict_shape"=>false,
+                "training"=>training,
+               ) |> JSON3.write
+    oshape = Ref{Ptr{Lib.bst_ulong}}()
+    odim = Ref{Lib.bst_ulong}()
     o = Ref{Ptr{Cfloat}}()
-    xgbcall(XGBoosterPredict, b.handle, Xy.handle, opts, ntree_limit, Int(training), olen, o)
-    unsafe_wrap(Array, o[], olen[])
+    xgbcall(XGBoosterPredictFromDMatrix, b.handle, Xy.handle, opts, oshape, odim, o)
+    dims = unsafe_wrap(Array, oshape[], odim[])
+    unsafe_wrap(Array, o[], tuple(dims...))
 end
 predict(b::Booster, Xy; kw...) = predict(b, DMatrix(Xy); kw...)
 
@@ -305,18 +324,18 @@ and is used for logs only.  `log_data_name` is the name of `data` for logging pu
 """
 function updateone!(b::Booster, Xy::DMatrix;
                     round_number::Integer=getnrounds(b)+1,
-                    log_data_name::Union{Nothing,AbstractString}=nothing,
+                    watchlist=Dict(),
                     update_feature_names::Bool=false,
                    )
     xgbcall(XGBoosterUpdateOneIter, b.handle, round_number, Xy.handle)
-    isnothing(log_data_name) || logeval(b, Dict(log_data_name=>Xy), round_number)
+    isempty(watchlist) || logeval(b, watchlist, round_number)
     _maybe_update_feature_names!(b, Xy, update_feature_names)
     b
 end
 
 function updateone!(b::Booster, Xy::DMatrix, g::AbstractVector{<:Real}, h::AbstractVector{<:Real};
                     round_number::Integer=1,
-                    log_data_name::Union{Nothing,AbstractString}=nothing,
+                    watchlist=Dict(),
                     update_feature_names::Bool=false,
                    )
     if size(g) ≠ size(h)
@@ -325,7 +344,7 @@ function updateone!(b::Booster, Xy::DMatrix, g::AbstractVector{<:Real}, h::Abstr
     g = convert(Vector{Cfloat}, g)
     h = convert(Vector{Cfloat}, h)  # uh, why is this not a matrix?
     xgbcall(XGBoosterBoostOneIter(b.handle, Xy.handle, g, h, length(g)))
-    isnothing(log_data_name) || logeval(b, Dict(log_data_name=>Xy), round_number)
+    isempty(watchlist) || logeval(b, watchlist, round_number)
     _maybe_update_feature_names!(b, Xy, update_feature_names)
     b
 end
@@ -345,7 +364,7 @@ Run `nrounds` rounds of gradient boosting on [`Booster`](@ref) `b`.
 """
 function update!(b::Booster, Xy, nrounds::Integer, obj...; kw...)
     for j ∈ 1:nrounds
-        round_number = getnrounds(b) + j
+        round_number = getnrounds(b) + 1
         updateone!(b, Xy, obj...; round_number, kw...)
     end
     b
@@ -374,15 +393,16 @@ b = xgboost((X, y), 10, max_depth=10, η=0.1)
 ŷ = predict(b, X)
 ```
 """
-function xgboost(data, nrounds::Integer=10;
-                 log_data_name::Union{Nothing,AbstractString}="train",
+function xgboost(dm::DMatrix, nrounds::Integer=10;
+                 watchlist=Dict("train"=>dm),
                  kw...
                 )
-    Xy = DMatrix(data)
+    Xy = DMatrix(dm)
     b = Booster(Xy; kw...)
-    isnothing(log_data_name) || @info("XGBoost: starting training.")
-    update!(b, Xy, nrounds; log_data_name)
-    isnothing(log_data_name) || @info("Training rounds complete.")
+    isempty(watchlist) || @info("XGBoost: starting training.")
+    update!(b, Xy, nrounds; watchlist)
+    isempty(watchlist) || @info("Training rounds complete.")
     b
 end
+xgboost(data, nrounds::Integer=10; kw...) = xgboost(DMatrix(data), nrounds; kw...)
 xgboost(X, y, nrounds::Integer=10; kw...) = xgboost((X, y), nrounds; kw...)

@@ -12,7 +12,8 @@ using Statistics: mean, std
 using Base.Iterators: Stateful, reset!
 
 export DMatrix, Booster
-export xgboost, predict, importance, importancereport, trees
+export updateone!, update!, predict, xgboost
+export importance, importancetable, importancereport, trees
 
 include("Lib.jl")
 using .Lib

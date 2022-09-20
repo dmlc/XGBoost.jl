@@ -4,10 +4,17 @@ function Base.show(io::IO, dm::DMatrix)
     print(io, "(", size(dm,1), ", ", size(dm,2), ")")
 end
 
-_features_display_string(fs) = "{bold yellow}Features:{/bold yellow} $fs"
+function _features_display_string(fs, n) 
+    str = "{bold yellow}Features:{/bold yellow} "
+    if isempty(fs)
+        str*"$n (unknown names)"
+    else
+        string(str, fs)
+    end
+end
 
 function Base.show(io::IO, mime::MIME"text/plain", dm::DMatrix)
-    p = Panel(_features_display_string(getfeaturenames(dm)),
+    p = Panel(_features_display_string(getfeaturenames(dm), size(dm,2)),
               "{dim}(opaque object){/dim}",
               style="magenta",
               title="XGBoost.DMatrix",
@@ -37,7 +44,7 @@ paramspanel(b::Booster) = paramspanel(b.params)
 
 function Term.Panel(b::Booster)
     info = isempty(b.params) ? () : (paramspanel(b),)
-    Panel(_features_display_string(b.feature_names),
+    Panel(_features_display_string(b.feature_names, nfeatures(b)),
           info...;
           style="magenta",
           title="XGBoost.Booster",
@@ -49,12 +56,16 @@ end
 
 Base.show(io::IO, mime::MIME"text/plain", b::Booster) = show(io, mime, Panel(b))
 
-function _importance_number_string(imp)
-    o = prod(size(imp)) == 1 ? imp[1] : imp
-    repr(o, context=:compact=>true)
-end
+_importance_number_string(imp) = repr(imp, context=:compact=>true)
 _importance_number_string(::Missing) = "{dim}missing{/dim}"
 
+"""
+    importancereport(b::Booster)
+
+Show a convenient text display of the table output by [`importancetable`](@ref).  This is
+intended entirely for display purposes, see [`importance`](@ref) for how to retrieve
+feature importance statistics directly.
+"""
 function importancereport(b::Booster)
     if getnrounds(b) == 0
         Panel("{red}(booster not trained){/red}",
@@ -62,23 +73,9 @@ function importancereport(b::Booster)
               style="magenta",
              )
     else
-        imps = (gain=importance(b, "gain"),
-                weight=importance(b, "weight"),
-                cover=importance(b, "cover"),
-                total_gain=importance(b, "total_gain"),
-                total_cover=importance(b, "total_cover"),
-               )
-        # for now we assume these all have the same feature names
-        fnames = collect(keys(imps.gain))
-        𝒻 = dict -> [_importance_number_string(get(dict, n, missing)) for n ∈ fnames]
-        inner = OrderedDict(:feature=>fnames,
-                            :gain=>𝒻(imps.gain),
-                            :weight=>𝒻(imps.weight),
-                            :cover=>𝒻(imps.cover),
-                            :total_gain=>𝒻(imps.total_gain),
-                            :total_cover=>𝒻(imps.total_cover),
-                           )
-        Term.Table(inner,
+        tbl = importancetable(b)
+        tbl = OrderedDict(k=>_importance_number_string.(getproperty(tbl, k)) for k ∈ propertynames(tbl))
+        Term.Table(tbl,
                    header_style="bold green",
                    columns_style=["bold yellow"; fill("default", 5)],
                    box=:ROUNDED,
@@ -109,8 +106,8 @@ function Term.Tree(node::Node)
 end
 
 function _paramstable(node::Node, names::AbstractVector)
-    vals = [getproperty(node, n) for n ∈ names]
-    Term.Table(vals';
+    vals = [getproperty(node, n) for n ∈ permutedims(names)]
+    Term.Table(vals;
                header=string.(names),
                header_style="bold yellow",
                box=:SIMPLE

@@ -1,86 +1,120 @@
 using XGBoost
-using Random: bitrand
-using SparseArrays: sparse
+using Random, SparseArrays
 using Test
 
 include("utils.jl")
 
 @testset "XGBoost" begin
 
-@testset "Sparse matrices" begin
-    X = sparse(randn(100,10) .* bitrand(100,10))
-    y = randn(100)
-    DMatrix(X, label = y)
+# it's *very* hard to do real tests here because we can't get data back
+# this section just checks for errors, only training below can verify it's working properly
+@testset "DMatrix Constructors" begin
+    dm = DMatrix(randn(10,3))
+    @test size(dm) == (10,3)
 
-    X = sparse(convert(Matrix{Float32}, randn(10,100) .* bitrand(10,100)))
-    y = randn(100)
-    DMatrix(X, true)
+    dm = DMatrix(transpose(randn(4,5)))
+    @test (size(dm,1), size(dm,2)) == (5,4)
 
-    X = sparse(randn(100,10) .* bitrand(100,10))
-    y = randn(100)
-    DMatrix(X)
+    dm = DMatrix(randn(4,5)')
+    @test size(dm) == (5,4)
+
+    dm = DMatrix(sprand(100, 10, 0.1))
+    @test size(dm) == (100,10)
+
+    dm = DMatrix(transpose(sprand(100, 10, 0.1)))
+    @test size(dm) == (10,100)
+
+    dm = DMatrix(randn(3,2), Float32[1.0, 2.0, 3.0])
+    @test XGBoost.getlabel(dm) == Float32[1.0, 2.0, 3.0]
+
+    dm = DMatrix(randn(3,2), label=Float64[1.0, 2.0, 3.0])
+    @test XGBoost.getlabel(dm) ≈ [1.0, 2.0, 3.0]
+
+    dm = DMatrix(randn(3,2), weight=Float32[1.0, 2.0, 3.0])
+    @test XGBoost.getweights(dm) ≈ [1.0, 2.0, 3.0]
+
+    # make sure we test retrieving multi-character strings
+    tbl = (spock=randn(10), kirk=randn(10), bones=randn(10))
+    dm = DMatrix(tbl)
+    @test size(dm) == (10,3)
+    @test XGBoost.getfeaturenames(dm) == ["spock", "kirk", "bones"]
+
+    itr = [(X=randn(3,2), y=[1,2,3]), (X=randn(3,2), y=[4,5,6])]
+    dm = XGBoost.fromiterator(DMatrix, itr)
+    @test size(dm) == (6, 2)
+    @test XGBoost.getlabel(dm) ≈ 1:6
 end
 
-@testset "DMatrix loading" begin
-    dtrain = DMatrix("../data/agaricus.txt.train")
-    train_X, train_Y = readlibsvm("../data/agaricus.txt.train", (6513, 126))
-    @test dtrain != nothing
+@testset "DMatrix IO" begin
+    for (fname, sz) ∈ [("agaricus.txt.train", (6513, 126)), ("agaricus.txt.test", (1611, 126))]
+        dm = XGBoost.load(DMatrix, testfilepath(fname))
+        @test size(dm) == sz
 
-    labels = get_info(dtrain, "label")
+        (X, y) = readlibsvm(testfilepath(fname), sz)
+        @test XGBoost.getlabel(dm) == y
+    end
 
-    @test train_Y == labels
+    (X, y) = (randn(3,2), 1.0:3.0)
+    dm = DMatrix((X, y))
+    fname = tempname()
+    XGBoost.save(dm, fname)
+    dm′ = XGBoost.load(DMatrix, fname)
+    @test size(dm) == size(dm′)
+    @test XGBoost.getlabel(dm) == XGBoost.getlabel(dm′)
+    isfile(fname) && rm(fname)
 end
 
 @testset "Agaricus training" begin
-    dtrain = DMatrix("../data/agaricus.txt.train")
-    dtest = DMatrix("../data/agaricus.txt.test")
-    watchlist = [(dtest, "eval"), (dtrain, "train")]
+    dtrain = XGBoost.load(DMatrix, testfilepath("agaricus.txt.train"))
+    dtest = XGBoost.load(DMatrix, testfilepath("agaricus.txt.test"))
+    watchlist = Dict("eval"=>dtest, "train"=>dtrain)
 
-    bst = xgboost(dtrain, 2, watchlist=watchlist, eta = 1, max_depth = 2,
-                  objective = "binary:logistic", silent = 1)
-    @test bst != nothing
+    bst = @test_logs (:info, r"XGBoost") (:info, r"") (:info, r"") (:info, r"Training") begin
+        xgboost(dtrain, 2,
+                watchlist=watchlist,
+                η=1, max_depth=2,
+                objective="binary:logistic",
+               )
+    end
 
-    preds = XGBoost.predict(bst, dtest)
+    @test XGBoost.nfeatures(bst) == 126
 
-    labels = get_info(dtest, "label")
-    @test size(preds) == size(labels)
+    ŷ = predict(bst, dtest)
+    y = XGBoost.getlabel(dtest)
+    @test size(y) == size(ŷ)
 
-    err = count(!iszero, (preds .> 0.5) .!= labels) / length(preds)
-    @test err < 0.1
-end
+    δ = count(!iszero, (ŷ .> 0.5) .≠ y) / length(ŷ)
+    @test δ < 0.1
 
-@testset "Cross validation" begin
-    dtrain = DMatrix("../data/agaricus.txt.train")
-    dtest = DMatrix("../data/agaricus.txt.test")
-    watchlist = [(dtest, "eval"), (dtrain, "train")]
-
-    bst = nfold_cv(dtrain, 5, 3, eta = 1, max_depth = 2, objective = "binary:logistic", silent = 1,
-                   seed = 12345)
-    # important_features = importance(bst)
-    #
-    # @test startswith(important_features[1].fname, "f28")
-    # @test important_features[1].fname == "f28" # pending
+    @test length(trees(bst)) == 2
 end
 
 @testset "Feature importance" begin
-    dtrain = DMatrix("../data/agaricus.txt.train")
-    dtest = DMatrix("../data/agaricus.txt.test")
-    watchlist = [(dtest, "eval"), (dtrain, "train")]
+    dtrain = XGBoost.load(DMatrix, testfilepath("agaricus.txt.train"))
+    dtest = XGBoost.load(DMatrix, testfilepath("agaricus.txt.test"))
 
-    bst = xgboost(dtrain, 5, watchlist = watchlist, eta = 1, max_depth = 2,
-                  objective = "binary:logistic", silent = 1, seed = 12345)
-    important_features = importance(bst)
+    bst = xgboost(dtrain, 5,
+                  η=1.0, max_depth=2,
+                  objective="binary:logistic",
+                 )
 
-    @test startswith(important_features[1].fname, "f28")
-    # @test important_features[1].fname --> "f28" # pending
+    gain = importance(bst, "gain")
+    @test first(keys(gain)) == 29
+
+    weight = importance(bst, "weight")
+    @test 29 ∈ keys(weight)
+
+    tbl = importancetable(bst)
+    @test tbl.feature[1] == 29
+    @test XGBoost.Tables.columnnames(tbl) == (:feature, :gain, :weight, :cover, :total_gain, :total_cover)
+
+    @test typeof(importancereport(bst)) <: XGBoost.Term.Tables.Table
 end
 
+#=
 @testset "Example" begin
     include("example.jl")
 end
-
-@testset "Rabit" begin
-    include("rabit.jl")
-end
+=#
 
 end

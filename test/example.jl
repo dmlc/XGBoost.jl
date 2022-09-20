@@ -1,4 +1,7 @@
+using LinearAlgebra, SparseArrays
 using XGBoost
+
+#TODO: finish rewriting this!
 
 include("utils.jl")
 

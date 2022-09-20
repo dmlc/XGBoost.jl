@@ -220,7 +220,7 @@ DMatrix(Xy::Tuple{TX,Ty}; kw...) where {TX,Ty} = DMatrix(Xy[1], Xy[2]; kw...)
 DMatrix(dm::DMatrix) = dm
 
 function DMatrix(tbl;
-                 feature_names::AbstractVector{<:AbstractString}=string.(Tables.columnnames(tbl)),
+                 feature_names::AbstractVector{<:AbstractString}=collect(string.(Tables.columnnames(tbl))),
                  kw...
                 )
     if !Tables.istable(tbl)
