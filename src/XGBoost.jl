@@ -23,5 +23,6 @@ include("dmatrix.jl")
 include("booster.jl")
 include("introspection.jl")
 include("show.jl")
+include("defaultparams.jl")
 
 end # module XGBoost

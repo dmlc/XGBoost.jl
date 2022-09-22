@@ -21,6 +21,12 @@ include("utils.jl")
     dm = DMatrix(sprand(100, 10, 0.1))
     @test size(dm) == (100,10)
 
+    dm = DMatrix([1 2 missing
+                  3 missing 4
+                  5 6 7
+                  missing missing missing])
+    @test size(dm) == (4,3)
+
     dm = DMatrix(transpose(sprand(100, 10, 0.1)))
     @test size(dm) == (10,100)
 

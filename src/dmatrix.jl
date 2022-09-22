@@ -29,6 +29,7 @@ DMatrix(X::AbstractMatrix, y::AbstractVector; kw...)
 DMatrix((X, y); kw...)
 DMatrix(tbl; kw...)
 DMatrix(tbl, y; kw...)
+DMatrix(tbl, yname::Symbol; kw...)
 ```
 
 ## Arguments
@@ -39,6 +40,8 @@ DMatrix(tbl, y; kw...)
 - `tbl`: The input matrix in tabular form.  `tbl` must satisfy the Tables.jl interface.
     If data is passed in tabular form feature names will be set automatically but can
     be overriden with the keyword argument.
+- `yname`: If passed a tabular argument `tbl`, `yname` is the name of the column which holds the
+    label data.
 
 ### Keyword Arguments
 - `missing_value`: The `Float32` value of elements of input data to be interpreted as `missing`,
@@ -167,7 +170,7 @@ function DMatrix(x::AbstractMatrix{Union{Missing,T}}; kw...) where {T<:Real}
     # we try to make it so that we only have to copy once
     x′ = map(ξ -> ismissing(ξ) ? NaN32 : Float32(ξ), transpose(x))
     x′ = convert(Matrix{Cfloat}, x′)
-    _dmatrix(x; missing_value=NaN32, kw...)
+    _dmatrix(x′; missing_value=NaN32, kw...)
 end
 
 function _sparse_csc_components(x::SparseMatrixCSC)
@@ -256,7 +259,7 @@ function ncols(dm::DMatrix)
 end
 
 """
-    size(dm::DMatrix)
+    size(dm::DMatrix, [dim])
 
 Returns the `size` of the primary data of the `DMatrix`.  Note that this only accounts for the primary data
 and is independent of whether labels or any other ancillary data are present.  In particular

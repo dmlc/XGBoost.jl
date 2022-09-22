@@ -32,7 +32,7 @@ All keyword arguments excepting only those listed below will be interpreted as m
 see [here](https://xgboost.readthedocs.io/en/stable/parameter.html) for a comprehensive list.
 Both parameter names and their values must be provided exactly as they appear in the linked
 documentation.  Model parameters can also be set after construction, see [`setparam!`](@ref) and
-[`setparams!](@ref).
+[`setparams!`](@ref).
 - `feature_names`: Sets the feature names of training data.  This will use the feature names set in the
     input data if available (e.g. if tabular data was passed this will use column names).
 - `model_buffer`: A buffer (`AbstractVector{UInt8}` or `IO`) from which to load an existing booster
@@ -223,12 +223,13 @@ end
 """
     nfeatures(b::Booster)
 
-Get the number of features on which `b` is being trained.
+Get the number of features on which `b` is being trained.  Note that this can return `nothing` if
+the `Booster` object is uninitialized (was created with no data arguments).
 """
 function nfeatures(b::Booster)
     o = Ref{Lib.bst_ulong}()
-    xgbcall(XGBoosterGetNumFeature, b.handle, o)
-    Int(o[])
+    err = XGBoosterGetNumFeature(b.handle, o)
+    iszero(err) ? Int(o[]) : nothing
 end
 
 """
@@ -324,7 +325,7 @@ and is used for logs only.  `log_data_name` is the name of `data` for logging pu
 """
 function updateone!(b::Booster, Xy::DMatrix;
                     round_number::Integer=getnrounds(b)+1,
-                    watchlist=Dict(),
+                    watchlist=Dict("train"=>Xy),
                     update_feature_names::Bool=false,
                    )
     xgbcall(XGBoosterUpdateOneIter, b.handle, round_number, Xy.handle)
@@ -335,7 +336,7 @@ end
 
 function updateone!(b::Booster, Xy::DMatrix, g::AbstractVector{<:Real}, h::AbstractVector{<:Real};
                     round_number::Integer=1,
-                    watchlist=Dict(),
+                    watchlist=Dict("train"=>Xy),
                     update_feature_names::Bool=false,
                    )
     if size(g) ≠ size(h)
@@ -372,13 +373,14 @@ end
 update!(b::Booster, Xy; kw...) = update!(b, Xy, 1; kw...)
 
 """
-    xgboost(data, nrounds=10; log_data_name="train", kw...)
+    xgboost(data, nrounds=10; watchlist=Dict(), kw...)
 
 Creates an xgboost gradient booster object on training data `data` and runs `nrounds` of training.
 This is essentially an alias for constructing a [`Booster`](@ref) with `data` and keyword arguments
 followed by [`update!`](@ref) for `nrounds`.
 
-`log_data_name` is used as the name of `data` when printing logs (will be silent if this is `nothing`).
+`watchlist` is a dict the keys of which are strings giving the name of the data to watch
+and the values of which are [`DMatrix`](@ref) objects containing the data.
 
 All other keyword arguments are passed to [`Booster`](@ref).  With few exceptions these are model
 training hyper-parameters, see [here](https://xgboost.readthedocs.io/en/stable/parameter.html) for
@@ -405,4 +407,4 @@ function xgboost(dm::DMatrix, nrounds::Integer=10;
     b
 end
 xgboost(data, nrounds::Integer=10; kw...) = xgboost(DMatrix(data), nrounds; kw...)
-xgboost(X, y, nrounds::Integer=10; kw...) = xgboost((X, y), nrounds; kw...)
+xgboost(X, y, nrounds::Integer=10; kw...) = xgboost(DMatrix(X, y), nrounds; kw...)
