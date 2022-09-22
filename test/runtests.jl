@@ -76,7 +76,7 @@ end
     watchlist = Dict("eval"=>dtest, "train"=>dtrain)
 
     bst = @test_logs (:info, r"XGBoost") (:info, r"") (:info, r"") (:info, r"Training") begin
-        xgboost(dtrain, 2,
+        xgboost(dtrain, num_round=2,
                 watchlist=watchlist,
                 η=1, max_depth=2,
                 objective="binary:logistic",
@@ -93,15 +93,27 @@ end
     @test δ < 0.1
 
     @test length(trees(bst)) == 2
+
+    @testset "custom objective" begin
+        ℓ = (ŷ, y) -> (ŷ - y)^2
+        ℓ′ = (ŷ, y) -> 2.0*(ŷ - y)
+        ℓ″ = (ŷ, y) -> 2.0
+
+        bst = xgboost(dtrain, ℓ′, ℓ″, watchlist=Dict(), num_round=3)
+
+        # we are just checking that the above rand without error and didn't return anything crazy
+        @test length(trees(bst)) == 3
+    end
 end
 
 @testset "Feature importance" begin
     dtrain = XGBoost.load(DMatrix, testfilepath("agaricus.txt.train"))
     dtest = XGBoost.load(DMatrix, testfilepath("agaricus.txt.test"))
 
-    bst = xgboost(dtrain, 5,
+    bst = xgboost(dtrain, num_round=5,
                   η=1.0, max_depth=2,
                   objective="binary:logistic",
+                  watchlist=Dict(),
                  )
 
     gain = importance(bst, "gain")

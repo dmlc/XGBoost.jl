@@ -218,7 +218,7 @@ Base.getindex(dm::DMatrix, idx::AbstractVector{<:Integer}, ::Colon; kw...) = sli
 
 DMatrix(X::AbstractMatrix, y::AbstractVector; kw...) = DMatrix(X; label=y, kw...)
 
-DMatrix(Xy::Tuple{TX,Ty}; kw...) where {TX,Ty} = DMatrix(Xy[1], Xy[2]; kw...)
+DMatrix(Xy::DataTuple; kw...) = DMatrix(Xy[1], Xy[2]; kw...)
 
 DMatrix(dm::DMatrix) = dm
 
@@ -505,7 +505,12 @@ end
     fromiterator(DMatrix, itr; cache_prefix=joinpath(tempdir(),"xgb-cache"), nthreads=nothing, kw...)
 
 Create a [`DMatrix`](@ref) from an iterable object.  `itr` can be any object that implements Julia's `Base`
-iteration protocol.
+iteration protocol.  Objects returned by the iterator must be key-value collections with `Symbol` keys
+with `X` as the main matrix and `y` as labels.  For example
+```julia
+(X=randn(10,2), y=randn(10))
+```
+Other keys will be interpreted as keyword arguments to `DMatrix`.
 
 When this is called XGBoost will start caching data provided by the iterator on disk in a format that it
 likes.  All cache files generated this way will have a the prefix `cache_prefix` which is in `/tmp`

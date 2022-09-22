@@ -17,7 +17,7 @@ For a quick and convenient summary one can use [`importancetable`](@ref).  The o
 function is primarily intended for visual inspection but it is a Tables.jl compatible table so it
 can easily be converted to any tabular format.
 ```julia
-bst = xgboost(X, y, 10)
+bst = xgboost(X, y)
 
 imp = DataFrame(importancetable(bst))
 ```
@@ -41,7 +41,7 @@ julia> df = DataFrame(randn(10,3), ["kirk", "spock", "bones"])
    9 │  0.593969    0.165502   1.31196
   10 │  2.15151     0.584925  -0.709128
 
-julia> bst = xgboost(df, randn(10), 10)
+julia> bst = xgboost((df, randn(10)), 10)
 [ Info: XGBoost: starting training.
 [ Info: [1]     train-rmse:0.71749003518059951
 [ Info: [2]     train-rmse:0.57348349389049413
@@ -72,6 +72,108 @@ julia> importancereport(bst)
 
 ### Tree Inspection
 The trees of a model belonging to a `Booster` can retrieved and directly inspected with
-[`trees`](@ref).
+[`trees`](@ref) which returns an array of [`Node`](@ref) objects each representing the model
+from a single round of boosting.
 
-**TODO** FINISH!
+Tree objects satisfy the [AbstractTrees.jl](https://github.com/JuliaCollections/AbstractTrees.jl)
+interface.
+
+```julia
+julia> ts = trees(bst)
+10-element Vector{XGBoost.Node}:
+ XGBoost.Node(split_feature="f1")
+ XGBoost.Node(split_feature="f1")
+ XGBoost.Node(split_feature="f1")
+ XGBoost.Node(split_feature="f1")
+ XGBoost.Node(split_feature="f1")
+ XGBoost.Node(split_feature="f1")
+ XGBoost.Node(split_feature="f1")
+ XGBoost.Node(split_feature="f1")
+ XGBoost.Node(split_feature="f1")
+ XGBoost.Node(split_feature="f1")
+
+julia> ts[1]
+╭──── XGBoost.Node (id=0, depth=0) ────────────────────────────────────────────────────╮
+│                                                                                      │
+│     split_condition     yes     no     nmissing        gain         cover            │
+│   ─────────────────────────────────────────────────────────────────────────          │
+│      -0.267610937        1      2         1         0.284702361     10.0             │
+│                                                                                      │
+│   XGBoost Tree (from this node)                                                      │
+│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━                                                     │
+│                │                                                                     │
+│                ├── f0 (1)                                                            │
+│                │   ├── f0 (1)                                                        │
+│                │   │   ├── (1): XGBoost.Node(leaf=0.042126134)                       │
+│                │   │   └── (2): XGBoost.Node(leaf=-0.0647352263)                     │
+│                │   └── (2): XGBoost.Node(leaf=0.0405130237)                          │
+│                └── (2): XGBoost.Node(leaf=-0.0718128532)                             │
+╰──── 2 children ──────────────────────────────────────────────────────────────────────╯
+
+julia> using AbstractTrees; children(ts[1])
+2-element Vector{XGBoost.Node}:
+ XGBoost.Node(split_feature="f0")
+ XGBoost.Node(leaf=-0.0718128532)
+```
+
+## Setting a Custom Objective Function
+Xgboost uses a second order approximation, so to provide a custom objective functoin first and
+second order derivatives must be provided, see the docstring of [`updateone!`](@ref) for more
+details.
+
+While the derivatives can be provided manually, it is also easy to use a calculus package to compute
+them and supply them to xgboost.  Julia is notorious for having a large number of
+auto-differentiation packages.  To provide an example we will use one of the most popular such
+packages [Zygote.jl](https://github.com/FluxML/Zygote.jl)
+```julia
+using Zygote, XGBoost
+
+# we use squared error loss to demonstrate
+ℓ(ŷ, y) = (ŷ - y)^2
+
+# we will try to fit this function
+𝒻(x) = 2norm(x)^2 - norm(x)
+X = randn(100, 2)
+y = 𝒻.(eachrow(X))
+
+# this is the (scalar) first derivative of the loss
+ℓ′ = (ŷ, y) -> gradient(ζ -> ℓ(ζ, y), ŷ)[1]
+
+# this is the (scalar) second derivative of the losss
+ℓ″ = (ŷ, y) -> gradient(ζ -> ℓ′(ζ, y), ŷ)[1]
+
+# the derivatives are the non-keyword arguments after the data,
+# keyword arguments can be provided as usual
+bst = xgboost((X, y), ℓ′, ℓ″, max_depth=8)
+```
+
+## Caching Data From External Memory
+Xgboost can be used to cache memory from external memory on disk, see
+[here](https://xgboost.readthedocs.io/en/stable/tutorials/external_memory.html).  In the Julia
+wrapper this is facilitated by allowing a `DMatrix` to be constructed from any Julia iterator with
+[`fromiterator`](@ref).  The resulting `DMatrix` holds references to cache files which will have
+been created on disk.  For example
+```julia
+Xy = [(X=randn(10,4), y=randn(10)) for i ∈ 1:5]
+dm = XGBoost.fromiterator(DMatrix, Xy, cache_prefix=pwd())
+```
+will create a `DMatrix` that will use the present working directory to store cache files (if
+`cache_prefix` is not set this will be in `/tmp`).  Objects returned by the supplied iterator must
+have `Symbol` keys which can be used to supply arguments to `DMatrix` with `:X` being the key for
+the main matrix and `:y` being the key for labels (typically a `NamedTuple` or a
+`Dict{Symbol,Any}`).
+
+
+## Default Parameters
+This wrapper can provide reasonable defaults for the following
+- [`regression`](@ref)
+- [`countregression`](@ref)
+- [`classification`](@ref)
+- [`randomforest`](@ref)
+
+Each of these merely returns a `NamedTuple` which can be used to supply keyword arguments to
+`Booster` or `xgboost`.  For example
+```julia
+xgboost(X, y, 1; countregression()..., randomforest()..., num_parallel_tree=12)
+```
+will fit a random forest according to a Poisson likelihood fit with 12 trees.

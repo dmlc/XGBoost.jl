@@ -19,6 +19,10 @@ include("Lib.jl")
 using .Lib
 using .Lib: DMatrixHandle, BoosterHandle
 
+
+const DataTuple = Tuple{AbstractMatrix,AbstractVector}
+
+
 include("dmatrix.jl")
 include("booster.jl")
 include("introspection.jl")

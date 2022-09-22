@@ -15,7 +15,7 @@ using XGBoost
 (X, y) = (randn(100,4), randn(100))
 
 # create and train a gradient boosted tree model of 5 trees
-bst = xgboost((X, y), 5, max_depth=6, objective="reg:squarederror")
+bst = xgboost((X, y), num_round=5, max_depth=6, objective="reg:squarederror")
 
 # obtain model predictions
 ŷ = predict(bst, X)
@@ -25,7 +25,7 @@ using DataFrames
 df = DataFrame(randn(100,3), [:a, :b, :y])
 
 # can accept tabular data, will keep feature names
-bst = xgboost(df[!, [:a, :b]], df.y, 10)
+bst = xgboost((df[!, [:a, :b]], df.y))
 
 # display importance statistics retaining feature names
 importancereport(bst)
@@ -149,7 +149,7 @@ y = 𝒻.(eachrow(X))
 bst = Booster((X, y), max_depth=8, η=0.5)
 
 # 20 rounds of training
-update!(bst, (X, y), 20)
+update!(bst, (X, y), num_round=20)
 
 ŷ = predict(bst, X)
 
@@ -161,19 +161,19 @@ Xgboost expects `Booster`s to be initialized with training data, therefore there
 to define `Booster` separate from training.  A shorthand for the above, provided by
 [`xgboost`](@ref) is
 ```julia
-bst = xgboost((X, y), 20, max_depth=8, η=0.5)
+bst = xgboost((X, y), num_round=20, max_depth=8, η=0.5)
 
 # feature names can also be set here
-bst = xgboost((X, y), 20, feature_names=["a", "b"], max_depth=8, η=0.5)
+bst = xgboost((X, y), num_round=20, feature_names=["a", "b"], max_depth=8, η=0.5)
 ```
 
 Note that `Booster`s can still be boosted with `update!` after they are create with `xgboost` or
 otherwise.  For example
 ```julia
-bst = xgboost((X, y), 20)
+bst = xgboost((X, y), num_round=20)
 ```
 is equivalent to
 ```julia
-bst = xgboost((X, y), 10)
-update!(bst, (X, y), 10)
+bst = xgboost((X, y), nun_round=10)
+update!(bst, (X, y), num_round=10)
 ```

@@ -1,2 +1,3 @@
-This folder contains processed example dataset used by the demos.
-Copyright of the dataset belongs to the original copyright holder
+# Test Data
+This folder contains processed example dataset used for testing.
+Copyright of the dataset belongs to the original copyright holder.

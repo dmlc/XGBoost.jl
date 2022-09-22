@@ -315,13 +315,13 @@ end
 
 """
     updateone!(b::Booster, data; round_number=getnrounds(b)+1,
-               log_data_name=nothing, update_feature_names=false
+               watchlist=Dict("train"=>data), update_feature_names=false
               )
 
 Run one round of gradient boosting with booster `b` on data `data`.  `data` can be any object that
 is accepted by a [`DMatrix`](@ref) constructor.  `round_number` is the number of the current round
-and is used for logs only.  `log_data_name` is the name of `data` for logging purposes (for example
-`"train"` when calling [`xgboost`](@ref)), if `nothing` no log will be printed.
+and is used for logs only.  Info logs will be printed for training sets in `watchlist`; keys give
+the name of that dataset for logging purposes only.
 """
 function updateone!(b::Booster, Xy::DMatrix;
                     round_number::Integer=getnrounds(b)+1,
@@ -343,37 +343,58 @@ function updateone!(b::Booster, Xy::DMatrix, g::AbstractVector{<:Real}, h::Abstr
         throw(ArgumentError("booster got gradient and hessian of incompatible sizes"))
     end
     g = convert(Vector{Cfloat}, g)
-    h = convert(Vector{Cfloat}, h)  # uh, why is this not a matrix?
-    xgbcall(XGBoosterBoostOneIter(b.handle, Xy.handle, g, h, length(g)))
+    h = convert(Vector{Cfloat}, h)
+    xgbcall(XGBoosterBoostOneIter, b.handle, Xy.handle, g, h, length(g))
     isempty(watchlist) || logeval(b, watchlist, round_number)
     _maybe_update_feature_names!(b, Xy, update_feature_names)
     b
 end
 
-updateone!(b::Booster, data, a...; kw...) = updateone!(b, DMatrix(data), a...; kw...)
+"""
+    updateone!(b::Booster, data, ℓ′, ℓ″; kw...)
 
-function updateone!(b::Booster, Xy::DMatrix, obj; kw...)
+Run one of gradient boosting with a loss function `ℓ`.  `ℓ′` and `ℓ″` are the first and second *scalar*
+derivatives of the loss function.  For example
+```julia
+ℓ(ŷ, y) = (ŷ - y)^2
+ℓ′(ŷ, y) = 2(ŷ - y)
+ℓ″(ŷ, y) = 2
+```
+where the derivatives are with respect to the first argument (the prediction).
+
+Other arguments are the same as they would be provided to other methods of `updateone!`.
+"""
+function updateone!(b::Booster, Xy::DMatrix, ℓ′, ℓ″; kw...)
+    y = getlabel(Xy)
     ŷ = predict(b, Xy)
-    (g, h) = obj(ŷ, Xy)
-    updateone!(b, Xy, g, h; kw...)
+    updateone!(b, Xy, ℓ′.(ŷ, y), ℓ″.(ŷ, y); kw...)
 end
 
-"""
-    update!(b::Booster, data, nrounds; kw...)
+updateone!(b::Booster, data, a...; kw...) = updateone!(b, DMatrix(data), a...; kw...)
 
-Run `nrounds` rounds of gradient boosting on [`Booster`](@ref) `b`.
+# this method should be reserved for if we add an autodiff dependency
+#updateone!(::Booster, ::DMatrix, ℓ; kw...)
+
 """
-function update!(b::Booster, Xy, nrounds::Integer, obj...; kw...)
-    for j ∈ 1:nrounds
+    update!(b::Booster, data; num_round=1, kw...)
+    update!(b::Booster, data, ℓ′, ℓ″; kw...)
+
+Run `num_round` rounds of gradient boosting on [`Booster`](@ref) `b`.
+
+The first and second derivatives of the loss function (`ℓ′` and `ℓ″` respectively) can be provided
+for custom loss.
+"""
+function update!(b::Booster, a...; num_round::Integer=1, kw...)
+    for j ∈ 1:num_round
         round_number = getnrounds(b) + 1
-        updateone!(b, Xy, obj...; round_number, kw...)
+        updateone!(b, a...; round_number, kw...)
     end
     b
 end
-update!(b::Booster, Xy; kw...) = update!(b, Xy, 1; kw...)
 
 """
-    xgboost(data, nrounds=10; watchlist=Dict(), kw...)
+    xgboost(data; num_round=10, watchlist=Dict(), kw...)
+    xgboost(data, ℓ′, ℓ″; kw...)
 
 Creates an xgboost gradient booster object on training data `data` and runs `nrounds` of training.
 This is essentially an alias for constructing a [`Booster`](@ref) with `data` and keyword arguments
@@ -386,6 +407,9 @@ All other keyword arguments are passed to [`Booster`](@ref).  With few exception
 training hyper-parameters, see [here](https://xgboost.readthedocs.io/en/stable/parameter.html) for
 a comprehensive list.
 
+A custom loss function can be privded via its first and second derivatives (`ℓ′` and `ℓ″` respectively).
+See [`updateone!`](@ref) for more details.
+
 ## Examples
 ```julia
 (X, y) = (randn(100,3), randn(100))
@@ -395,16 +419,16 @@ b = xgboost((X, y), 10, max_depth=10, η=0.1)
 ŷ = predict(b, X)
 ```
 """
-function xgboost(dm::DMatrix, nrounds::Integer=10;
+function xgboost(dm::DMatrix, a...;
+                 num_round::Integer=10,
                  watchlist=Dict("train"=>dm),
                  kw...
                 )
     Xy = DMatrix(dm)
     b = Booster(Xy; kw...)
     isempty(watchlist) || @info("XGBoost: starting training.")
-    update!(b, Xy, nrounds; watchlist)
+    update!(b, Xy, a...; num_round, watchlist)
     isempty(watchlist) || @info("Training rounds complete.")
     b
 end
-xgboost(data, nrounds::Integer=10; kw...) = xgboost(DMatrix(data), nrounds; kw...)
-xgboost(X, y, nrounds::Integer=10; kw...) = xgboost(DMatrix(X, y), nrounds; kw...)
+xgboost(data, a...; kw...) = xgboost(DMatrix(data), a...; kw...)
