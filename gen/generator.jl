@@ -1,3 +1,4 @@
+# see https://juliainterop.github.io/Clang.jl/stable/generator/
 using Clang
 using Clang.Generators
 using XGBoost_jll
