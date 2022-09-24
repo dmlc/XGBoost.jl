@@ -21,7 +21,7 @@ jobs:
         include:
           - os: windows-latest
             version: '1'
-            arch: x86
+            arch: x64
     steps:
       - uses: actions/checkout@v2
       - uses: julia-actions/setup-julia@v1
