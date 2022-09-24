@@ -422,7 +422,8 @@ end
 
 DataIterator(x) = DataIterator(Stateful(x))
 
-Iterators.reset!(itr::DataIterator) = reset!(itr.iter)
+# Julia 1.6 has a missing method for reset! so we use two argument method here
+Iterators.reset!(itr::DataIterator) = reset!(itr.iter, itr.iter.itr)
 
 Base.isempty(itr::DataIterator) = isempty(itr.iter)
 
