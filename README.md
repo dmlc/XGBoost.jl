@@ -17,7 +17,7 @@ gradient boosting packages. It supports various objective functions, including r
 classification and ranking. The package is also made to be extensible, so that users are also
 allowed to define their own objectives easily.
 
-See the [documentation](https://dmlc.github.io/XGBoost.jl/) for more information.
+See the [documentation](https://docs.juliahub.com/XGBoost/) for more information.
 
 ## Installation
 ```julia
