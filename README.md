@@ -4,7 +4,7 @@
 [![Latest Version](https://juliahub.com/docs/XGBoost/version.svg)](https://juliahub.com/ui/Packages/XGBoost/rSeEh/)
 [![Pkg Eval](https://juliahub.com/docs/XGBoost/pkgeval.svg)](https://juliahub.com/ui/Packages/XGBoost/rSeEh/)
 [![Dependents](https://juliahub.com/docs/XGBoost/deps.svg)](https://juliahub.com/ui/Packages/XGBoost/rSeEh/?t=2)
-[![docs](https://img.shields.io/badge/docs-stable-blue.svg)](https://docs.juliahub.com/XGBoost/)
+[![docs](https://img.shields.io/badge/docs-latest-blue?style=for-the-badge&logo=julia)](https://dmlc.github.io/XGBoost.jl/)
 
 eXtreme Gradient Boosting in Julia.
 
@@ -17,7 +17,7 @@ gradient boosting packages. It supports various objective functions, including r
 classification and ranking. The package is also made to be extensible, so that users are also
 allowed to define their own objectives easily.
 
-See the [documentation](https://docs.juliahub.com/XGBoost/) for more information.
+See the [documentation](https://dmlc.github.io/XGBoost.jl/) for more information.
 
 ## Installation
 ```julia
