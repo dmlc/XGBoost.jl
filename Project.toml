@@ -16,6 +16,7 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 XGBoost_jll = "a5c6f535-4255-5ca2-a466-0e519f119c46"
 
 [compat]
+CEnum = "0.4"
 XGBoost_jll = "1.5.2"
 julia = "1.6"
 
