@@ -3,3 +3,4 @@ deps.jl
 deps
 test/*.buffer
 Manifest.toml
+docs/build

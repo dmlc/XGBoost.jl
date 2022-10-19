@@ -1,0 +1,10 @@
+[general]
+library_name = "libxgboost"
+output_file_path = "../src/Lib.jl"
+module_name = "Lib"
+jll_pkg_name = "XGBoost_jll"
+export_symbol_prefixes = ["XG"]
+prologue_file_path = "./prologue.jl"
+
+[codegen]
+use_ccall_macro = true

@@ -1,20 +1,32 @@
 module XGBoost
 
-using XGBoost_jll
-
-using Printf
-using Random: randperm, MersenneTwister
+using LinearAlgebra
 using SparseArrays: SparseMatrixCSC, nnz
+using AbstractTrees
+using OrderedCollections
+using JSON3
+using Tables
+using Term
 using Statistics: mean, std
 
+using Base.Iterators: Stateful, reset!
+
 export DMatrix, Booster
-export xgboost, predict, save, nfold_cv, slice, get_info, set_info, dump_model, importance
-export rabit_init, rabit_finalize, rabit_is_distributed, rabit_get_rank, rabit_get_world_size, rabit_get_version_number
+export updateone!, update!, predict, xgboost
+export importance, importancetable, importancereport, trees
 
-global const build_version = "0.82"
+include("Lib.jl")
+using .Lib
+using .Lib: DMatrixHandle, BoosterHandle
 
-include("xgboost_wrapper_h.jl")
-include("rabit_wrapper.jl")
-include("xgboost_lib.jl")
+
+const DataTuple = Tuple{AbstractMatrix,AbstractVector}
+
+
+include("dmatrix.jl")
+include("booster.jl")
+include("introspection.jl")
+include("show.jl")
+include("defaultparams.jl")
 
 end # module XGBoost
