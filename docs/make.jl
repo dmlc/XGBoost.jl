@@ -19,4 +19,4 @@ makedocs(;
        ],
    )
 
-deploydocs(repo="github.com/dmlc/XGBoost.jl", devbranch="master")
+deploydocs(repo="github.com/dmlc/XGBoost.jl.git", devbranch="master")
