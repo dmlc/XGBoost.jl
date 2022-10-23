@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Home · XGBoost.jl</title><script data-outdated-warner src="assets/warner.js"></script><link rel="canonical" href="https://dmlc.github.io/XGBoost.jl/"/><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.045/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.24/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="assets/documenter.js"></script><script src="siteinfo.js"></script><script src="../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href>XGBoost.jl</a></span></div><form class="docs-search" action="search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li class="is-active"><a class="tocitem" href>Home</a><ul class="internal"><li><a class="tocitem" href="#TL;DR"><span>TL;DR</span></a></li><li><a class="tocitem" href="#Data-Input"><span>Data Input</span></a></li><li><a class="tocitem" href="#Booster"><span>Booster</span></a></li></ul></li><li><a class="tocitem" href="features/">Additional Features</a></li><li><a class="tocitem" href="api/">API</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Home</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Home</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/dmlc/XGBoost.jl/blob/master/docs/src/index.md#" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="XGBoost"><a class="docs-heading-anchor" href="#XGBoost">XGBoost</a><a id="XGBoost-1"></a><a class="docs-heading-anchor-permalink" href="#XGBoost" title="Permalink"></a></h1><p>This is the Julia wrapper of the <a href="https://xgboost.ai/">xgboost</a> gradient boosting library.</p><h2 id="TL;DR"><a class="docs-heading-anchor" href="#TL;DR">TL;DR</a><a id="TL;DR-1"></a><a class="docs-heading-anchor-permalink" href="#TL;DR" title="Permalink"></a></h2><pre><code class="language-julia hljs">using XGBoost
+
+# training set of 100 datapoints of 4 features
+(X, y) = (randn(100,4), randn(100))
+
+# create and train a gradient boosted tree model of 5 trees
+bst = xgboost((X, y), num_round=5, max_depth=6, objective=&quot;reg:squarederror&quot;)
+
+# obtain model predictions
+ŷ = predict(bst, X)
+
+
+using DataFrames
+df = DataFrame(randn(100,3), [:a, :b, :y])
+
+# can accept tabular data, will keep feature names
+bst = xgboost((df[!, [:a, :b]], df.y))
+
+# display importance statistics retaining feature names
+importancereport(bst)
+
+# return AbstractTrees.jl compatible tree objects describing the model
+trees(bst)</code></pre><h2 id="Data-Input"><a class="docs-heading-anchor" href="#Data-Input">Data Input</a><a id="Data-Input-1"></a><a class="docs-heading-anchor-permalink" href="#Data-Input" title="Permalink"></a></h2><p>Data is passed to xgboost via the <a href="api/#XGBoost.DMatrix"><code>DMatrix</code></a> object.  This is an opaque wrapper of the data that stores it in a format that xgboost can understand, and for the most part data cannot be retrieved from the <code>DMatrix</code> once created.  Julia <code>AbstractArray</code> data will automatically be wrapped in a <code>DMatrix</code> where appropriate, so users should mostly not have to call its constructors directly, but it may be helpful to understand the semantics for creating it.</p><p>For example, thoe following are equivalent</p><pre><code class="language-julia hljs">X = rand(4,3)
+predict(bst, X) == predict(bst, DMatrix(X))</code></pre><p>Xgboost can efficiently wrap CSC sparse matrices.  For example, the following is done without conversion into a dense matrix</p><pre><code class="language-julia hljs">using SparseArrays
+X = sprand(1000,4,0.1)
+DMatrix(X)</code></pre><p>The xgboost library interprets floating point <code>NaN</code> values as &quot;missing&quot; or &quot;null&quot; data.  <code>missing</code> values will automatically be converted so that the semantics of the resulting <code>DMatrix</code> will match that of a provided Julia matrix with <code>Union{Missing,Real}</code> values.  For example</p><pre><code class="language-julia hljs">X = [0 missing 1
+     1 0 missing
+     missing 1 0]
+DMatrix(X)  # nullity is preserved</code></pre><h3 id="Feature-Naming-and-Tabular-Data"><a class="docs-heading-anchor" href="#Feature-Naming-and-Tabular-Data">Feature Naming and Tabular Data</a><a id="Feature-Naming-and-Tabular-Data-1"></a><a class="docs-heading-anchor-permalink" href="#Feature-Naming-and-Tabular-Data" title="Permalink"></a></h3><p>Xgboost supports the naming of features (i.e. columns of the feature matrix).  This can be useful for inspecting trained models.</p><pre><code class="language-julia hljs">X = randn(10,3)
+
+dm = DMatrix(X, feature_names=[&quot;a&quot;, &quot;b&quot;, &quot;c&quot;])
+
+XGBoost.setfeaturenames!(dm, [&quot;a&quot;, &quot;b&quot;, &quot;c&quot;])  # can also set after construction</code></pre><p><code>DMatrix</code> can also accept tabular arguments.  These can be any table that satisfies the <a href="https://github.com/JuliaData/Tables.jl">Tables.jl</a> interface (e.g. a <code>NamedTuple</code> of same-length <code>AbstractVector</code>s or a <code>DataFrame</code>).</p><pre><code class="language-julia hljs">using DataFrames
+df = DataFrame(randn(10,3), [:a, :b, :c])
+
+y = randn(10)
+
+DMatrix(df, y)
+
+df[!, :y] = y
+DMatrix(df, :y)  # equivalent to DMatrix(df, y)</code></pre><p>When constructing a <code>DMatrix</code> from a table the feature names will automatically be set to the names of the columns (this can be overridden with the <code>feature_names</code> keyword argument).</p><pre><code class="language-julia hljs">df = DataFrame(randn(10,3), [:a, :b, :c])
+dm = DMatrix(df)
+XGBoost.getfeaturenames(dm) == [&quot;a&quot;, &quot;b&quot;, &quot;c&quot;]</code></pre><h3 id="Label-Data"><a class="docs-heading-anchor" href="#Label-Data">Label Data</a><a id="Label-Data-1"></a><a class="docs-heading-anchor-permalink" href="#Label-Data" title="Permalink"></a></h3><p>Since xgboost is a supervised machine learning library, it will involve &quot;label&quot; or target training data.  This data is also provided to <code>DMatrix</code> objects and it is kept with the corresponding feature data.  For example</p><pre><code class="language-julia hljs">using LinearAlgebra
+
+𝒻(x) = 2norm(x)^2 - norm(x)
+
+X = randn(100,2)
+y = 𝒻.(eachrow(X))
+
+DMatrix(X, y)  # input data with features X and target y
+DMatrix((X, y))  # equivalent (to simplify function arguments)
+DMatrix(X, label=y)  # equivalent
+(dm = DMatrix(X); XGBoost.setlabel!(dm, y); dm)  # equivalent</code></pre><p>Training and initialization methods such as <code>xgboost</code> and <code>Booster</code> can accept feature and label data together as a tuple</p><pre><code class="language-julia hljs">Booster((X, y))
+Booster(DMatrix(X, y)) # equivalent to above</code></pre><p>Unlike feature data, label data can be extracted after construction of the <code>DMatrix</code> with <a href="api/#XGBoost.getlabel"><code>XGBoost.getlabel</code></a>.</p><h2 id="Booster"><a class="docs-heading-anchor" href="#Booster">Booster</a><a id="Booster-1"></a><a class="docs-heading-anchor-permalink" href="#Booster" title="Permalink"></a></h2><p>The <a href="api/#XGBoost.Booster"><code>Booster</code></a> object holds model data.  They are created with training data.  Internally this is always a <code>DMatrix</code> but arguments will be automatically converted.</p><h3 id="[Parameters](https://xgboost.readthedocs.io/en/stable/parameter.html)"><a class="docs-heading-anchor" href="#[Parameters](https://xgboost.readthedocs.io/en/stable/parameter.html)"><a href="https://xgboost.readthedocs.io/en/stable/parameter.html">Parameters</a></a><a id="[Parameters](https://xgboost.readthedocs.io/en/stable/parameter.html)-1"></a><a class="docs-heading-anchor-permalink" href="#[Parameters](https://xgboost.readthedocs.io/en/stable/parameter.html)" title="Permalink"></a></h3><p>Keyword arguments to <code>Booster</code> are xgboost model parameters.  These are described in detail <a href="https://xgboost.readthedocs.io/en/stable/parameter.html">here</a> and should all be passed exactly as they are described in the main xgbosot documentation (in a few cases such as Greek letters we also allow unicode equivalents).</p><h3 id="Training"><a class="docs-heading-anchor" href="#Training">Training</a><a id="Training-1"></a><a class="docs-heading-anchor-permalink" href="#Training" title="Permalink"></a></h3><p><code>Booster</code> objects can be trained with <a href="api/#XGBoost.update!"><code>update!</code></a>.</p><pre><code class="language-julia hljs">𝒻(x) = 2norm(x)^2 - norm(x)
+
+X = randn(100,3)
+y = 𝒻.(eachrow(X))
+
+bst = Booster((X, y), max_depth=8, η=0.5)
+
+# 20 rounds of training
+update!(bst, (X, y), num_round=20)
+
+ŷ = predict(bst, X)
+
+using Statistics
+mean(ŷ - y)/std(y)</code></pre><p>Xgboost expects <code>Booster</code>s to be initialized with training data, therefore there is usually no need to define <code>Booster</code> separate from training.  A shorthand for the above, provided by <a href="api/#XGBoost.xgboost"><code>xgboost</code></a> is</p><pre><code class="language-julia hljs">bst = xgboost((X, y), num_round=20, max_depth=8, η=0.5)
+
+# feature names can also be set here
+bst = xgboost((X, y), num_round=20, feature_names=[&quot;a&quot;, &quot;b&quot;], max_depth=8, η=0.5)</code></pre><p>Note that <code>Booster</code>s can still be boosted with <code>update!</code> after they are create with <code>xgboost</code> or otherwise.  For example</p><pre><code class="language-julia hljs">bst = xgboost((X, y), num_round=20)</code></pre><p>is equivalent to</p><pre><code class="language-julia hljs">bst = xgboost((X, y), nun_round=10)
+update!(bst, (X, y), num_round=10)</code></pre></article><nav class="docs-footer"><a class="docs-footer-nextpage" href="features/">Additional Features »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.23 on <span class="colophon-date" title="Sunday 23 October 2022 18:53">Sunday 23 October 2022</span>. Using Julia version 1.8.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

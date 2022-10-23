@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Additional Features · XGBoost.jl</title><script data-outdated-warner src="../assets/warner.js"></script><link rel="canonical" href="https://dmlc.github.io/XGBoost.jl/features/"/><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.045/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.24/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../">XGBoost.jl</a></span></div><form class="docs-search" action="../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../">Home</a></li><li class="is-active"><a class="tocitem" href>Additional Features</a><ul class="internal"><li><a class="tocitem" href="#Introspection"><span>Introspection</span></a></li><li><a class="tocitem" href="#Setting-a-Custom-Objective-Function"><span>Setting a Custom Objective Function</span></a></li><li><a class="tocitem" href="#Caching-Data-From-External-Memory"><span>Caching Data From External Memory</span></a></li><li><a class="tocitem" href="#Default-Parameters"><span>Default Parameters</span></a></li></ul></li><li><a class="tocitem" href="../api/">API</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Additional Features</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Additional Features</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/dmlc/XGBoost.jl/blob/master/docs/src/features.md#" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Additional-Features"><a class="docs-heading-anchor" href="#Additional-Features">Additional Features</a><a id="Additional-Features-1"></a><a class="docs-heading-anchor-permalink" href="#Additional-Features" title="Permalink"></a></h1><h2 id="Introspection"><a class="docs-heading-anchor" href="#Introspection">Introspection</a><a id="Introspection-1"></a><a class="docs-heading-anchor-permalink" href="#Introspection" title="Permalink"></a></h2><h3 id="Feature-Importance"><a class="docs-heading-anchor" href="#Feature-Importance">Feature Importance</a><a id="Feature-Importance-1"></a><a class="docs-heading-anchor-permalink" href="#Feature-Importance" title="Permalink"></a></h3><p>This package contains a number of methods for inspecting the results of training and displaying the results in a legible way with <a href="https://github.com/FedeClaudi/Term.jl">Term.jl</a>.</p><p>Feature importances can be computed explicitly using <a href="../api/#XGBoost.importance"><code>importance</code></a></p><p>For a quick and convenient summary one can use <a href="../api/#XGBoost.importancetable"><code>importancetable</code></a>.  The output of this function is primarily intended for visual inspection but it is a Tables.jl compatible table so it can easily be converted to any tabular format.</p><pre><code class="language-julia hljs">bst = xgboost(X, y)
+
+imp = DataFrame(importancetable(bst))</code></pre><p>A convenient visualization of this table can also be seen with <a href="../api/#XGBoost.importancereport"><code>importancereport</code></a>.  These will use assigned feature names, for example</p><pre><code class="language-julia hljs">julia&gt; df = DataFrame(randn(10,3), [&quot;kirk&quot;, &quot;spock&quot;, &quot;bones&quot;])
+10×3 DataFrame
+ Row │ kirk        spock      bones
+     │ Float64     Float64    Float64
+─────┼───────────────────────────────────
+   1 │  0.731406   -0.53631    0.465881
+   2 │  0.553427   -0.787531  -0.838059
+   3 │  1.30724    -2.38111   -1.1979
+   4 │  0.0759902   0.418856   1.49618
+   5 │ -0.426773   -0.32008   -0.773329
+   6 │ -1.36495    -0.105646   1.08546
+   7 │  0.476315   -0.080163  -1.4846
+   8 │  0.144403    0.344307  -0.0301839
+   9 │  0.593969    0.165502   1.31196
+  10 │  2.15151     0.584925  -0.709128
+
+julia&gt; bst = xgboost((df, randn(10)), 10)
+[ Info: XGBoost: starting training.
+[ Info: [1]     train-rmse:0.71749003518059951
+[ Info: [2]     train-rmse:0.57348349389049413
+[ Info: [3]     train-rmse:0.46118182517533174
+[ Info: [4]     train-rmse:0.37161911786076596
+[ Info: [5]     train-rmse:0.29986573085749962
+[ Info: [6]     train-rmse:0.24238347776088820
+[ Info: [7]     train-rmse:0.19544715478958452
+[ Info: [8]     train-rmse:0.15795933989281422
+[ Info: [9]     train-rmse:0.12805284613811851
+[ Info: [10]    train-rmse:0.10467078844629517
+[ Info: Training rounds complete.
+╭──── XGBoost.Booster ─────────────────────────────────────────────────────────────────╮
+│  Features: [&quot;kirk&quot;, &quot;spock&quot;, &quot;bones&quot;]                                                │
+╰──── boosted rounds: 10 ──────────────────────────────────────────────────────────────╯
+
+julia&gt; importancereport(bst)
+╭───────────┬────────────┬──────────┬───────────┬──────────────┬───────────────╮
+│  feature  │    gain    │  weight  │   cover   │  total_gain  │  total_cover  │
+├───────────┼────────────┼──────────┼───────────┼──────────────┼───────────────┤
+│  &quot;bones&quot;  │  0.229349  │   17.0   │  7.64706  │   3.89893    │     130.0     │
+├───────────┼────────────┼──────────┼───────────┼──────────────┼───────────────┤
+│  &quot;spock&quot;  │  0.176391  │   18.0   │  4.77778  │   3.17503    │     86.0      │
+├───────────┼────────────┼──────────┼───────────┼──────────────┼───────────────┤
+│  &quot;kirk&quot;   │  0.115055  │   13.0   │  3.38462  │   1.49572    │     44.0      │
+╰───────────┴────────────┴──────────┴───────────┴──────────────┴───────────────╯</code></pre><h3 id="Tree-Inspection"><a class="docs-heading-anchor" href="#Tree-Inspection">Tree Inspection</a><a id="Tree-Inspection-1"></a><a class="docs-heading-anchor-permalink" href="#Tree-Inspection" title="Permalink"></a></h3><p>The trees of a model belonging to a <code>Booster</code> can retrieved and directly inspected with <a href="../api/#XGBoost.trees"><code>trees</code></a> which returns an array of <a href="../api/#XGBoost.Node"><code>Node</code></a> objects each representing the model from a single round of boosting.</p><p>Tree objects satisfy the <a href="https://github.com/JuliaCollections/AbstractTrees.jl">AbstractTrees.jl</a> interface.</p><pre><code class="language-julia hljs">julia&gt; ts = trees(bst)
+10-element Vector{XGBoost.Node}:
+ XGBoost.Node(split_feature=&quot;f1&quot;)
+ XGBoost.Node(split_feature=&quot;f1&quot;)
+ XGBoost.Node(split_feature=&quot;f1&quot;)
+ XGBoost.Node(split_feature=&quot;f1&quot;)
+ XGBoost.Node(split_feature=&quot;f1&quot;)
+ XGBoost.Node(split_feature=&quot;f1&quot;)
+ XGBoost.Node(split_feature=&quot;f1&quot;)
+ XGBoost.Node(split_feature=&quot;f1&quot;)
+ XGBoost.Node(split_feature=&quot;f1&quot;)
+ XGBoost.Node(split_feature=&quot;f1&quot;)
+
+julia&gt; ts[1]
+╭──── XGBoost.Node (id=0, depth=0) ────────────────────────────────────────────────────╮
+│                                                                                      │
+│     split_condition     yes     no     nmissing        gain         cover            │
+│   ─────────────────────────────────────────────────────────────────────────          │
+│      -0.267610937        1      2         1         0.284702361     10.0             │
+│                                                                                      │
+│   XGBoost Tree (from this node)                                                      │
+│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━                                                     │
+│                │                                                                     │
+│                ├── f0 (1)                                                            │
+│                │   ├── f0 (1)                                                        │
+│                │   │   ├── (1): XGBoost.Node(leaf=0.042126134)                       │
+│                │   │   └── (2): XGBoost.Node(leaf=-0.0647352263)                     │
+│                │   └── (2): XGBoost.Node(leaf=0.0405130237)                          │
+│                └── (2): XGBoost.Node(leaf=-0.0718128532)                             │
+╰──── 2 children ──────────────────────────────────────────────────────────────────────╯
+
+julia&gt; using AbstractTrees; children(ts[1])
+2-element Vector{XGBoost.Node}:
+ XGBoost.Node(split_feature=&quot;f0&quot;)
+ XGBoost.Node(leaf=-0.0718128532)</code></pre><h2 id="Setting-a-Custom-Objective-Function"><a class="docs-heading-anchor" href="#Setting-a-Custom-Objective-Function">Setting a Custom Objective Function</a><a id="Setting-a-Custom-Objective-Function-1"></a><a class="docs-heading-anchor-permalink" href="#Setting-a-Custom-Objective-Function" title="Permalink"></a></h2><p>Xgboost uses a second order approximation, so to provide a custom objective functoin first and second order derivatives must be provided, see the docstring of <a href="../api/#XGBoost.updateone!"><code>updateone!</code></a> for more details.</p><p>While the derivatives can be provided manually, it is also easy to use a calculus package to compute them and supply them to xgboost.  Julia is notorious for having a large number of auto-differentiation packages.  To provide an example we will use one of the most popular such packages <a href="https://github.com/FluxML/Zygote.jl">Zygote.jl</a></p><pre><code class="language-julia hljs">using Zygote, XGBoost
+
+# we use squared error loss to demonstrate
+ℓ(ŷ, y) = (ŷ - y)^2
+
+# we will try to fit this function
+𝒻(x) = 2norm(x)^2 - norm(x)
+X = randn(100, 2)
+y = 𝒻.(eachrow(X))
+
+# this is the (scalar) first derivative of the loss
+ℓ′ = (ŷ, y) -&gt; gradient(ζ -&gt; ℓ(ζ, y), ŷ)[1]
+
+# this is the (scalar) second derivative of the losss
+ℓ″ = (ŷ, y) -&gt; gradient(ζ -&gt; ℓ′(ζ, y), ŷ)[1]
+
+# the derivatives are the non-keyword arguments after the data,
+# keyword arguments can be provided as usual
+bst = xgboost((X, y), ℓ′, ℓ″, max_depth=8)</code></pre><h2 id="Caching-Data-From-External-Memory"><a class="docs-heading-anchor" href="#Caching-Data-From-External-Memory">Caching Data From External Memory</a><a id="Caching-Data-From-External-Memory-1"></a><a class="docs-heading-anchor-permalink" href="#Caching-Data-From-External-Memory" title="Permalink"></a></h2><p>Xgboost can be used to cache memory from external memory on disk, see <a href="https://xgboost.readthedocs.io/en/stable/tutorials/external_memory.html">here</a>.  In the Julia wrapper this is facilitated by allowing a <code>DMatrix</code> to be constructed from any Julia iterator with <a href="../api/#XGBoost.fromiterator"><code>fromiterator</code></a>.  The resulting <code>DMatrix</code> holds references to cache files which will have been created on disk.  For example</p><pre><code class="language-julia hljs">Xy = [(X=randn(10,4), y=randn(10)) for i ∈ 1:5]
+dm = XGBoost.fromiterator(DMatrix, Xy, cache_prefix=pwd())</code></pre><p>will create a <code>DMatrix</code> that will use the present working directory to store cache files (if <code>cache_prefix</code> is not set this will be in <code>/tmp</code>).  Objects returned by the supplied iterator must have <code>Symbol</code> keys which can be used to supply arguments to <code>DMatrix</code> with <code>:X</code> being the key for the main matrix and <code>:y</code> being the key for labels (typically a <code>NamedTuple</code> or a <code>Dict{Symbol,Any}</code>).</p><h2 id="Default-Parameters"><a class="docs-heading-anchor" href="#Default-Parameters">Default Parameters</a><a id="Default-Parameters-1"></a><a class="docs-heading-anchor-permalink" href="#Default-Parameters" title="Permalink"></a></h2><p>This wrapper can provide reasonable defaults for the following</p><ul><li><a href="../api/#XGBoost.regression"><code>regression</code></a></li><li><a href="../api/#XGBoost.countregression"><code>countregression</code></a></li><li><a href="../api/#XGBoost.classification"><code>classification</code></a></li><li><a href="../api/#XGBoost.randomforest"><code>randomforest</code></a></li></ul><p>Each of these merely returns a <code>NamedTuple</code> which can be used to supply keyword arguments to <code>Booster</code> or <code>xgboost</code>.  For example</p><pre><code class="language-julia hljs">xgboost(X, y, 1; countregression()..., randomforest()..., num_parallel_tree=12)</code></pre><p>will fit a random forest according to a Poisson likelihood fit with 12 trees.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../">« Home</a><a class="docs-footer-nextpage" href="../api/">API »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.23 on <span class="colophon-date" title="Sunday 23 October 2022 18:53">Sunday 23 October 2022</span>. Using Julia version 1.8.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
