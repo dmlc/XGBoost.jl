@@ -4,7 +4,7 @@
 [![Latest Version](https://juliahub.com/docs/XGBoost/version.svg)](https://juliahub.com/ui/Packages/XGBoost/rSeEh/)
 [![Pkg Eval](https://juliahub.com/docs/XGBoost/pkgeval.svg)](https://juliahub.com/ui/Packages/XGBoost/rSeEh/)
 [![Dependents](https://juliahub.com/docs/XGBoost/deps.svg)](https://juliahub.com/ui/Packages/XGBoost/rSeEh/?t=2)
-[![docs](https://img.shields.io/badge/docs-latest-blue?style=for-the-badge&logo=julia)](https://dmlc.github.io/XGBoost.jl/)
+[![docs](https://img.shields.io/badge/docs-latest-blue?style=flat&logo=julia)](https://dmlc.github.io/XGBoost.jl/)
 
 eXtreme Gradient Boosting in Julia.
 
