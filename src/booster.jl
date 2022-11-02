@@ -168,9 +168,9 @@ end
 function save(b::Booster, ::Type{Vector{UInt8}}; format::AbstractString="json")
     cfg = JSON3.write(Dict("format"=>format))
     olen = Ref{Lib.bst_ulong}()
-    o = Ref{Ptr{UInt8}}()
-    xgbcall(XGBoosterSaveModelToBuffer, cfg, olen, o)
-    unsafe_wrap(Array, o[], olen[])
+    o = Ref{Ptr{Int8}}()
+    xgbcall(XGBoosterSaveModelToBuffer, b.handle, cfg, olen, o)
+    unsafe_wrap(Array, convert(Ptr{UInt8}, o[]), olen[])
 end
 save(b::Booster, io::IO; kw...) = write(io, save(b, Vector{UInt8}; kw...))
 
