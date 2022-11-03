@@ -4,3 +4,5 @@ deps
 test/*.buffer
 Manifest.toml
 docs/build
+
+test/*.xgb

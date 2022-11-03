@@ -129,4 +129,44 @@ end
     @test typeof(importancereport(bst)) <: XGBoost.Term.Tables.Table
 end
 
+@testset "Booster Save/Load/Serialize" begin
+    dtrain = XGBoost.load(DMatrix, testfilepath("agaricus.txt.train"))
+    dtest = XGBoost.load(DMatrix, testfilepath("agaricus.txt.test"))
+
+    model_file = "test.xgb"
+
+    bst = xgboost(dtrain, num_round=5,
+                  η=1.0, max_depth=2,
+                  objective="binary:logistic",
+                  watchlist=Dict(),
+                 )
+    preds = predict(bst, dtest)
+    XGBoost.save(bst, model_file)
+
+    bst2 = Booster(DMatrix[])
+    XGBoost.load!(bst2, model_file)
+    @test preds == predict(bst2, dtest)
+
+    bst2 = Booster(DMatrix[])
+    XGBoost.load!(bst2, open(model_file))
+    @test preds == predict(bst2, dtest)
+    
+    bst2 = XGBoost.load(Booster, model_file)
+    @test preds == predict(bst2, dtest)
+
+    bst2 = XGBoost.load(Booster, open(model_file))
+    @test preds == predict(bst2, dtest)
+
+    buf = XGBoost.save(bst, Vector{UInt8}; format="json")
+    bst2 = Booster(DMatrix[])
+    XGBoost.load!(bst2, buf)
+    @test preds == predict(bst2, dtest)
+
+    bin = XGBoost.serialize(bst)
+    bst2 = Booster(DMatrix[])
+    XGBoost.deserialize!(bst2, bin)
+    @test preds == predict(bst2, dtest)
+end
+
+
 end
