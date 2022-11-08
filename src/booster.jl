@@ -327,9 +327,10 @@ function updateone!(b::Booster, Xy::DMatrix;
                     round_number::Integer=getnrounds(b)+1,
                     watchlist=Dict("train"=>Xy),
                     update_feature_names::Bool=false,
+                    silent::Bool=false
                    )
     xgbcall(XGBoosterUpdateOneIter, b.handle, round_number, Xy.handle)
-    isempty(watchlist) || logeval(b, watchlist, round_number)
+    (silent | isempty(watchlist)) || logeval(b, watchlist, round_number)
     _maybe_update_feature_names!(b, Xy, update_feature_names)
     b
 end
@@ -338,6 +339,7 @@ function updateone!(b::Booster, Xy::DMatrix, g::AbstractVector{<:Real}, h::Abstr
                     round_number::Integer=1,
                     watchlist=Dict("train"=>Xy),
                     update_feature_names::Bool=false,
+                    silent::Bool=false
                    )
     if size(g) ≠ size(h)
         throw(ArgumentError("booster got gradient and hessian of incompatible sizes"))
@@ -345,7 +347,7 @@ function updateone!(b::Booster, Xy::DMatrix, g::AbstractVector{<:Real}, h::Abstr
     g = convert(Vector{Cfloat}, g)
     h = convert(Vector{Cfloat}, h)
     xgbcall(XGBoosterBoostOneIter, b.handle, Xy.handle, g, h, length(g))
-    isempty(watchlist) || logeval(b, watchlist, round_number)
+    (silent | isempty(watchlist)) || logeval(b, watchlist, round_number)
     _maybe_update_feature_names!(b, Xy, update_feature_names)
     b
 end
@@ -364,13 +366,13 @@ where the derivatives are with respect to the first argument (the prediction).
 
 Other arguments are the same as they would be provided to other methods of `updateone!`.
 """
-function updateone!(b::Booster, Xy::DMatrix, ℓ′, ℓ″; kw...)
+function updateone!(b::Booster, Xy::DMatrix, ℓ′, ℓ″; silent::Bool=false, kw...)
     y = getlabel(Xy)
     ŷ = predict(b, Xy)
-    updateone!(b, Xy, ℓ′.(ŷ, y), ℓ″.(ŷ, y); kw...)
+    updateone!(b, Xy, ℓ′.(ŷ, y), ℓ″.(ŷ, y); silent, kw...)
 end
 
-updateone!(b::Booster, data, a...; kw...) = updateone!(b, DMatrix(data), a...; kw...)
+updateone!(b::Booster, data, a...; silent::Bool=false, kw...) = updateone!(b, DMatrix(data), a...; silent, kw...)
 
 # this method should be reserved for if we add an autodiff dependency
 #updateone!(::Booster, ::DMatrix, ℓ; kw...)
@@ -384,10 +386,10 @@ Run `num_round` rounds of gradient boosting on [`Booster`](@ref) `b`.
 The first and second derivatives of the loss function (`ℓ′` and `ℓ″` respectively) can be provided
 for custom loss.
 """
-function update!(b::Booster, a...; num_round::Integer=1, kw...)
+function update!(b::Booster, a...; num_round::Integer=1, silent::Bool=false, kw...)
     for j ∈ 1:num_round
         round_number = getnrounds(b) + 1
-        updateone!(b, a...; round_number, kw...)
+        updateone!(b, a...; round_number, silent, kw...)
     end
     b
 end
@@ -422,13 +424,14 @@ ŷ = predict(b, X)
 function xgboost(dm::DMatrix, a...;
                  num_round::Integer=10,
                  watchlist=Dict("train"=>dm),
+                 silent::Bool=false,
                  kw...
                 )
     Xy = DMatrix(dm)
     b = Booster(Xy; kw...)
-    isempty(watchlist) || @info("XGBoost: starting training.")
-    update!(b, Xy, a...; num_round, watchlist)
-    isempty(watchlist) || @info("Training rounds complete.")
+    (silent | isempty(watchlist)) || @info("XGBoost: starting training.")
+    update!(b, Xy, a...; num_round, watchlist, silent)
+    (silent | isempty(watchlist)) || @info("Training rounds complete.")
     b
 end
 xgboost(data, a...; kw...) = xgboost(DMatrix(data), a...; kw...)
