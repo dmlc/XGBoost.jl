@@ -218,7 +218,7 @@ Base.getindex(dm::DMatrix, idx::AbstractVector{<:Integer}, ::Colon; kw...) = sli
 
 DMatrix(X::AbstractMatrix, y::AbstractVector; kw...) = DMatrix(X; label=y, kw...)
 
-DMatrix(Xy::DataTuple; kw...) = DMatrix(Xy[1], Xy[2]; kw...)
+DMatrix(Xy::Tuple; kw...) = DMatrix(Xy[1], Xy[2]; kw...)
 
 DMatrix(dm::DMatrix) = dm
 
