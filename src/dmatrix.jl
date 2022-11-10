@@ -109,6 +109,13 @@ end
 setinfo!(dm::DMatrix, name::Symbol, info) = setinfo!(dm, string(name), info)
 
 """
+    setlabel!(dm::DMatrix, y)
+
+Set the label data of `dm` to `y`.  Equivalent to `setinfo!(dm, "label", y)`.
+"""
+setlabel!(dm::DMatrix, info::AbstractVector) = setinfo!(dm, "label", info)
+
+"""
     setinfos!(dm::DMatrix; kw...)
 
 Make arbitrarily many calls to [`setinfo!`](@ref) via keyword arguments.  This function is called by all
