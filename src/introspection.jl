@@ -57,7 +57,7 @@ function importance(b::Booster, type::AbstractString="gain")
     p = sortperm(fim, by=sum, rev=true)
 
     fns = _parse_out_feature_name.(names[p])
-    if length(b.feature_names) ≥ maximum(fns)
+    if length(b.feature_names) ≥ maximum(fns, init=0)
         fns = map(j -> b.feature_names[j], fns)
     end
 
