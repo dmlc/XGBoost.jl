@@ -41,7 +41,7 @@ DMatrix(tbl, yname::Symbol; kw...)
     If data is passed in tabular form feature names will be set automatically but can
     be overriden with the keyword argument.
 - `yname`: If passed a tabular argument `tbl`, `yname` is the name of the column which holds the
-    label data.
+    label data.  It will automatically be omitted from the features.
 
 ### Keyword Arguments
 - `missing_value`: The `Float32` value of elements of input data to be interpreted as `missing`,
@@ -233,6 +233,12 @@ function DMatrix(tbl;
 end
 
 DMatrix(tbl, y::AbstractVector; kw...) = DMatrix(tbl; label=y, kw...)
+
+function DMatrix(tbl, ycol::Symbol; kw...)
+    Xcols = [n for n ∈ Tables.columnnames(tbl) if n ≠ ycol]
+    tbl′ = NamedTuple(n=>Tables.getcolumn(tbl, n) for n ∈ Xcols)
+    DMatrix(tbl′, Tables.getcolumn(tbl, ycol); kw...)
+end
 
 """
     nrows(dm::DMatrix)

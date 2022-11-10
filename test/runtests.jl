@@ -55,6 +55,11 @@ include("utils.jl")
     dm = XGBoost.DMatrix((tbl, y))
     @test size(dm) == (10,2)
     @test XGBoost.getlabel(dm) ≈ y
+
+    tbl = (a=randn(10), b=randn(10), c=randn(Float32, 10))
+    dm = XGBoost.DMatrix(tbl, :c)
+    @test size(dm) == (10,2)
+    @test XGBoost.getlabel(dm) ≈ tbl.c
 end
 
 @testset "DMatrix IO" begin
