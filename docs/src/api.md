@@ -16,6 +16,7 @@ setfeaturenames!
 getfeaturenames
 setinfo!
 setinfos!
+setlabel!
 getinfo
 slice
 nrows

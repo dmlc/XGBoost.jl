@@ -41,7 +41,7 @@ DMatrix(tbl, yname::Symbol; kw...)
     If data is passed in tabular form feature names will be set automatically but can
     be overriden with the keyword argument.
 - `yname`: If passed a tabular argument `tbl`, `yname` is the name of the column which holds the
-    label data.
+    label data.  It will automatically be omitted from the features.
 
 ### Keyword Arguments
 - `missing_value`: The `Float32` value of elements of input data to be interpreted as `missing`,
@@ -107,6 +107,13 @@ function setinfo!(dm::DMatrix, name::AbstractString, info::AbstractVector)
     _setinfo!(dm, name, info)
 end
 setinfo!(dm::DMatrix, name::Symbol, info) = setinfo!(dm, string(name), info)
+
+"""
+    setlabel!(dm::DMatrix, y)
+
+Set the label data of `dm` to `y`.  Equivalent to `setinfo!(dm, "label", y)`.
+"""
+setlabel!(dm::DMatrix, info::AbstractVector) = setinfo!(dm, "label", info)
 
 """
     setinfos!(dm::DMatrix; kw...)
@@ -218,7 +225,7 @@ Base.getindex(dm::DMatrix, idx::AbstractVector{<:Integer}, ::Colon; kw...) = sli
 
 DMatrix(X::AbstractMatrix, y::AbstractVector; kw...) = DMatrix(X; label=y, kw...)
 
-DMatrix(Xy::DataTuple; kw...) = DMatrix(Xy[1], Xy[2]; kw...)
+DMatrix(Xy::Tuple; kw...) = DMatrix(Xy[1], Xy[2]; kw...)
 
 DMatrix(dm::DMatrix) = dm
 
@@ -233,6 +240,12 @@ function DMatrix(tbl;
 end
 
 DMatrix(tbl, y::AbstractVector; kw...) = DMatrix(tbl; label=y, kw...)
+
+function DMatrix(tbl, ycol::Symbol; kw...)
+    Xcols = [n for n ∈ Tables.columnnames(tbl) if n ≠ ycol]
+    tbl′ = NamedTuple(n=>Tables.getcolumn(tbl, n) for n ∈ Xcols)
+    DMatrix(tbl′, Tables.getcolumn(tbl, ycol); kw...)
+end
 
 """
     nrows(dm::DMatrix)
