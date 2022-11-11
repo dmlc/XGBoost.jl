@@ -68,14 +68,17 @@ df = DataFrame(A=randn(10), B=randn(10))
 DMatrix(df)  # has feature names ["A", "B"] but no label
 ```
 """
-mutable struct DMatrix
+mutable struct DMatrix <: AbstractMatrix{Float32}
     handle::DMatrixHandle
+    
+    # this is not allocated on initialization because it's not needed for any core functionality
+    data::Union{Nothing,SparseMatrixCSR{0,Float32,UInt64}}
 
     function DMatrix(handle::Ptr{Nothing};
                      feature_names::AbstractVector{<:AbstractString}=String[],
                      kw...
                     )
-        dm = new(handle)
+        dm = new(handle, nothing)
         setinfos!(dm; kw...)
         isempty(feature_names) || setfeaturenames!(dm, feature_names)
         finalizer(x -> xgbcall(XGDMatrixFree, x.handle), dm)
@@ -91,6 +94,8 @@ function _setinfo!(dm::DMatrix, name::AbstractString, info::AbstractVector{<:Int
     xgbcall(XGDMatrixSetUIntInfo, dm.handle, name, convert(Vector{Cuint}, info), length(info))
     info
 end
+
+
 
 """
     setinfo!(dm::DMatrix, name, info)
@@ -287,6 +292,44 @@ function Base.size(dm::DMatrix, ax::Integer)
     else
         throw(ArgumentError("size: DMatrix only has 2 indices"))
     end
+end
+
+"""
+    getdata(dm::DMatrix)
+
+Get the data in the `DMatrix` as a `SparseMatrixCSR`.  This involves allocating new buffers and is not
+required for any core functionality and so should be avoided.
+"""
+function getdata(dm::DMatrix)
+    (m, n) = size(dm)
+    rowptr = Vector{UInt64}(undef, m+1)
+    colval = Vector{UInt32}(undef, nnz(dm))
+    data = Vector{Float32}(undef, nnz(dm))
+    cfg = JSON3.write(Dict())
+    xgbcall(XGDMatrixGetDataAsCSR, dm.handle, cfg, rowptr, colval, data)
+    SparseMatrixCSR{0}(m, n, rowptr, UInt64.(colval), data)
+end
+
+"""
+    getdata!(dm::DMatrix)
+
+Allocate and store the underlying data using [`getdata`](@ref).  When `getdata!` is called the resulting
+matrix is stored permanently as a field of `DMatrix`.
+"""
+getdata!(dm::DMatrix) = (dm.data = getdata(dm))
+
+"""
+    hasdata(dm::DMatrix)
+
+Whether the data within the `DMatrix` has been allocated and stored as an `AbstractMatrix{Float32}` field
+of the `DMatrix`.  If this returns `false` it means that additional allocations are required to index
+the `DMatrix`.
+"""
+hasdata(dm::DMatrix) = !isnothing(dm.data)
+
+@propagate_inbounds function Base.getindex(dm::DMatrix, idx...)
+    hasdata(dm) || getdata!(dm)
+    @inbounds getindex(dm.data, idx...)
 end
 
 """
@@ -535,3 +578,16 @@ What exactly xgboost does with `nthreads` is a bit mysterious, `nothing` gives t
 Additional keyword arguments are passed to a `DMatrix` constructor.
 """
 fromiterator(::Type{DMatrix}, itr; kw...) = DMatrix(DataIterator(itr); kw...)
+
+"""
+    nnz(dm::DMatrix)
+
+Get the number of non-zero values in the `DMatrix`.  Note that this is guaranteed to give the same number
+of non-zero values as in the `SparseMatrixCSR` constructed from the `DMatrix`.
+"""
+function SparseArrays.nnz(dm::DMatrix)
+    o = Ref{Lib.bst_ulong}()
+    xgbcall(XGDMatrixNumNonMissing, dm.handle, o)
+    Int(o[])
+end
+

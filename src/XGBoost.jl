@@ -1,13 +1,18 @@
 module XGBoost
 
 using LinearAlgebra
+import SparseArrays
 using SparseArrays: SparseMatrixCSC, nnz
+import SparseMatricesCSR
+using SparseMatricesCSR: SparseMatrixCSR
 using AbstractTrees
 using OrderedCollections
 using JSON3
 using Tables
 using Term
 using Statistics: mean, std
+
+using Base: @propagate_inbounds
 
 using Base.Iterators: Stateful, reset!
 

@@ -14,8 +14,13 @@ function _features_display_string(fs, n)
 end
 
 function Base.show(io::IO, mime::MIME"text/plain", dm::DMatrix)
+    str = if !hasdata(dm)
+        "{dim}(values not allocated){/dim}"
+    else
+        sprint((io, x) -> show(io, MIME"text/plain"(), x), dm.data)
+    end
     p = Panel(_features_display_string(getfeaturenames(dm), size(dm,2)),
-              "{dim}(opaque object){/dim}",
+              str,
               style="magenta",
               title="XGBoost.DMatrix",
               title_style="bold cyan",
