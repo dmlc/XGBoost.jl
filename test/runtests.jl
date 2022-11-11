@@ -6,29 +6,38 @@ include("utils.jl")
 
 @testset "XGBoost" begin
 
-# it's *very* hard to do real tests here because we can't get data back
-# this section just checks for errors, only training below can verify it's working properly
+# note that non-Float32 matrices will get truncated and `==` may not hold
 @testset "DMatrix Constructors" begin
-    dm = DMatrix(randn(10,3))
+    X = randn(Float32, 10, 3)
+    dm = DMatrix(X)
     @test size(dm) == (10,3)
+    @test !XGBoost.hasdata(dm)
+    @test dm == X
 
-    dm = DMatrix(transpose(randn(4,5)))
+    X = transpose(randn(Float32, 4, 5))
+    dm = DMatrix(X)
     @test (size(dm,1), size(dm,2)) == (5,4)
+    @test dm == X
 
-    dm = DMatrix(randn(4,5)')
+    X = randn(Float32, 4, 5)'
+    dm = DMatrix(X)
     @test size(dm) == (5,4)
+    @test dm == X
 
-    dm = DMatrix(sprand(100, 10, 0.1))
-    @test size(dm) == (100,10)
+    X = sprand(Float32, 100, 10, 0.1)
+    dm = DMatrix(X)
+    @test dm == X
 
+    #TODO: what??? see https://github.com/dmlc/xgboost/issues/8459
     dm = DMatrix([1 2 missing
                   3 missing 4
                   5 6 7
                   missing missing missing])
     @test size(dm) == (4,3)
 
-    dm = DMatrix(transpose(sprand(100, 10, 0.1)))
-    @test size(dm) == (10,100)
+    X = transpose(sprand(Float32, 100, 10, 0.1))
+    dm = DMatrix(X)
+    @test X == dm
 
     dm = DMatrix(randn(3,2), Float32[1.0, 2.0, 3.0])
     @test XGBoost.getlabel(dm) == Float32[1.0, 2.0, 3.0]
