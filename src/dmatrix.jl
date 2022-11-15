@@ -68,7 +68,7 @@ df = DataFrame(A=randn(10), B=randn(10))
 DMatrix(df)  # has feature names ["A", "B"] but no label
 ```
 """
-mutable struct DMatrix <: AbstractMatrix{Float32}
+mutable struct DMatrix <: AbstractMatrix{Union{Float32,Missing}}
     handle::DMatrixHandle
     
     # this is not allocated on initialization because it's not needed for any core functionality
@@ -192,6 +192,9 @@ function _sparse_csc_components(x::SparseMatrixCSC)
     (colptr, rowval, nzval)
 end
 
+#TODO: following discussion [here](https://github.com/dmlc/xgboost/issues/8459) it seems like this
+#constructor is invalid because libxgboost will interpret the 0 values as *missing*
+#=
 function DMatrix(x::SparseMatrixCSC{<:Real,<:Integer}; kw...)
     o = Ref{DMatrixHandle}()
     (colptr, rowval, nzval) = _sparse_csc_components(x)
@@ -201,8 +204,7 @@ function DMatrix(x::SparseMatrixCSC{<:Real,<:Integer}; kw...)
            )
     DMatrix(o[]; kw...)
 end
-
-#TODO: transpose sparse method
+=#
 
 """
     slice(dm::DMatrix, idx; kw...)
@@ -303,8 +305,8 @@ required for any core functionality and so should be avoided.
 function getdata(dm::DMatrix)
     (m, n) = size(dm)
     rowptr = Vector{UInt64}(undef, m+1)
-    colval = Vector{UInt32}(undef, nnz(dm))
-    data = Vector{Float32}(undef, nnz(dm))
+    colval = Vector{UInt32}(undef, nnonmissing(dm))
+    data = Vector{Float32}(undef, nnonmissing(dm))
     cfg = JSON3.write(Dict())
     xgbcall(XGDMatrixGetDataAsCSR, dm.handle, cfg, rowptr, colval, data)
     SparseMatrixCSR{0}(m, n, rowptr, UInt64.(colval), data)
@@ -329,7 +331,7 @@ hasdata(dm::DMatrix) = !isnothing(dm.data)
 
 @propagate_inbounds function Base.getindex(dm::DMatrix, idx...)
     hasdata(dm) || getdata!(dm)
-    @inbounds getindex(dm.data, idx...)
+    @inbounds getvalue(dm.data, idx..., missing)
 end
 
 """
@@ -579,15 +581,30 @@ Additional keyword arguments are passed to a `DMatrix` constructor.
 """
 fromiterator(::Type{DMatrix}, itr; kw...) = DMatrix(DataIterator(itr); kw...)
 
-"""
-    nnz(dm::DMatrix)
 
-Get the number of non-zero values in the `DMatrix`.  Note that this is guaranteed to give the same number
-of non-zero values as in the `SparseMatrixCSR` constructed from the `DMatrix`.
 """
-function SparseArrays.nnz(dm::DMatrix)
+    nnonmissing(dm::DMatrix)
+
+Returns the number of non-missing values in `dm`.  Equivalent to `count(!ismissing, dm)`.
+"""
+function nnonmissing(dm::DMatrix)
     o = Ref{Lib.bst_ulong}()
     xgbcall(XGDMatrixNumNonMissing, dm.handle, o)
     Int(o[])
 end
 
+Base.count(::typeof(!ismissing), dm::DMatrix) = nnonmissing(dm)
+Base.count(::typeof(ismissing), dm::DMatrix) = prod(size(dm)) - nnonmissing(dm)
+
+#TODO: this needs to be submitted to SparseMatrixCSRin a PR, uses lots of internals
+function getvalue(A::SparseMatrixCSR{Bi,T}, idx::CartesianIndex, default) where {Bi,T}
+    (i0, i1) = (idx[1], idx[2])
+    @boundscheck checkbounds(A, i0, i1)
+    o = SparseMatricesCSR.getoffset(A)
+    r1 = Int(SparseMatricesCSR.getrowptr(A)[i0]+o)
+    r2 = Int(SparseMatricesCSR.getrowptr(A)[i0+1]-Bi)
+    (r1 > r2) && return default
+    i1o = i1 - o
+    k = searchsortedfirst(SparseMatricesCSR.colvals(A), i1o, r1, r2, Base.Order.Forward)
+    ((k > r2) || (SparseMatricesCSR.colvals(A)[k] ≠ i1o)) ? default : SparseMatricesCSR.nonzeros(A)[k]
+end

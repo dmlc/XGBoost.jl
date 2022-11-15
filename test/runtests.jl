@@ -28,12 +28,12 @@ include("utils.jl")
     dm = DMatrix(X)
     @test dm == X
 
-    #TODO: what??? see https://github.com/dmlc/xgboost/issues/8459
-    dm = DMatrix([1 2 missing
-                  3 missing 4
-                  5 6 7
-                  missing missing missing])
-    @test size(dm) == (4,3)
+    X = [1 2 missing
+         3 missing 4
+         5 6 7
+         missing missing missing]
+    dm = DMatrix(X)
+    @test isequal(X, dm)
 
     X = transpose(sprand(Float32, 100, 10, 0.1))
     dm = DMatrix(X)
@@ -170,7 +170,7 @@ end
     bst2 = Booster(DMatrix[])
     XGBoost.load!(bst2, open(model_file))
     @test preds == predict(bst2, dtest)
-    
+
     bst2 = XGBoost.load(Booster, model_file)
     @test preds == predict(bst2, dtest)
 
