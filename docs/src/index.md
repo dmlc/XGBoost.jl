@@ -35,24 +35,16 @@ trees(bst)
 ```
 
 ## Data Input
-Data is passed to xgboost via the [`DMatrix`](@ref) object.  This is an opaque wrapper of the data
-that stores it in a format that xgboost can understand, and for the most part data cannot be
-retrieved from the `DMatrix` once created.  Julia `AbstractArray` data will automatically be wrapped
-in a `DMatrix` where appropriate, so users should mostly not have to call its constructors directly,
-but it may be helpful to understand the semantics for creating it.
+Data is passed to xgboost via the [`DMatrix`](@ref) object.  This is an
+`AbstractMatrix{Union{Missing,Float32}}` object which is primarily intended for internal use by
+`libxgboost`.  Julia `AbstractArray` data will automatically be wrapped in a `DMatrix` where
+appropriate, so users should mostly not have to call its constructors directly, but it may be
+helpful to understand the semantics for creating it.
 
-For example, thoe following are equivalent
+For example, the following are equivalent
 ```julia
-X = rand(4,3)
+X = randn(4,3)
 predict(bst, X) == predict(bst, DMatrix(X))
-```
-
-Xgboost can efficiently wrap CSC sparse matrices.  For example, the following is done without
-conversion into a dense matrix
-```julia
-using SparseArrays
-X = sprand(1000,4,0.1)
-DMatrix(X)
 ```
 
 The xgboost library interprets floating point `NaN` values as "missing" or "null" data.  `missing`
@@ -62,8 +54,15 @@ that of a provided Julia matrix with `Union{Missing,Real}` values.  For example
 X = [0 missing 1
      1 0 missing
      missing 1 0]
-DMatrix(X)  # nullity is preserved
+isequal(DMatrix(X), x)  # nullity is preserved
 ```
+
+!!! note
+
+    `DMatrix` must allocate new arrays when fetching values from it.  One therefore should avoid
+    using `DMatrix` directly except with `XGBoost`; retrieving values from this object should be
+    considered useful mostly only for verification.
+
 
 ### Feature Naming and Tabular Data
 Xgboost supports the naming of features (i.e. columns of the feature matrix).  This can be useful

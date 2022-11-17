@@ -1,26 +1,31 @@
 
 """
-    DMatrix
+    DMatrix <: AbstractMatrix{Union{Missing,Float32}}
 
 Data structure for storing data which can be understood by an xgboost [`Booster`](@ref).
-These can store both features and targets.  The `DMatrix` object itself is opaque
-and once constructed data cannot be retrieved from it.  For this reason it does not possess
-any kind of array interface, however it does have a knowable `size` (main data only).
+These can store both features and targets.  Values of the `DMatrix` can be accessed as with any
+other `AbstractMatrix`, however doing so causes additional allocations.  Performant indexing and
+matrix operation code should not use `DMatrix` directly.
 
 Aside from a primary array, the `DMatrix` object can have various "info" fields associated with it.
 Training target variables are stored as a special info field with the name `label`, see
-[`setinfo!`](@ref) and [`setinfos!`](@ref).  Unlike the parimary data the info fields are retrievable,
-see [`getinfo`](@ref) and [`getlabel`](@ref).
-
-This object has special efficient constructors for `SparseMatrixCSC` objects (the default sparse
-matrix type from the `SparseArrays` stdlib).
-
-The `DMatrix` can interpret `missing` data, its argument can be an `AbstractMatrix{Union{<:Real,Missing}}`.
-By default, any `NaN` value will also be interpreted as `missing`.
+[`setinfo!`](@ref) and [`setinfos!`](@ref).  These can be retrieved with [`getinfo`](@ref) and
+[`getlabel`](@ref).
 
 Note that the xgboost library internally uses `Float32` to represent all data, so input data is
 automatically copied unless provided in this format.  Unfortunately because of the different
 representations used by C and Julia, any non `Transpose` matrix will also be copied.
+
+### On `missing` Values
+Xgboost supports training on `missing` data.  Such data is simply omitted from tree splits.  Because
+the `DMatrix` is internally a `Float32` matrix, `libxgboost` uses a settable default value to represent
+missing values, see the `missing_value` keyword argument below (default `NaN32`).  This value is used
+only on matrix construction.  This will cause input matrix elements to ultimately be converted to
+`missing`.  The most obvious consequence of this is that `NaN32` values will automatically be converted
+to `missing` with default arguments.  The provided constructors ensure that `missing` values will be
+preserved.
+
+TL;DR: `DMatrix` supports `missing` and `NaN`'s will be converted to `missing`.
 
 ## Constructors
 ```julia
@@ -192,8 +197,9 @@ function _sparse_csc_components(x::SparseMatrixCSC)
     (colptr, rowval, nzval)
 end
 
-#TODO: following discussion [here](https://github.com/dmlc/xgboost/issues/8459) it seems like this
-#constructor is invalid because libxgboost will interpret the 0 values as *missing*
+#TODO: following discussion [here](https://github.com/dmlc/xgboost/issues/8459) 
+# this constructor is invalid.  we preserve the code so that appropriate methods can
+# be provided in the future
 #=
 function DMatrix(x::SparseMatrixCSC{<:Real,<:Integer}; kw...)
     o = Ref{DMatrixHandle}()
@@ -210,9 +216,8 @@ end
     slice(dm::DMatrix, idx; kw...)
 
 Create a new `DMatrix` out of the subset of rows of `dm` given by indices `idx`.
-Since `DMatrix` is opaque it's not possible to verify the result, so for most use cases
-it is recommended to take slices before converting to `DMatrix`.  Additional keyword
-arguments are passed to the newly constructed slice.
+For performance reasons it is recommended to take slices before converting to `DMatrix`.
+Additional keyword arguments are passed to the newly constructed slice.
 
 This can also be called via `Base.getindex`, for example, the following are equivalent
 ```julia
