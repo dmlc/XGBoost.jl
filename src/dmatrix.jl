@@ -1,26 +1,31 @@
 
 """
-    DMatrix
+    DMatrix <: AbstractMatrix{Union{Missing,Float32}}
 
 Data structure for storing data which can be understood by an xgboost [`Booster`](@ref).
-These can store both features and targets.  The `DMatrix` object itself is opaque
-and once constructed data cannot be retrieved from it.  For this reason it does not possess
-any kind of array interface, however it does have a knowable `size` (main data only).
+These can store both features and targets.  Values of the `DMatrix` can be accessed as with any
+other `AbstractMatrix`, however doing so causes additional allocations.  Performant indexing and
+matrix operation code should not use `DMatrix` directly.
 
 Aside from a primary array, the `DMatrix` object can have various "info" fields associated with it.
 Training target variables are stored as a special info field with the name `label`, see
-[`setinfo!`](@ref) and [`setinfos!`](@ref).  Unlike the parimary data the info fields are retrievable,
-see [`getinfo`](@ref) and [`getlabel`](@ref).
-
-This object has special efficient constructors for `SparseMatrixCSC` objects (the default sparse
-matrix type from the `SparseArrays` stdlib).
-
-The `DMatrix` can interpret `missing` data, its argument can be an `AbstractMatrix{Union{<:Real,Missing}}`.
-By default, any `NaN` value will also be interpreted as `missing`.
+[`setinfo!`](@ref) and [`setinfos!`](@ref).  These can be retrieved with [`getinfo`](@ref) and
+[`getlabel`](@ref).
 
 Note that the xgboost library internally uses `Float32` to represent all data, so input data is
 automatically copied unless provided in this format.  Unfortunately because of the different
 representations used by C and Julia, any non `Transpose` matrix will also be copied.
+
+### On `missing` Values
+Xgboost supports training on `missing` data.  Such data is simply omitted from tree splits.  Because
+the `DMatrix` is internally a `Float32` matrix, `libxgboost` uses a settable default value to represent
+missing values, see the `missing_value` keyword argument below (default `NaN32`).  This value is used
+only on matrix construction.  This will cause input matrix elements to ultimately be converted to
+`missing`.  The most obvious consequence of this is that `NaN32` values will automatically be converted
+to `missing` with default arguments.  The provided constructors ensure that `missing` values will be
+preserved.
+
+TL;DR: `DMatrix` supports `missing` and `NaN`'s will be converted to `missing`.
 
 ## Constructors
 ```julia
@@ -68,14 +73,17 @@ df = DataFrame(A=randn(10), B=randn(10))
 DMatrix(df)  # has feature names ["A", "B"] but no label
 ```
 """
-mutable struct DMatrix
+mutable struct DMatrix <: AbstractMatrix{Union{Float32,Missing}}
     handle::DMatrixHandle
+    
+    # this is not allocated on initialization because it's not needed for any core functionality
+    data::Union{Nothing,SparseMatrixCSR{0,Float32,UInt64}}
 
     function DMatrix(handle::Ptr{Nothing};
                      feature_names::AbstractVector{<:AbstractString}=String[],
                      kw...
                     )
-        dm = new(handle)
+        dm = new(handle, nothing)
         setinfos!(dm; kw...)
         isempty(feature_names) || setfeaturenames!(dm, feature_names)
         finalizer(x -> xgbcall(XGDMatrixFree, x.handle), dm)
@@ -91,6 +99,8 @@ function _setinfo!(dm::DMatrix, name::AbstractString, info::AbstractVector{<:Int
     xgbcall(XGDMatrixSetUIntInfo, dm.handle, name, convert(Vector{Cuint}, info), length(info))
     info
 end
+
+
 
 """
     setinfo!(dm::DMatrix, name, info)
@@ -187,6 +197,10 @@ function _sparse_csc_components(x::SparseMatrixCSC)
     (colptr, rowval, nzval)
 end
 
+#TODO: following discussion [here](https://github.com/dmlc/xgboost/issues/8459) 
+# this constructor is invalid.  we preserve the code so that appropriate methods can
+# be provided in the future
+#=
 function DMatrix(x::SparseMatrixCSC{<:Real,<:Integer}; kw...)
     o = Ref{DMatrixHandle}()
     (colptr, rowval, nzval) = _sparse_csc_components(x)
@@ -196,16 +210,14 @@ function DMatrix(x::SparseMatrixCSC{<:Real,<:Integer}; kw...)
            )
     DMatrix(o[]; kw...)
 end
-
-#TODO: transpose sparse method
+=#
 
 """
     slice(dm::DMatrix, idx; kw...)
 
 Create a new `DMatrix` out of the subset of rows of `dm` given by indices `idx`.
-Since `DMatrix` is opaque it's not possible to verify the result, so for most use cases
-it is recommended to take slices before converting to `DMatrix`.  Additional keyword
-arguments are passed to the newly constructed slice.
+For performance reasons it is recommended to take slices before converting to `DMatrix`.
+Additional keyword arguments are passed to the newly constructed slice.
 
 This can also be called via `Base.getindex`, for example, the following are equivalent
 ```julia
@@ -287,6 +299,44 @@ function Base.size(dm::DMatrix, ax::Integer)
     else
         throw(ArgumentError("size: DMatrix only has 2 indices"))
     end
+end
+
+"""
+    getdata(dm::DMatrix)
+
+Get the data in the `DMatrix` as a `SparseMatrixCSR`.  This involves allocating new buffers and is not
+required for any core functionality and so should be avoided.
+"""
+function getdata(dm::DMatrix)
+    (m, n) = size(dm)
+    rowptr = Vector{UInt64}(undef, m+1)
+    colval = Vector{UInt32}(undef, nnonmissing(dm))
+    data = Vector{Float32}(undef, nnonmissing(dm))
+    cfg = JSON3.write(Dict())
+    xgbcall(XGDMatrixGetDataAsCSR, dm.handle, cfg, rowptr, colval, data)
+    SparseMatrixCSR{0}(m, n, rowptr, UInt64.(colval), data)
+end
+
+"""
+    getdata!(dm::DMatrix)
+
+Allocate and store the underlying data using [`getdata`](@ref).  When `getdata!` is called the resulting
+matrix is stored permanently as a field of `DMatrix`.
+"""
+getdata!(dm::DMatrix) = (dm.data = getdata(dm))
+
+"""
+    hasdata(dm::DMatrix)
+
+Whether the data within the `DMatrix` has been allocated and stored as an `AbstractMatrix{Float32}` field
+of the `DMatrix`.  If this returns `false` it means that additional allocations are required to index
+the `DMatrix`.
+"""
+hasdata(dm::DMatrix) = !isnothing(dm.data)
+
+@propagate_inbounds function Base.getindex(dm::DMatrix, idx...)
+    hasdata(dm) || getdata!(dm)
+    @inbounds getvalue(dm.data, idx..., missing)
 end
 
 """
@@ -535,3 +585,31 @@ What exactly xgboost does with `nthreads` is a bit mysterious, `nothing` gives t
 Additional keyword arguments are passed to a `DMatrix` constructor.
 """
 fromiterator(::Type{DMatrix}, itr; kw...) = DMatrix(DataIterator(itr); kw...)
+
+
+"""
+    nnonmissing(dm::DMatrix)
+
+Returns the number of non-missing values in `dm`.  Equivalent to `count(!ismissing, dm)`.
+"""
+function nnonmissing(dm::DMatrix)
+    o = Ref{Lib.bst_ulong}()
+    xgbcall(XGDMatrixNumNonMissing, dm.handle, o)
+    Int(o[])
+end
+
+Base.count(::typeof(!ismissing), dm::DMatrix) = nnonmissing(dm)
+Base.count(::typeof(ismissing), dm::DMatrix) = prod(size(dm)) - nnonmissing(dm)
+
+#TODO: this needs to be submitted to SparseMatrixCSRin a PR, uses lots of internals
+function getvalue(A::SparseMatrixCSR{Bi,T}, idx::CartesianIndex, default) where {Bi,T}
+    (i0, i1) = (idx[1], idx[2])
+    @boundscheck checkbounds(A, i0, i1)
+    o = SparseMatricesCSR.getoffset(A)
+    r1 = Int(SparseMatricesCSR.getrowptr(A)[i0]+o)
+    r2 = Int(SparseMatricesCSR.getrowptr(A)[i0+1]-Bi)
+    (r1 > r2) && return default
+    i1o = i1 - o
+    k = searchsortedfirst(SparseMatricesCSR.colvals(A), i1o, r1, r2, Base.Order.Forward)
+    ((k > r2) || (SparseMatricesCSR.colvals(A)[k] ≠ i1o)) ? default : SparseMatricesCSR.nonzeros(A)[k]
+end

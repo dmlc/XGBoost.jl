@@ -47,6 +47,7 @@ function XGBuildInfo(out)
     @ccall libxgboost.XGBuildInfo(out::Ptr{Ptr{Cchar}})::Cint
 end
 
+# no prototype is found for this function at c_api.h:84:21, please use with caution
 function XGBGetLastError()
     @ccall libxgboost.XGBGetLastError()::Ptr{Cchar}
 end
@@ -55,12 +56,12 @@ function XGBRegisterLogCallback(callback)
     @ccall libxgboost.XGBRegisterLogCallback(callback::Ptr{Cvoid})::Cint
 end
 
-function XGBSetGlobalConfig(json_str)
-    @ccall libxgboost.XGBSetGlobalConfig(json_str::Ptr{Cchar})::Cint
+function XGBSetGlobalConfig(config)
+    @ccall libxgboost.XGBSetGlobalConfig(config::Ptr{Cchar})::Cint
 end
 
-function XGBGetGlobalConfig(json_str)
-    @ccall libxgboost.XGBGetGlobalConfig(json_str::Ptr{Ptr{Cchar}})::Cint
+function XGBGetGlobalConfig(out_config)
+    @ccall libxgboost.XGBGetGlobalConfig(out_config::Ptr{Ptr{Cchar}})::Cint
 end
 
 function XGDMatrixCreateFromFile(fname, silent, out)
@@ -71,12 +72,12 @@ function XGDMatrixCreateFromCSREx(indptr, indices, data, nindptr, nelem, num_col
     @ccall libxgboost.XGDMatrixCreateFromCSREx(indptr::Ptr{Csize_t}, indices::Ptr{Cuint}, data::Ptr{Cfloat}, nindptr::Csize_t, nelem::Csize_t, num_col::Csize_t, out::Ptr{DMatrixHandle})::Cint
 end
 
-function XGDMatrixCreateFromCSR(indptr, indices, data, ncol, json_config, out)
-    @ccall libxgboost.XGDMatrixCreateFromCSR(indptr::Ptr{Cchar}, indices::Ptr{Cchar}, data::Ptr{Cchar}, ncol::bst_ulong, json_config::Ptr{Cchar}, out::Ptr{DMatrixHandle})::Cint
+function XGDMatrixCreateFromCSR(indptr, indices, data, ncol, config, out)
+    @ccall libxgboost.XGDMatrixCreateFromCSR(indptr::Ptr{Cchar}, indices::Ptr{Cchar}, data::Ptr{Cchar}, ncol::bst_ulong, config::Ptr{Cchar}, out::Ptr{DMatrixHandle})::Cint
 end
 
-function XGDMatrixCreateFromDense(data, json_config, out)
-    @ccall libxgboost.XGDMatrixCreateFromDense(data::Ptr{Cchar}, json_config::Ptr{Cchar}, out::Ptr{DMatrixHandle})::Cint
+function XGDMatrixCreateFromDense(data, config, out)
+    @ccall libxgboost.XGDMatrixCreateFromDense(data::Ptr{Cchar}, config::Ptr{Cchar}, out::Ptr{DMatrixHandle})::Cint
 end
 
 function XGDMatrixCreateFromCSCEx(col_ptr, indices, data, nindptr, nelem, num_row, out)
@@ -95,12 +96,12 @@ function XGDMatrixCreateFromDT(data, feature_stypes, nrow, ncol, out, nthread)
     @ccall libxgboost.XGDMatrixCreateFromDT(data::Ptr{Ptr{Cvoid}}, feature_stypes::Ptr{Ptr{Cchar}}, nrow::bst_ulong, ncol::bst_ulong, out::Ptr{DMatrixHandle}, nthread::Cint)::Cint
 end
 
-function XGDMatrixCreateFromCudaColumnar(data, json_config, out)
-    @ccall libxgboost.XGDMatrixCreateFromCudaColumnar(data::Ptr{Cchar}, json_config::Ptr{Cchar}, out::Ptr{DMatrixHandle})::Cint
+function XGDMatrixCreateFromCudaColumnar(data, config, out)
+    @ccall libxgboost.XGDMatrixCreateFromCudaColumnar(data::Ptr{Cchar}, config::Ptr{Cchar}, out::Ptr{DMatrixHandle})::Cint
 end
 
-function XGDMatrixCreateFromCudaArrayInterface(data, json_config, out)
-    @ccall libxgboost.XGDMatrixCreateFromCudaArrayInterface(data::Ptr{Cchar}, json_config::Ptr{Cchar}, out::Ptr{DMatrixHandle})::Cint
+function XGDMatrixCreateFromCudaArrayInterface(data, config, out)
+    @ccall libxgboost.XGDMatrixCreateFromCudaArrayInterface(data::Ptr{Cchar}, config::Ptr{Cchar}, out::Ptr{DMatrixHandle})::Cint
 end
 
 const DataIterHandle = Ptr{Cvoid}
@@ -137,8 +138,12 @@ const XGDMatrixCallbackNext = Cvoid
 # typedef void DataIterResetCallback ( DataIterHandle handle )
 const DataIterResetCallback = Cvoid
 
-function XGDMatrixCreateFromCallback(iter, proxy, reset, next, c_json_config, out)
-    @ccall libxgboost.XGDMatrixCreateFromCallback(iter::DataIterHandle, proxy::DMatrixHandle, reset::Ptr{Cvoid}, next::Ptr{Cvoid}, c_json_config::Ptr{Cchar}, out::Ptr{DMatrixHandle})::Cint
+function XGDMatrixCreateFromCallback(iter, proxy, reset, next, config, out)
+    @ccall libxgboost.XGDMatrixCreateFromCallback(iter::DataIterHandle, proxy::DMatrixHandle, reset::Ptr{Cvoid}, next::Ptr{Cvoid}, config::Ptr{Cchar}, out::Ptr{DMatrixHandle})::Cint
+end
+
+function XGQuantileDMatrixCreateFromCallback(iter, proxy, ref, reset, next, config, out)
+    @ccall libxgboost.XGQuantileDMatrixCreateFromCallback(iter::DataIterHandle, proxy::DMatrixHandle, ref::DataIterHandle, reset::Ptr{Cvoid}, next::Ptr{Cvoid}, config::Ptr{Cchar}, out::Ptr{DMatrixHandle})::Cint
 end
 
 function XGDeviceQuantileDMatrixCreateFromCallback(iter, proxy, reset, next, missing, nthread, max_bin, out)
@@ -165,8 +170,8 @@ function XGImportArrowRecordBatch(data_handle, ptr_array, ptr_schema)
     @ccall libxgboost.XGImportArrowRecordBatch(data_handle::DataIterHandle, ptr_array::Ptr{Cvoid}, ptr_schema::Ptr{Cvoid})::Cint
 end
 
-function XGDMatrixCreateFromArrowCallback(next, json_config, out)
-    @ccall libxgboost.XGDMatrixCreateFromArrowCallback(next::Ptr{Cvoid}, json_config::Ptr{Cchar}, out::Ptr{DMatrixHandle})::Cint
+function XGDMatrixCreateFromArrowCallback(next, config, out)
+    @ccall libxgboost.XGDMatrixCreateFromArrowCallback(next::Ptr{Cvoid}, config::Ptr{Cchar}, out::Ptr{DMatrixHandle})::Cint
 end
 
 function XGDMatrixSliceDMatrix(handle, idxset, len, out)
@@ -229,6 +234,14 @@ function XGDMatrixNumCol(handle, out)
     @ccall libxgboost.XGDMatrixNumCol(handle::DMatrixHandle, out::Ptr{bst_ulong})::Cint
 end
 
+function XGDMatrixNumNonMissing(handle, out)
+    @ccall libxgboost.XGDMatrixNumNonMissing(handle::DMatrixHandle, out::Ptr{bst_ulong})::Cint
+end
+
+function XGDMatrixGetDataAsCSR(handle, config, out_indptr, out_indices, out_data)
+    @ccall libxgboost.XGDMatrixGetDataAsCSR(handle::DMatrixHandle, config::Ptr{Cchar}, out_indptr::Ptr{bst_ulong}, out_indices::Ptr{Cuint}, out_data::Ptr{Cfloat})::Cint
+end
+
 function XGBoosterCreate(dmats, len, out)
     @ccall libxgboost.XGBoosterCreate(dmats::Ptr{DMatrixHandle}, len::bst_ulong, out::Ptr{BoosterHandle})::Cint
 end
@@ -269,24 +282,24 @@ function XGBoosterPredict(handle, dmat, option_mask, ntree_limit, training, out_
     @ccall libxgboost.XGBoosterPredict(handle::BoosterHandle, dmat::DMatrixHandle, option_mask::Cint, ntree_limit::Cuint, training::Cint, out_len::Ptr{bst_ulong}, out_result::Ptr{Ptr{Cfloat}})::Cint
 end
 
-function XGBoosterPredictFromDMatrix(handle, dmat, c_json_config, out_shape, out_dim, out_result)
-    @ccall libxgboost.XGBoosterPredictFromDMatrix(handle::BoosterHandle, dmat::DMatrixHandle, c_json_config::Ptr{Cchar}, out_shape::Ptr{Ptr{bst_ulong}}, out_dim::Ptr{bst_ulong}, out_result::Ptr{Ptr{Cfloat}})::Cint
+function XGBoosterPredictFromDMatrix(handle, dmat, config, out_shape, out_dim, out_result)
+    @ccall libxgboost.XGBoosterPredictFromDMatrix(handle::BoosterHandle, dmat::DMatrixHandle, config::Ptr{Cchar}, out_shape::Ptr{Ptr{bst_ulong}}, out_dim::Ptr{bst_ulong}, out_result::Ptr{Ptr{Cfloat}})::Cint
 end
 
-function XGBoosterPredictFromDense(handle, values, c_json_config, m, out_shape, out_dim, out_result)
-    @ccall libxgboost.XGBoosterPredictFromDense(handle::BoosterHandle, values::Ptr{Cchar}, c_json_config::Ptr{Cchar}, m::DMatrixHandle, out_shape::Ptr{Ptr{bst_ulong}}, out_dim::Ptr{bst_ulong}, out_result::Ptr{Ptr{Cfloat}})::Cint
+function XGBoosterPredictFromDense(handle, values, config, m, out_shape, out_dim, out_result)
+    @ccall libxgboost.XGBoosterPredictFromDense(handle::BoosterHandle, values::Ptr{Cchar}, config::Ptr{Cchar}, m::DMatrixHandle, out_shape::Ptr{Ptr{bst_ulong}}, out_dim::Ptr{bst_ulong}, out_result::Ptr{Ptr{Cfloat}})::Cint
 end
 
-function XGBoosterPredictFromCSR(handle, indptr, indices, values, ncol, c_json_config, m, out_shape, out_dim, out_result)
-    @ccall libxgboost.XGBoosterPredictFromCSR(handle::BoosterHandle, indptr::Ptr{Cchar}, indices::Ptr{Cchar}, values::Ptr{Cchar}, ncol::bst_ulong, c_json_config::Ptr{Cchar}, m::DMatrixHandle, out_shape::Ptr{Ptr{bst_ulong}}, out_dim::Ptr{bst_ulong}, out_result::Ptr{Ptr{Cfloat}})::Cint
+function XGBoosterPredictFromCSR(handle, indptr, indices, values, ncol, config, m, out_shape, out_dim, out_result)
+    @ccall libxgboost.XGBoosterPredictFromCSR(handle::BoosterHandle, indptr::Ptr{Cchar}, indices::Ptr{Cchar}, values::Ptr{Cchar}, ncol::bst_ulong, config::Ptr{Cchar}, m::DMatrixHandle, out_shape::Ptr{Ptr{bst_ulong}}, out_dim::Ptr{bst_ulong}, out_result::Ptr{Ptr{Cfloat}})::Cint
 end
 
-function XGBoosterPredictFromCudaArray(handle, values, c_json_config, m, out_shape, out_dim, out_result)
-    @ccall libxgboost.XGBoosterPredictFromCudaArray(handle::BoosterHandle, values::Ptr{Cchar}, c_json_config::Ptr{Cchar}, m::DMatrixHandle, out_shape::Ptr{Ptr{bst_ulong}}, out_dim::Ptr{bst_ulong}, out_result::Ptr{Ptr{Cfloat}})::Cint
+function XGBoosterPredictFromCudaArray(handle, values, config, m, out_shape, out_dim, out_result)
+    @ccall libxgboost.XGBoosterPredictFromCudaArray(handle::BoosterHandle, values::Ptr{Cchar}, config::Ptr{Cchar}, m::DMatrixHandle, out_shape::Ptr{Ptr{bst_ulong}}, out_dim::Ptr{bst_ulong}, out_result::Ptr{Ptr{Cfloat}})::Cint
 end
 
-function XGBoosterPredictFromCudaColumnar(handle, values, c_json_config, m, out_shape, out_dim, out_result)
-    @ccall libxgboost.XGBoosterPredictFromCudaColumnar(handle::BoosterHandle, values::Ptr{Cchar}, c_json_config::Ptr{Cchar}, m::DMatrixHandle, out_shape::Ptr{Ptr{bst_ulong}}, out_dim::Ptr{bst_ulong}, out_result::Ptr{Ptr{Cfloat}})::Cint
+function XGBoosterPredictFromCudaColumnar(handle, values, config, m, out_shape, out_dim, out_result)
+    @ccall libxgboost.XGBoosterPredictFromCudaColumnar(handle::BoosterHandle, values::Ptr{Cchar}, config::Ptr{Cchar}, m::DMatrixHandle, out_shape::Ptr{Ptr{bst_ulong}}, out_dim::Ptr{bst_ulong}, out_result::Ptr{Ptr{Cfloat}})::Cint
 end
 
 function XGBoosterLoadModel(handle, fname)
@@ -301,8 +314,8 @@ function XGBoosterLoadModelFromBuffer(handle, buf, len)
     @ccall libxgboost.XGBoosterLoadModelFromBuffer(handle::BoosterHandle, buf::Ptr{Cvoid}, len::bst_ulong)::Cint
 end
 
-function XGBoosterSaveModelToBuffer(handle, json_config, out_len, out_dptr)
-    @ccall libxgboost.XGBoosterSaveModelToBuffer(handle::BoosterHandle, json_config::Ptr{Cchar}, out_len::Ptr{bst_ulong}, out_dptr::Ptr{Ptr{Cchar}})::Cint
+function XGBoosterSaveModelToBuffer(handle, config, out_len, out_dptr)
+    @ccall libxgboost.XGBoosterSaveModelToBuffer(handle::BoosterHandle, config::Ptr{Cchar}, out_len::Ptr{bst_ulong}, out_dptr::Ptr{Ptr{Cchar}})::Cint
 end
 
 function XGBoosterGetModelRaw(handle, out_len, out_dptr)
@@ -329,8 +342,8 @@ function XGBoosterSaveJsonConfig(handle, out_len, out_str)
     @ccall libxgboost.XGBoosterSaveJsonConfig(handle::BoosterHandle, out_len::Ptr{bst_ulong}, out_str::Ptr{Ptr{Cchar}})::Cint
 end
 
-function XGBoosterLoadJsonConfig(handle, json_parameters)
-    @ccall libxgboost.XGBoosterLoadJsonConfig(handle::BoosterHandle, json_parameters::Ptr{Cchar})::Cint
+function XGBoosterLoadJsonConfig(handle, config)
+    @ccall libxgboost.XGBoosterLoadJsonConfig(handle::BoosterHandle, config::Ptr{Cchar})::Cint
 end
 
 function XGBoosterDumpModel(handle, fmap, with_stats, out_len, out_dump_array)
@@ -369,8 +382,44 @@ function XGBoosterGetStrFeatureInfo(handle, field, len, out_features)
     @ccall libxgboost.XGBoosterGetStrFeatureInfo(handle::BoosterHandle, field::Ptr{Cchar}, len::Ptr{bst_ulong}, out_features::Ptr{Ptr{Ptr{Cchar}}})::Cint
 end
 
-function XGBoosterFeatureScore(handle, json_config, out_n_features, out_features, out_dim, out_shape, out_scores)
-    @ccall libxgboost.XGBoosterFeatureScore(handle::BoosterHandle, json_config::Ptr{Cchar}, out_n_features::Ptr{bst_ulong}, out_features::Ptr{Ptr{Ptr{Cchar}}}, out_dim::Ptr{bst_ulong}, out_shape::Ptr{Ptr{bst_ulong}}, out_scores::Ptr{Ptr{Cfloat}})::Cint
+function XGBoosterFeatureScore(handle, config, out_n_features, out_features, out_dim, out_shape, out_scores)
+    @ccall libxgboost.XGBoosterFeatureScore(handle::BoosterHandle, config::Ptr{Cchar}, out_n_features::Ptr{bst_ulong}, out_features::Ptr{Ptr{Ptr{Cchar}}}, out_dim::Ptr{bst_ulong}, out_shape::Ptr{Ptr{bst_ulong}}, out_scores::Ptr{Ptr{Cfloat}})::Cint
+end
+
+function XGCommunicatorInit(config)
+    @ccall libxgboost.XGCommunicatorInit(config::Ptr{Cchar})::Cint
+end
+
+function XGCommunicatorFinalize()
+    @ccall libxgboost.XGCommunicatorFinalize()::Cint
+end
+
+function XGCommunicatorGetRank()
+    @ccall libxgboost.XGCommunicatorGetRank()::Cint
+end
+
+function XGCommunicatorGetWorldSize()
+    @ccall libxgboost.XGCommunicatorGetWorldSize()::Cint
+end
+
+function XGCommunicatorIsDistributed()
+    @ccall libxgboost.XGCommunicatorIsDistributed()::Cint
+end
+
+function XGCommunicatorPrint(message)
+    @ccall libxgboost.XGCommunicatorPrint(message::Ptr{Cchar})::Cint
+end
+
+function XGCommunicatorGetProcessorName(name_str)
+    @ccall libxgboost.XGCommunicatorGetProcessorName(name_str::Ptr{Ptr{Cchar}})::Cint
+end
+
+function XGCommunicatorBroadcast(send_receive_buffer, size, root)
+    @ccall libxgboost.XGCommunicatorBroadcast(send_receive_buffer::Ptr{Cvoid}, size::Csize_t, root::Cint)::Cint
+end
+
+function XGCommunicatorAllreduce(send_receive_buffer, count, data_type, op)
+    @ccall libxgboost.XGCommunicatorAllreduce(send_receive_buffer::Ptr{Cvoid}, count::Csize_t, data_type::Cint, op::Cint)::Cint
 end
 
 # Skipping MacroDefinition: XGB_DLL XGB_EXTERN_C __attribute__ ( ( visibility ( "default" ) ) )
