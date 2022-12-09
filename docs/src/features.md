@@ -117,7 +117,7 @@ julia> using AbstractTrees; children(ts[1])
 ```
 
 ## Setting a Custom Objective Function
-Xgboost uses a second order approximation, so to provide a custom objective functoin first and
+XGBoost uses a second order approximation, so to provide a custom objective functoin first and
 second order derivatives must be provided, see the docstring of [`updateone!`](@ref) for more
 details.
 
@@ -148,7 +148,7 @@ bst = xgboost((X, y), ℓ′, ℓ″, max_depth=8)
 ```
 
 ## Caching Data From External Memory
-Xgboost can be used to cache memory from external memory on disk, see
+XGBoost can be used to cache memory from external memory on disk, see
 [here](https://xgboost.readthedocs.io/en/stable/tutorials/external_memory.html).  In the Julia
 wrapper this is facilitated by allowing a `DMatrix` to be constructed from any Julia iterator with
 [`fromiterator`](@ref).  The resulting `DMatrix` holds references to cache files which will have
