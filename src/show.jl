@@ -90,17 +90,20 @@ function importancereport(b::Booster)
     end
 end
 
-function _tree_display_branch_string(split, j::Integer)
-    o = "($j)"
-    isnothing(split) ? o : string(split, " ", o)
-end
-
-function _tree_display(node::Node)
-    ch = children(node)
-    if isempty(ch)
+function _tree_display(node::XGBoost.Node)
+    if length(node.children)==0
         sprint(show, node)
     else
-        OrderedDict(_tree_display_branch_string(ch[j].split, j)=>_tree_display(ch[j]) for j ∈ 1:length(ch))
+        dict = Dict()
+        foreach(node.children) do child
+            if node.yes == child.id
+                key = string(node.split, " < ", node.split_condition)
+            else
+                key = string(node.split, " >= ", node.split_condition)
+            end
+            dict[key] = _tree_display(child)
+        end
+        dict
     end
 end
 
