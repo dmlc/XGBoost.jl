@@ -90,7 +90,7 @@ function importancereport(b::Booster)
     end
 end
 
-function _tree_display(node::XGBoost.Node)
+function _tree_display(node::Node)
     if length(node.children)==0
         sprint(show, node)
     else
