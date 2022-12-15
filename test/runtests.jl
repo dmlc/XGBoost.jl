@@ -1,5 +1,5 @@
 using XGBoost
-using CUDA: cu
+using CUDA: has_cuda, cu
 using Random, SparseArrays
 using Test
 
@@ -24,17 +24,6 @@ include("utils.jl")
     dm = DMatrix(X)
     @test size(dm) == (5,4)
     @test dm == X
-
-    #TODO: is this going to work if there is no GPU?
-    X = randn(Float32, 4, 5)
-    dm = DMatrix(cu(X))
-    @test size(dm) == size(X)
-    @test dm == Matrix(X)
-
-    X = randn(Float32, 4, 5)
-    dm = DMatrix(cu(X)')
-    @test size(dm) == size(X')
-    @test dm == Matrix(X')
 
     X = sprand(Float32, 100, 10, 0.1)
     dm = DMatrix(X)
@@ -198,6 +187,18 @@ end
     bst2 = Booster(DMatrix[])
     XGBoost.deserialize!(bst2, bin)
     @test preds == predict(bst2, dtest)
+end
+
+has_cuda() && @testset "cuda" begin
+    X = randn(Float32, 4, 5)
+    dm = DMatrix(cu(X))
+    @test size(dm) == size(X)
+    @test dm == Matrix(X)
+
+    X = randn(Float32, 4, 5)
+    dm = DMatrix(cu(X)')
+    @test size(dm) == size(X')
+    @test dm == Matrix(X')
 end
 
 
