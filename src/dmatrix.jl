@@ -174,6 +174,25 @@ function _dmatrix(x::AbstractMatrix{T}; missing_value::Float32=NaN32, kw...) whe
     DMatrix(o[]; kw...)
 end
 
+# sadly we have to copy CuArray because of incompatible column convention
+function _transposed_cuda_dmatrix(x::CuArray{T}; missing_value::Float32=NaN32, kw...) where {T<:Real}
+    o = Ref{DMatrixHandle}()
+    cfg = "{\"missing\": $missing_value}"
+    GC.@preserve x begin
+        info = numpy_json_info(x)
+        xgbcall(XGDMatrixCreateFromCudaArrayInterface, info, cfg, o)
+    end
+    DMatrix(o[]; kw...)
+end
+
+DMatrix(x::Transpose{T,<:CuArray}; kw...) where {T<:Real} = _transposed_cuda_dmatrix(parent(x); kw...)
+DMatrix(x::Adjoint{T,<:CuArray}; kw...) where {T<:Real} = _transposed_cuda_dmatrix(parent(x); kw...)
+
+function DMatrix(x::CuArray; kw...)
+    x′ = CuArray(transpose(x))
+    _transposed_cuda_dmatrix(x′; kw...)
+end
+
 function DMatrix(x::AbstractMatrix{T}; kw...) where {T<:Real}
     # sadly, this copying is unavoidable
     _dmatrix(convert(Matrix{Float32}, transpose(x)); kw...)
@@ -336,7 +355,7 @@ hasdata(dm::DMatrix) = !isnothing(dm.data)
 
 @propagate_inbounds function Base.getindex(dm::DMatrix, idx...)
     hasdata(dm) || getdata!(dm)
-    @inbounds getvalue(dm.data, idx..., missing)
+    @inbounds getvalue(dm.data, CartesianIndex(idx...), missing)
 end
 
 """
@@ -435,14 +454,18 @@ _numpy_json_typestr(::Type{<:Complex{<:AbstractFloat}}) = "c"
 
 numpy_json_typestr(::Type{T}) where {T<:Number} = string("<",_numpy_json_typestr(T),sizeof(T))
 
-function numpy_json_info(x::AbstractMatrix; read_only::Bool=false)
-    info = Dict("data"=>(convert(Csize_t, pointer(x)), read_only),
-                "shape"=>reverse(size(x)),
-                "typestr"=>numpy_json_typestr(eltype(x)),
-                "version"=>3,
-               )
-    JSON3.write(info)
+# yes, this is supposed to also work for CuArray
+numpy_array_pointer(x::AbstractArray) = convert(Csize_t, pointer(x))
+
+function numpy_json_dict(x::AbstractArray; read_only::Bool=false)
+    Dict("data"=>(numpy_array_pointer(x), read_only),
+         "shape"=>reverse(size(x)),
+         "typestr"=>numpy_json_typestr(eltype(x)),
+         "version"=>3,
+        )
 end
+
+numpy_json_info(x::AbstractArray; kw...) = JSON3.write(numpy_json_dict(x; kw...))
 
 #TODO: still a little worried about ownership here
 #TODO: sparse data for iterator and proper missings handling
