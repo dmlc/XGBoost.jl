@@ -127,6 +127,17 @@ end
     end
 end
 
+@testset "Blobs training" begin
+    (X, y) = load_classification()
+
+    bst = xgboost((X, y), num_round=10, objective="multi:softprob", num_class=3, watchlist=Dict())
+
+    ŷ = map(ζ -> argmax(ζ) - 1, eachrow(predict(bst, X)))
+
+    # this is a pretty low bar that xgboost should always pass
+    @test sum(ŷ .== y)/length(y) > 0.9
+end
+
 @testset "Feature importance" begin
     dtrain = XGBoost.load(DMatrix, testfilepath("agaricus.txt.train"))
     dtest = XGBoost.load(DMatrix, testfilepath("agaricus.txt.test"))

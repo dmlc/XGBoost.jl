@@ -1,3 +1,5 @@
+using JSON3
+
 
 function testfilepath(name::AbstractString) 
     dir = joinpath(dirname(pathof(XGBoost)), "..")
@@ -21,4 +23,12 @@ function readlibsvm(fname::AbstractString, shape)
         end
     end
     (dmx, label)
+end
+
+function load_classification()
+    fname = joinpath(@__DIR__,"..","assets","data","blobs.json")
+    o = JSON3.read(String(open(read, fname)))
+    X = Matrix{Float32}([o[:X1] o[:X2] o[:X3]])
+    y = o[:y]
+    (X, y)
 end

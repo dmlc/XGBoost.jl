@@ -255,6 +255,7 @@ function deserialize(::Type{Booster}, buf::AbstractVector{UInt8}, data=DMatrix[]
     deserialize!(b, buf)
 end
 
+# sadly this is type unstable because we might return a transpose
 """
     predict(b::Booster, data; margin=false, training=false, ntree_limit=0)
 
@@ -287,8 +288,9 @@ function predict(b::Booster, Xy::DMatrix;
     odim = Ref{Lib.bst_ulong}()
     o = Ref{Ptr{Cfloat}}()
     xgbcall(XGBoosterPredictFromDMatrix, b.handle, Xy.handle, opts, oshape, odim, o)
-    dims = unsafe_wrap(Array, oshape[], odim[])
-    unsafe_wrap(Array, o[], tuple(dims...))
+    dims = reverse(unsafe_wrap(Array, oshape[], odim[]))
+    o = unsafe_wrap(Array, o[], tuple(dims...))
+    length(dims) > 1 ? transpose(o) : o
 end
 predict(b::Booster, Xy; kw...) = predict(b, DMatrix(Xy); kw...)
 
