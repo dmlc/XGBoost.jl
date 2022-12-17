@@ -105,7 +105,7 @@ function Booster(cache::AbstractVector{<:DMatrix};
     end
     # automatically use gpu_hist if CuArrays used and we didn't pass an explicit argument
     tm = if isnothing(tree_method)
-        all(isgpu, cache) ? (tree_method="gpu_hist",) : (;)
+        (!isempty(cache) && all(isgpu, cache)) ? (tree_method="gpu_hist",) : (;)
     else
         (tree_method=tree_method,)
     end

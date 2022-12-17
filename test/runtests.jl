@@ -165,7 +165,7 @@ end
     dtrain = XGBoost.load(DMatrix, testfilepath("agaricus.txt.train"))
     dtest = XGBoost.load(DMatrix, testfilepath("agaricus.txt.test"))
 
-    model_file, _ = mktemp()
+    (model_file, _) = mktemp()
 
     bst = xgboost(dtrain, num_round=5,
                   η=1.0, max_depth=2,
