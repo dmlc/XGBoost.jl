@@ -22,6 +22,7 @@ slice
 nrows
 ncols
 size(::DMatrix)
+isgpu
 getlabel
 getweights
 setfeatureinfo!

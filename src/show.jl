@@ -21,12 +21,14 @@ function Base.show(io::IO, mime::MIME"text/plain", dm::DMatrix)
                context=:compact=>true,
               )
     end
+    subtitle = "(nrows=$(nrows(dm)), ncols=$(ncols(dm)))"
+    isgpu(dm) && (subtitle *= " {bold green}(GPU){/bold green}")
     p = Panel(_features_display_string(getfeaturenames(dm), size(dm,2)),
-              str,
+              str;
               style="magenta",
               title="XGBoost.DMatrix",
               title_style="bold cyan",
-              subtitle="(nrows=$(nrows(dm)), ncols=$(ncols(dm)))",
+              subtitle,
               subtitle_style="blue",
              )
     show(io, mime, p)

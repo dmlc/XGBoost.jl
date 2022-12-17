@@ -79,11 +79,15 @@ mutable struct DMatrix <: AbstractMatrix{Union{Float32,Missing}}
     # this is not allocated on initialization because it's not needed for any core functionality
     data::Union{Nothing,SparseMatrixCSR{0,Float32,UInt64}}
 
+    # whether the DMatrix was initialized via GPU methods
+    is_gpu::Bool
+
     function DMatrix(handle::Ptr{Nothing};
                      feature_names::AbstractVector{<:AbstractString}=String[],
+                     is_gpu::Bool=false,
                      kw...
                     )
-        dm = new(handle, nothing)
+        dm = new(handle, nothing, is_gpu)
         setinfos!(dm; kw...)
         isempty(feature_names) || setfeaturenames!(dm, feature_names)
         finalizer(x -> xgbcall(XGDMatrixFree, x.handle), dm)
@@ -100,7 +104,13 @@ function _setinfo!(dm::DMatrix, name::AbstractString, info::AbstractVector{<:Int
     info
 end
 
+"""
+    isgpu(dm::DMatrix)
 
+Whether or not the `DMatrix` data was initialized for a GPU.  Boosters trained on such data utilize the GPU
+for training.
+"""
+isgpu(dm::DMatrix) = dm.is_gpu
 
 """
     setinfo!(dm::DMatrix, name, info)
@@ -182,7 +192,7 @@ function _transposed_cuda_dmatrix(x::CuArray{T}; missing_value::Float32=NaN32, k
         info = numpy_json_info(x)
         xgbcall(XGDMatrixCreateFromCudaArrayInterface, info, cfg, o)
     end
-    DMatrix(o[]; kw...)
+    DMatrix(o[]; is_gpu=true, kw...)
 end
 
 DMatrix(x::Transpose{T,<:CuArray}; kw...) where {T<:Real} = _transposed_cuda_dmatrix(parent(x); kw...)
@@ -260,6 +270,22 @@ DMatrix(Xy::Tuple; kw...) = DMatrix(Xy[1], Xy[2]; kw...)
 
 DMatrix(dm::DMatrix) = dm
 
+function _check_gpu_table(tbl)
+    cols = Tables.Columns(tbl)
+    isgpu = all(x -> x isa CuArray, cols)
+    (isgpu, cols)
+end
+
+function _dmatrix_gpu_table(cols::Tables.Columns; missing_value::Float32=NaN32, kw...)
+    o = Ref{DMatrixHandle}()
+    cfg = "{\"missing\": $missing_value}"
+    GC.@preserve cols begin
+        infos = numpy_json_infos(cols)
+        xgbcall(XGDMatrixCreateFromCudaColumnar, infos, cfg, o)
+    end
+    DMatrix(o[]; is_gpu=true, kw...)
+end
+
 function DMatrix(tbl;
                  feature_names::AbstractVector{<:AbstractString}=collect(string.(Tables.columnnames(tbl))),
                  kw...
@@ -267,7 +293,12 @@ function DMatrix(tbl;
     if !Tables.istable(tbl)
         throw(ArgumentError("DMatrix requires either an AbstractMatrix or table satisfying the Tables.jl interface"))
     end
-    DMatrix(Tables.matrix(tbl); feature_names, kw...)
+    (isgpu, cols) = _check_gpu_table(tbl)
+    if isgpu
+        _dmatrix_gpu_table(cols; feature_names, kw...)
+    else
+        DMatrix(Tables.matrix(tbl); feature_names, kw...)
+    end
 end
 
 DMatrix(tbl, y::AbstractVector; kw...) = DMatrix(tbl; label=y, kw...)
@@ -466,6 +497,8 @@ function numpy_json_dict(x::AbstractArray; read_only::Bool=false)
 end
 
 numpy_json_info(x::AbstractArray; kw...) = JSON3.write(numpy_json_dict(x; kw...))
+
+numpy_json_infos(cols::Tables.Columns; kw...) = JSON3.write(map(x -> numpy_json_dict(x; kw...), cols))
 
 #TODO: still a little worried about ownership here
 #TODO: sparse data for iterator and proper missings handling

@@ -204,12 +204,21 @@ has_cuda() && @testset "cuda" begin
     X = randn(Float32, 4, 5)
     dm = DMatrix(cu(X))
     @test size(dm) == size(X)
+    @test XGBoost.isgpu(dm)
     @test dm == Matrix(X)
 
     X = randn(Float32, 4, 5)
     dm = DMatrix(cu(X)')
     @test size(dm) == size(X')
+    @test XGBoost.isgpu(dm)
     @test dm == Matrix(X')
+
+    X₀ = randn(Float32, 100, 3)
+    X = (x1=cu(X₀[:,1]), x2=cu(X₀[:,2]), x3=cu(X₀[:,3]))
+    dm = DMatrix(X)
+    @test size(dm) == size(X₀)
+    @test XGBoost.isgpu(dm)
+    @test dm == X₀
 end
 
 
