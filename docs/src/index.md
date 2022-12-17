@@ -137,6 +137,12 @@ Keyword arguments to `Booster` are xgboost model parameters.  These are describe
 they are described in the main xgbosot documentation (in a few cases such as Greek letters we also
 allow unicode equivalents).
 
+!!! note
+
+    The `tree_method` paramter has special handling.  If `nothing`, it will use `libxgboost`
+    defaults as per the documentation, unless a GPU array is input in which case it will default to
+    `gpu_hist`.  An explicitly set value will override this.
+
 ### Training
 `Booster` objects can be trained with [`update!`](@ref).
 ```julia

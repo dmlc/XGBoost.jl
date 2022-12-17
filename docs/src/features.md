@@ -193,6 +193,12 @@ The target or label data does not need to be a `CuArray`.
 It is not necessary to create an explicit `DMatrix` to use GPU features, one can pass the data
 normally directly to `xgboost` or `Booster`, as long as that data consists of `CuArray`s.
 
+!!! note
+
+    The `tree_method` paramter to `Booster` has special handling.  If `nothing`, it will use `libxgboost`
+    defaults as per the documentation, unless a GPU array is input in which case it will default to
+    `gpu_hist`.  An explicitly set value will override this.
+
 ### Example
 ```julia
 X = cu(randn(1000, 3))
