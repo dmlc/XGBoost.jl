@@ -180,7 +180,7 @@ will fit a random forest according to a Poisson likelihood fit with 12 trees.
 
 
 ## GPU Support
-XGBoost supports GPU-assisted training on nvidia GPU's with CUDA via
+XGBoost supports GPU-assisted training on Nvidia GPU's with CUDA via
 [CUDA.jl](https://github.com/JuliaGPU/CUDA.jl).  To utilize the GPU, one has to construct a
 `DMatrix` object from GPU arrays.  There are two ways of doing this:
 - Pass a `CuArray` as the training matrix (conventionally `X`, the first argument to `DMatrix`).
