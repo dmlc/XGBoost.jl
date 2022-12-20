@@ -195,7 +195,7 @@ normally directly to `xgboost` or `Booster`, as long as that data consists of `C
 
 !!! note
 
-    The `tree_method` paramter to `Booster` has special handling.  If `nothing`, it will use `libxgboost`
+    The `tree_method` parameter to `Booster` has special handling.  If `nothing`, it will use `libxgboost`
     defaults as per the documentation, unless a GPU array is input in which case it will default to
     `gpu_hist`.  An explicitly set value will override this.
 
