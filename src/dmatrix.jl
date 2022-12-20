@@ -485,7 +485,7 @@ _numpy_json_typestr(::Type{<:Complex{<:AbstractFloat}}) = "c"
 
 numpy_json_typestr(::Type{T}) where {T<:Number} = string("<",_numpy_json_typestr(T),sizeof(T))
 
-# yes, this is supposed to also work for CuArray
+# pointer(x) should return the proper pointer even for CuArray
 numpy_array_pointer(x::AbstractArray) = convert(Csize_t, pointer(x))
 
 function numpy_json_dict(x::AbstractArray; read_only::Bool=false)
