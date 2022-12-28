@@ -1,10 +1,11 @@
 name = "XGBoost"
 uuid = "009559a3-9522-5dbb-924b-0b6ed2b22bb9"
-version = "2.1.1"
+version = "2.2.0"
 
 [deps]
 AbstractTrees = "1520ce14-60c1-5f80-bbc7-55ef81b5835c"
 CEnum = "fa961155-64e5-5f13-b03f-caf6b980ea82"
+CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
 JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 OrderedCollections = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"
@@ -24,7 +25,7 @@ OrderedCollections = "1"
 SparseMatricesCSR = "0.6"
 Tables = "1"
 Term = "1"
-XGBoost_jll = "1.7"
+XGBoost_jll = "1.7.2"
 julia = "1.6"
 
 [extras]

@@ -1,4 +1,5 @@
 using XGBoost
+using CUDA: has_cuda, cu
 using Random, SparseArrays
 using Test
 
@@ -164,7 +165,7 @@ end
     dtrain = XGBoost.load(DMatrix, testfilepath("agaricus.txt.train"))
     dtest = XGBoost.load(DMatrix, testfilepath("agaricus.txt.test"))
 
-    model_file, _ = mktemp()
+    (model_file, _) = mktemp()
 
     bst = xgboost(dtrain, num_round=5,
                   η=1.0, max_depth=2,
@@ -197,6 +198,27 @@ end
     bst2 = Booster(DMatrix[])
     XGBoost.deserialize!(bst2, bin)
     @test preds == predict(bst2, dtest)
+end
+
+has_cuda() && @testset "cuda" begin
+    X = randn(Float32, 4, 5)
+    dm = DMatrix(cu(X))
+    @test size(dm) == size(X)
+    @test XGBoost.isgpu(dm)
+    @test dm == Matrix(X)
+
+    X = randn(Float32, 4, 5)
+    dm = DMatrix(cu(X)')
+    @test size(dm) == size(X')
+    @test XGBoost.isgpu(dm)
+    @test dm == Matrix(X')
+
+    X₀ = randn(Float32, 100, 3)
+    X = (x1=cu(X₀[:,1]), x2=cu(X₀[:,2]), x3=cu(X₀[:,3]))
+    dm = DMatrix(X)
+    @test size(dm) == size(X₀)
+    @test XGBoost.isgpu(dm)
+    @test dm == X₀
 end
 
 

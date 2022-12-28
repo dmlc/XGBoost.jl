@@ -177,3 +177,39 @@ Each of these merely returns a `NamedTuple` which can be used to supply keyword 
 xgboost(X, y, 1; countregression()..., randomforest()..., num_parallel_tree=12)
 ```
 will fit a random forest according to a Poisson likelihood fit with 12 trees.
+
+
+## GPU Support
+XGBoost supports GPU-assisted training on Nvidia GPU's with CUDA via
+[CUDA.jl](https://github.com/JuliaGPU/CUDA.jl).  To utilize the GPU, one has to construct a
+`DMatrix` object from GPU arrays.  There are two ways of doing this:
+- Pass a `CuArray` as the training matrix (conventionally `X`, the first argument to `DMatrix`).
+- Pass a table with *all* columns as `CuVector`s.
+
+You can check whether a `DMatrix` can use the GPU with [`XGBoost.isgpu`](@ref).
+
+The target or label data does not need to be a `CuArray`.
+
+It is not necessary to create an explicit `DMatrix` to use GPU features, one can pass the data
+normally directly to `xgboost` or `Booster`, as long as that data consists of `CuArray`s.
+
+!!! note
+
+    The `tree_method` parameter to `Booster` has special handling.  If `nothing`, it will use `libxgboost`
+    defaults as per the documentation, unless a GPU array is given in which case it will default to
+    `gpu_hist`.  An explicitly set value will override this.
+
+### Example
+```julia
+X = cu(randn(1000, 3))
+y = randn(1000)
+
+dm = DMatrix(X, y)
+XGBoost.isgpu(dm)  # true
+
+X = (x1=cu(randn(1000)), x2=cu(randn(1000)))
+dm = DMatrix(X, y)
+XGBoost.isgpu(dm)  # true
+
+xgboost((X, y), num_rounds=10)  # no need to use `DMatrix`
+```

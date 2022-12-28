@@ -10,6 +10,7 @@ using OrderedCollections
 using JSON3
 using Tables
 using Term
+using CUDA
 using Statistics: mean, std
 
 using Base: @propagate_inbounds

@@ -33,6 +33,9 @@ see [here](https://xgboost.readthedocs.io/en/stable/parameter.html) for a compre
 Both parameter names and their values must be provided exactly as they appear in the linked
 documentation.  Model parameters can also be set after construction, see [`setparam!`](@ref) and
 [`setparams!`](@ref).
+- `tree_method`: This parameter gets special handling.  By default it is `nothing` which uses the default
+    from `libxgboost` as per the documentation unless GPU arrays are used in which case it defaults to
+    `"gpu_hist"`.  If an explicit option is set, it will always be used.
 - `feature_names`: Sets the feature names of training data.  This will use the feature names set in the
     input data if available (e.g. if tabular data was passed this will use column names).
 - `model_buffer`: A buffer (`AbstractVector{UInt8}` or `IO`) from which to load an existing booster
@@ -89,6 +92,7 @@ function Booster(cache::AbstractVector{<:DMatrix};
                  feature_names::AbstractVector{<:AbstractString}=getfeaturenames(cache),
                  model_buffer=UInt8[],
                  model_file::AbstractString="",
+                 tree_method::Union{Nothing,AbstractString}=nothing,
                  kw...
                 )
     o = Ref{BoosterHandle}()
@@ -99,7 +103,13 @@ function Booster(cache::AbstractVector{<:DMatrix};
     elseif !isempty(model_file)
         load!(b, model_file)
     end
-    setparams!(b; kw...)
+    # automatically use gpu_hist if CuArrays used and we didn't pass an explicit argument
+    tm = if isnothing(tree_method)
+        (!isempty(cache) && all(isgpu, cache)) ? (tree_method="gpu_hist",) : (;)
+    else
+        (tree_method=tree_method,)
+    end
+    setparams!(b; tm..., kw...)
     b
 end
 Booster(dm::DMatrix; kw...) = Booster([dm]; kw...)
