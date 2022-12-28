@@ -20,6 +20,7 @@ XGBoost_jll = "a5c6f535-4255-5ca2-a466-0e519f119c46"
 [compat]
 AbstractTrees = "0.4"
 CEnum = "0.4"
+CUDA = "3"
 JSON3 = "1"
 OrderedCollections = "1"
 SparseMatricesCSR = "0.6"
