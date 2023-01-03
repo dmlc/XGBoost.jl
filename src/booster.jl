@@ -441,7 +441,7 @@ b = xgboost((X, y), 10, max_depth=10, η=0.1)
 ŷ = predict(b, X)
 ```
 """
-function xgboost(dm::DMatrix;
+function xgboost(dm::DMatrix, a...;
                  num_round::Integer=10,
                  watchlist=Dict("train"=>dm),
                  kw...
@@ -449,23 +449,17 @@ function xgboost(dm::DMatrix;
     Xy = DMatrix(dm)
     b = Booster(Xy; kw...)
     isempty(watchlist) || @info("XGBoost: starting training.")
-    update!(b, Xy; num_round, watchlist)
+    update!(b, Xy, a...; num_round, watchlist)
     isempty(watchlist) || @info("Training rounds complete.")
     b
 end
-xgboost(data; kw...) = xgboost(DMatrix(data); kw...)
+xgboost(data, a...; kw...) = xgboost(DMatrix(data), a...; kw...)
 
-function xgboost(dm::DMatrix, ℓ′, ℓ″;
-                 num_round::Integer=10,
+function xgboost(dm::DMatrix, 
+                 num_round::Integer;
                  watchlist=Dict("train"=>dm),
                  kw...
-                )
-    Xy = DMatrix(dm)
-    b = Booster(Xy; kw...)
-    isempty(watchlist) || @info("XGBoost: starting training.")
-    update!(b, Xy, ℓ′, ℓ″; num_round, watchlist)
-    isempty(watchlist) || @info("Training rounds complete.")
-    b
+                 )
+    Base.depwarn("`xgboost(dm, num_round) `is depreciated, use `xgboost(dm; num_round)` instead", :xgboost)
+    xgboost(dm; num_round, watchlist, kw...)
 end
-xgboost(data, ℓ′, ℓ″, kw...) = xgboost(DMatrix(data), ℓ′, ℓ″; num_round, kw...)
-
