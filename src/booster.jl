@@ -406,6 +406,7 @@ end
 
 """
     xgboost(data; num_round=10, watchlist=Dict(), kw...)
+    xgboost(data, num_round; watchlist=Dict(), kw...)
     xgboost(data, ℓ′, ℓ″; kw...)
 
 Creates an xgboost gradient booster object on training data `data` and runs `nrounds` of training.
@@ -431,7 +432,7 @@ b = xgboost((X, y), 10, max_depth=10, η=0.1)
 ŷ = predict(b, X)
 ```
 """
-function xgboost(dm::DMatrix, a...;
+function xgboost(dm::DMatrix;
                  num_round::Integer=10,
                  watchlist=Dict("train"=>dm),
                  kw...
@@ -439,8 +440,10 @@ function xgboost(dm::DMatrix, a...;
     Xy = DMatrix(dm)
     b = Booster(Xy; kw...)
     isempty(watchlist) || @info("XGBoost: starting training.")
-    update!(b, Xy, a...; num_round, watchlist)
+    update!(b, Xy; num_round, watchlist)
     isempty(watchlist) || @info("Training rounds complete.")
     b
 end
-xgboost(data, a...; kw...) = xgboost(DMatrix(data), a...; kw...)
+xgboost(data; kw...) = xgboost(DMatrix(data); kw...)
+xgboost(dm::DMatrix, num_round::Integer; kw...) = xgboost(dm; num_round, kw...)
+xgboost(data, num_round::Integer; kw...) = xgboost(DMatrix(data); num_round, kw...)
