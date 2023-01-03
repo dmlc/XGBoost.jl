@@ -382,7 +382,8 @@ function updateone!(b::Booster, Xy::DMatrix, ℓ′, ℓ″; kw...)
     updateone!(b, Xy, ℓ′.(ŷ, y), ℓ″.(ŷ, y); kw...)
 end
 
-updateone!(b::Booster, data, a...; kw...) = updateone!(b, DMatrix(data), a...; kw...)
+updateone!(b::Booster, data; kw...) = updateone!(b, DMatrix(data); kw...)
+updateone!(b::Booster, data, ℓ′, ℓ″; kw...) = updateone!(b, DMatrix(data), ℓ′, ℓ″; kw...)
 
 # this method should be reserved for if we add an autodiff dependency
 #updateone!(::Booster, ::DMatrix, ℓ; kw...)
@@ -396,17 +397,25 @@ Run `num_round` rounds of gradient boosting on [`Booster`](@ref) `b`.
 The first and second derivatives of the loss function (`ℓ′` and `ℓ″` respectively) can be provided
 for custom loss.
 """
-function update!(b::Booster, a...; num_round::Integer=1, kw...)
+function update!(b::Booster, data; num_round::Integer=1, kw...)
     for j ∈ 1:num_round
         round_number = getnrounds(b) + 1
-        updateone!(b, a...; round_number, kw...)
+        updateone!(b, data; round_number, kw...)
     end
     b
 end
 
+function update!(b::Booster, data, ℓ′, ℓ″; num_round::Integer=1, kw...)
+    for j ∈ 1:num_round
+        round_number = getnrounds(b) + 1
+        updateone!(b, data, ℓ′, ℓ″; round_number, kw...)
+    end
+    b
+end
+
+
 """
     xgboost(data; num_round=10, watchlist=Dict(), kw...)
-    xgboost(data, num_round; watchlist=Dict(), kw...)
     xgboost(data, ℓ′, ℓ″; kw...)
 
 Creates an xgboost gradient booster object on training data `data` and runs `nrounds` of training.
@@ -445,5 +454,18 @@ function xgboost(dm::DMatrix;
     b
 end
 xgboost(data; kw...) = xgboost(DMatrix(data); kw...)
-xgboost(dm::DMatrix, num_round::Integer; kw...) = xgboost(dm; num_round, kw...)
-xgboost(data, num_round::Integer; kw...) = xgboost(DMatrix(data); num_round, kw...)
+
+function xgboost(dm::DMatrix, ℓ′, ℓ″;
+                 num_round::Integer=10,
+                 watchlist=Dict("train"=>dm),
+                 kw...
+                )
+    Xy = DMatrix(dm)
+    b = Booster(Xy; kw...)
+    isempty(watchlist) || @info("XGBoost: starting training.")
+    update!(b, Xy, ℓ′, ℓ″; num_round, watchlist)
+    isempty(watchlist) || @info("Training rounds complete.")
+    b
+end
+xgboost(data, ℓ′, ℓ″, kw...) = xgboost(DMatrix(data), ℓ′, ℓ″; num_round, kw...)
+
