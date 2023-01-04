@@ -405,7 +405,6 @@ function update!(b::Booster, data, a...; num_round::Integer=1, kw...)
     b
 end
 
-
 """
     xgboost(data; num_round=10, watchlist=Dict(), kw...)
     xgboost(data, ℓ′, ℓ″; kw...)
