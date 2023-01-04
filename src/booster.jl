@@ -397,18 +397,10 @@ Run `num_round` rounds of gradient boosting on [`Booster`](@ref) `b`.
 The first and second derivatives of the loss function (`ℓ′` and `ℓ″` respectively) can be provided
 for custom loss.
 """
-function update!(b::Booster, data; num_round::Integer=1, kw...)
+function update!(b::Booster, data, a...; num_round::Integer=1, kw...)
     for j ∈ 1:num_round
         round_number = getnrounds(b) + 1
-        updateone!(b, data; round_number, kw...)
-    end
-    b
-end
-
-function update!(b::Booster, data, ℓ′, ℓ″; num_round::Integer=1, kw...)
-    for j ∈ 1:num_round
-        round_number = getnrounds(b) + 1
-        updateone!(b, data, ℓ′, ℓ″; round_number, kw...)
+        updateone!(b, data, a...; round_number, kw...)
     end
     b
 end
@@ -454,12 +446,3 @@ function xgboost(dm::DMatrix, a...;
     b
 end
 xgboost(data, a...; kw...) = xgboost(DMatrix(data), a...; kw...)
-
-function xgboost(dm::DMatrix, 
-                 num_round::Integer;
-                 watchlist=Dict("train"=>dm),
-                 kw...
-                 )
-    Base.depwarn("`xgboost(dm, num_round) `is depreciated, use `xgboost(dm; num_round)` instead", :xgboost)
-    xgboost(dm; num_round, watchlist, kw...)
-end
