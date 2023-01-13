@@ -26,6 +26,23 @@ using .Lib
 using .Lib: DMatrixHandle, BoosterHandle
 
 
+const LOG_LEVEL_REGEX = r"\[.*\] (\D*): "
+
+function xgblog(s::Cstring)
+    s = unsafe_string(s)
+    m = match(LOG_LEVEL_REGEX, s)
+    if isnothing(m) || isempty(m.captures)
+        @info(s)
+    elseif m.captures[1] == "WARNING"
+        @warn(s)
+    else
+        @info(s)
+    end
+end
+
+__init__() = XGBRegisterLogCallback(@cfunction(xgblog, Nothing, (Cstring,)))
+
+
 include("dmatrix.jl")
 include("booster.jl")
 include("introspection.jl")
