@@ -382,7 +382,8 @@ function updateone!(b::Booster, Xy::DMatrix, ℓ′, ℓ″; kw...)
     updateone!(b, Xy, ℓ′.(ŷ, y), ℓ″.(ŷ, y); kw...)
 end
 
-updateone!(b::Booster, data, a...; kw...) = updateone!(b, DMatrix(data), a...; kw...)
+updateone!(b::Booster, data; kw...) = updateone!(b, DMatrix(data); kw...)
+updateone!(b::Booster, data, ℓ′, ℓ″; kw...) = updateone!(b, DMatrix(data), ℓ′, ℓ″; kw...)
 
 # this method should be reserved for if we add an autodiff dependency
 #updateone!(::Booster, ::DMatrix, ℓ; kw...)
@@ -396,10 +397,10 @@ Run `num_round` rounds of gradient boosting on [`Booster`](@ref) `b`.
 The first and second derivatives of the loss function (`ℓ′` and `ℓ″` respectively) can be provided
 for custom loss.
 """
-function update!(b::Booster, a...; num_round::Integer=1, kw...)
+function update!(b::Booster, data, a...; num_round::Integer=1, kw...)
     for j ∈ 1:num_round
         round_number = getnrounds(b) + 1
-        updateone!(b, a...; round_number, kw...)
+        updateone!(b, data, a...; round_number, kw...)
     end
     b
 end
