@@ -27,47 +27,52 @@ will use assigned feature names, for example
 ```julia
 julia> df = DataFrame(randn(10,3), ["kirk", "spock", "bones"])
 10×3 DataFrame
- Row │ kirk        spock      bones
-     │ Float64     Float64    Float64
+ Row │ kirk       spock       bones      
+     │ Float64    Float64     Float64    
 ─────┼───────────────────────────────────
-   1 │  0.731406   -0.53631    0.465881
-   2 │  0.553427   -0.787531  -0.838059
-   3 │  1.30724    -2.38111   -1.1979
-   4 │  0.0759902   0.418856   1.49618
-   5 │ -0.426773   -0.32008   -0.773329
-   6 │ -1.36495    -0.105646   1.08546
-   7 │  0.476315   -0.080163  -1.4846
-   8 │  0.144403    0.344307  -0.0301839
-   9 │  0.593969    0.165502   1.31196
-  10 │  2.15151     0.584925  -0.709128
+   1 │  0.663934  -0.419345   -0.489801
+   2 │  1.19064    0.420935   -0.321852
+   3 │  0.713867   0.293724    0.0450463
+   4 │ -1.3474    -0.402996    1.50831
+   5 │ -0.458164   0.0399281  -0.83443
+   6 │ -0.277555   0.149485    0.408656
+   7 │ -1.79885   -1.1535      0.99213
+   8 │ -0.177408  -0.818639    0.280188
+   9 │ -1.26053   -1.60734     2.21421
+  10 │  0.30378   -0.299256    0.384029
 
-julia> bst = xgboost((df, randn(10)), 10)
+julia> bst = xgboost((df, randn(10)), num_round=10)
 [ Info: XGBoost: starting training.
-[ Info: [1]     train-rmse:0.71749003518059951
-[ Info: [2]     train-rmse:0.57348349389049413
-[ Info: [3]     train-rmse:0.46118182517533174
-[ Info: [4]     train-rmse:0.37161911786076596
-[ Info: [5]     train-rmse:0.29986573085749962
-[ Info: [6]     train-rmse:0.24238347776088820
-[ Info: [7]     train-rmse:0.19544715478958452
-[ Info: [8]     train-rmse:0.15795933989281422
-[ Info: [9]     train-rmse:0.12805284613811851
-[ Info: [10]    train-rmse:0.10467078844629517
+[ Info: [1]     train-rmse:0.57998637329114211
+[ Info: [2]     train-rmse:0.48232409595403752
+[ Info: [3]     train-rmse:0.40593080843433427
+[ Info: [4]     train-rmse:0.34595769369793850
+[ Info: [5]     train-rmse:0.29282108263987289
+[ Info: [6]     train-rmse:0.24862819795032731
+[ Info: [7]     train-rmse:0.21094418685218519
+[ Info: [8]     train-rmse:0.17903024616536045
+[ Info: [9]     train-rmse:0.15198720040980171
+[ Info: [10]    train-rmse:0.12906074380448287
 [ Info: Training rounds complete.
 ╭──── XGBoost.Booster ─────────────────────────────────────────────────────────────────╮
 │  Features: ["kirk", "spock", "bones"]                                                │
+│                                                                                      │
+│          Parameter          Value                                                    │
+│   ─────────────────────────────────                                                  │
+│     validate_parameters     true                                                     │
+│                                                                                      │
 ╰──── boosted rounds: 10 ──────────────────────────────────────────────────────────────╯
 
 julia> importancereport(bst)
-╭───────────┬────────────┬──────────┬───────────┬──────────────┬───────────────╮
-│  feature  │    gain    │  weight  │   cover   │  total_gain  │  total_cover  │
-├───────────┼────────────┼──────────┼───────────┼──────────────┼───────────────┤
-│  "bones"  │  0.229349  │   17.0   │  7.64706  │   3.89893    │     130.0     │
-├───────────┼────────────┼──────────┼───────────┼──────────────┼───────────────┤
-│  "spock"  │  0.176391  │   18.0   │  4.77778  │   3.17503    │     86.0      │
-├───────────┼────────────┼──────────┼───────────┼──────────────┼───────────────┤
-│  "kirk"   │  0.115055  │   13.0   │  3.38462  │   1.49572    │     44.0      │
-╰───────────┴────────────┴──────────┴───────────┴──────────────┴───────────────╯
+╭───────────┬─────────────┬──────────┬───────────┬──────────────┬───────────────╮
+│  feature  │    gain     │  weight  │   cover   │  total_gain  │  total_cover  │
+├───────────┼─────────────┼──────────┼───────────┼──────────────┼───────────────┤
+│  "bones"  │  0.358836   │   15.0   │  8.53333  │   5.38254    │     128.0     │
+├───────────┼─────────────┼──────────┼───────────┼──────────────┼───────────────┤
+│  "spock"  │  0.157437   │   16.0   │   4.75    │   2.51899    │     76.0      │
+├───────────┼─────────────┼──────────┼───────────┼──────────────┼───────────────┤
+│  "kirk"   │  0.0128546  │   34.0   │  2.91176  │   0.437056   │     99.0      │
+╰───────────┴─────────────┴──────────┴───────────┴──────────────┴───────────────╯
 ```
 
 ### Tree Inspection
@@ -81,39 +86,43 @@ interface.
 ```julia
 julia> ts = trees(bst)
 10-element Vector{XGBoost.Node}:
- XGBoost.Node(split_feature="f1")
- XGBoost.Node(split_feature="f1")
- XGBoost.Node(split_feature="f1")
- XGBoost.Node(split_feature="f1")
- XGBoost.Node(split_feature="f1")
- XGBoost.Node(split_feature="f1")
- XGBoost.Node(split_feature="f1")
- XGBoost.Node(split_feature="f1")
- XGBoost.Node(split_feature="f1")
- XGBoost.Node(split_feature="f1")
+ XGBoost.Node(split_feature="bones")
+ XGBoost.Node(split_feature="bones")
+ XGBoost.Node(split_feature="bones")
+ XGBoost.Node(split_feature="bones")
+ XGBoost.Node(split_feature="bones")
+ XGBoost.Node(split_feature="bones")
+ XGBoost.Node(split_feature="bones")
+ XGBoost.Node(split_feature="bones")
+ XGBoost.Node(split_feature="bones")
+ XGBoost.Node(split_feature="bones")
 
 julia> ts[1]
 ╭──── XGBoost.Node (id=0, depth=0) ────────────────────────────────────────────────────╮
 │                                                                                      │
-│     split_condition     yes     no     nmissing        gain         cover            │
-│   ─────────────────────────────────────────────────────────────────────────          │
-│      -0.267610937        1      2         1         0.284702361     10.0             │
+│     split_condition     yes     no     nmissing        gain        cover             │
+│   ────────────────────────────────────────────────────────────────────────           │
+│       0.396342576        1      2         1         1.86042714     10.0              │
 │                                                                                      │
 │   XGBoost Tree (from this node)                                                      │
 │  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━                                                     │
 │                │                                                                     │
-│                ├── f0 (1)                                                            │
-│                │   ├── f0 (1)                                                        │
-│                │   │   ├── (1): XGBoost.Node(leaf=0.042126134)                       │
-│                │   │   └── (2): XGBoost.Node(leaf=-0.0647352263)                     │
-│                │   └── (2): XGBoost.Node(leaf=0.0405130237)                          │
-│                └── (2): XGBoost.Node(leaf=-0.0718128532)                             │
+│                ├── bones < 0.396                                                     │
+│                │   ├── bones < 0.332: XGBoost.Node(leaf=-0.159539297)                │
+│                │   └── bones ≥ 0.332: XGBoost.Node(leaf=-0.0306737479)               │
+│                └── bones ≥ 0.396                                                     │
+│                    ├── spock < -0.778                                                │
+│                    │   ├── kirk < -1.53: XGBoost.Node(leaf=-0.0544514731)            │
+│                    │   └── kirk ≥ -1.53: XGBoost.Node(leaf=0.00967349485)            │
+│                    └── spock ≥ -0.778                                                │
+│                        ├── kirk < -0.812: XGBoost.Node(leaf=0.0550933369)            │
+│                        └── kirk ≥ -0.812: XGBoost.Node(leaf=0.228843644)             │
 ╰──── 2 children ──────────────────────────────────────────────────────────────────────╯
 
 julia> using AbstractTrees; children(ts[1])
 2-element Vector{XGBoost.Node}:
- XGBoost.Node(split_feature="f0")
- XGBoost.Node(leaf=-0.0718128532)
+ XGBoost.Node(split_feature="bones")
+ XGBoost.Node(split_feature="spock")
 ```
 
 ## Setting a Custom Objective Function
