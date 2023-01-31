@@ -94,9 +94,7 @@ end
 
 
 function _tree_display_branch_string(node, child_id::Integer)
-    if isnothing(node.split)
-        "11111111111"
-    elseif node.yes == child_id
+    if node.yes == child_id
         string(node.split, " < ", round(node.split_condition, digits=3))
     else
         string(node.split, " ≥ ", round(node.split_condition, digits=3))
