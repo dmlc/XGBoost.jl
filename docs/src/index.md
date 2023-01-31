@@ -179,6 +179,6 @@ bst = xgboost((X, y), num_round=20)
 ```
 is equivalent to
 ```julia
-bst = xgboost((X, y), nun_round=10)
+bst = xgboost((X, y), num_round=10)
 update!(bst, (X, y), num_round=10)
 ```

@@ -92,9 +92,15 @@ function importancereport(b::Booster)
     end
 end
 
-function _tree_display_branch_string(split, j::Integer)
-    o = "($j)"
-    isnothing(split) ? o : string(split, " ", o)
+
+function _tree_display_branch_string(node, child_id::Integer)
+    if isnothing(node.split)
+        "11111111111"
+    elseif node.yes == child_id
+        string(node.split, " < ", round(node.split_condition, digits=3))
+    else
+        string(node.split, " ≥ ", round(node.split_condition, digits=3))
+    end
 end
 
 function _tree_display(node::Node)
@@ -102,7 +108,7 @@ function _tree_display(node::Node)
     if isempty(ch)
         sprint(show, node)
     else
-        OrderedDict(_tree_display_branch_string(ch[j].split, j)=>_tree_display(ch[j]) for j ∈ 1:length(ch))
+        OrderedDict(_tree_display_branch_string(node, ch[j].id)=>_tree_display(ch[j]) for j ∈ 1:length(ch))
     end
 end
 
