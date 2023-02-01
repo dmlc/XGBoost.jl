@@ -1,6 +1,6 @@
 name = "XGBoost"
 uuid = "009559a3-9522-5dbb-924b-0b6ed2b22bb9"
-version = "2.2.2"
+version = "2.2.3"
 
 [deps]
 AbstractTrees = "1520ce14-60c1-5f80-bbc7-55ef81b5835c"
