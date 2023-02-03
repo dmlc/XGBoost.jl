@@ -81,6 +81,15 @@ end
 setparam!(b::Booster, name::AbstractString, val) = setparam!(b, name, string(val))
 setparam!(b::Booster, name::Symbol, val) = setparam!(b, string(name), val)
 
+setmultiparams!(b::Booster, name::Union{Symbol,AbstractString}, vals) = foreach(v -> setparam!(b, name, v), vals)
+
+# the API for some parameters involves multiple separate calls to XGBoosterSetParam
+# multi methods for resolving ambiguities
+setparam!(b::Booster, name::Symbol, vals::AbstractVector) = setmultiparams!(b, name, vals)
+setparam!(b::Booster, name::AbstractString, vals::AbstractVector) = setmultiparams!(b, name, vals)
+setparam!(b::Booster, name::Symbol, vals::Tuple) = setmultiparams!(b, name, vals)
+setparam!(b::Booster, name::AbstractString, vals::Tuple) = setmultiparams!(b, name, vals)
+
 """
     setparams!(b::Booster; kw...)
 

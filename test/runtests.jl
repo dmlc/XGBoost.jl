@@ -101,6 +101,8 @@ end
                 watchlist=watchlist,
                 η=1, max_depth=2,
                 objective="binary:logistic",
+                # check that we can set multiple param values
+                eval_metric=["rmse", "rmsle"],
                )
     end
 
@@ -171,6 +173,7 @@ end
                   η=1.0, max_depth=2,
                   objective="binary:logistic",
                   watchlist=Dict(),
+                  eval_metric=("mae", "mape"),
                  )
     preds = predict(bst, dtest)
     XGBoost.save(bst, model_file)
