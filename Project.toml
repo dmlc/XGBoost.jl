@@ -1,6 +1,6 @@
 name = "XGBoost"
 uuid = "009559a3-9522-5dbb-924b-0b6ed2b22bb9"
-version = "2.2.3"
+version = "2.2.4"
 
 [deps]
 AbstractTrees = "1520ce14-60c1-5f80-bbc7-55ef81b5835c"
@@ -20,7 +20,7 @@ XGBoost_jll = "a5c6f535-4255-5ca2-a466-0e519f119c46"
 [compat]
 AbstractTrees = "0.4"
 CEnum = "0.4"
-CUDA = "3"
+CUDA = "3, 4"
 JSON3 = "1"
 OrderedCollections = "1"
 SparseMatricesCSR = "0.6"
