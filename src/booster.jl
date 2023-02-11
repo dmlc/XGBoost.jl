@@ -322,7 +322,7 @@ function predict(b::Booster, Xy::DMatrix;
     oshape = Ref{Ptr{UInt64}}()
     odim = Ref{UInt64}()
     o = Ref{Ptr{Cfloat}}()
-    XGBoost.xgbcall(XGBoost.XGBoosterPredictFromDMatrix, b.handle, Xy.handle, opts, oshape, odim, o)
+    xgbcall(XGBoosterPredictFromDMatrix, b.handle, Xy.handle, opts, oshape, odim, o)
     dims = reverse(unsafe_wrap(Array, oshape[], odim[]))
     o = unsafe_wrap(Array, o[], tuple(dims...))
     length(dims) > 1 ? permutedims(o, reverse(1:ndims(o))) : o
