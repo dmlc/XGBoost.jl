@@ -314,13 +314,13 @@ function predict(b::Booster, Xy::DMatrix;
         type=0
     end
     opts = Dict("type"=>type,
-    "iteration_begin"=>ntree_lower_limit,
-    "iteration_end"=>ntree_limit,
-    "strict_shape"=>false,
-    "training"=>training,
-    ) |> JSON3.write
-    oshape = Ref{Ptr{UInt64}}()
-    odim = Ref{UInt64}()
+                "iteration_begin"=>ntree_lower_limit,
+                "iteration_end"=>ntree_limit,
+                "strict_shape"=>false,
+                "training"=>training,
+                ) |> JSON3.write
+    oshape = Ref{Ptr{Lib.bst_ulong}}()
+    odim = Ref{Lib.bst_ulong}()
     o = Ref{Ptr{Cfloat}}()
     xgbcall(XGBoosterPredictFromDMatrix, b.handle, Xy.handle, opts, oshape, odim, o)
     dims = reverse(unsafe_wrap(Array, oshape[], odim[]))
