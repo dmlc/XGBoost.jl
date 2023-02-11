@@ -277,7 +277,7 @@ end
 
 
 """
-    predict(b::Booster, data; margin=false, training=false, ntree_limit=0)
+    predict(b::Booster, data; type=0, training=false, ntree_limit=0)
 
 Use the model `b` to run predictions on `data`.  This will return a `Vector{Float32}` which can be compared
 to training or test target data.
