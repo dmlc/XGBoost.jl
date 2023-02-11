@@ -305,11 +305,11 @@ ŷ = predict(b, X)
 ```
 """
 function predict(b::Booster, Xy::DMatrix;
-    type::Integer=0,  # 0-normal, 1-margin, 2-contrib, 3-est. contrib,4-interact,5-est. interact, 6-leaf
-    training::Bool=false,
-    ntree_lower_limit::Integer=0,
-    ntree_limit::Integer=0,  # 0 corresponds to no limit
-   )
+                type::Integer=0,  # 0-normal, 1-margin, 2-contrib, 3-est. contrib,4-interact,5-est. interact, 6-leaf
+                training::Bool=false,
+                ntree_lower_limit::Integer=0,
+                ntree_limit::Integer=0,  # 0 corresponds to no limit
+                )
     if type<0 || type>6
         type=0
     end
@@ -318,7 +318,7 @@ function predict(b::Booster, Xy::DMatrix;
                 "iteration_end"=>ntree_limit,
                 "strict_shape"=>false,
                 "training"=>training,
-                ) |> JSON3.write
+               ) |> JSON3.write
     oshape = Ref{Ptr{Lib.bst_ulong}}()
     odim = Ref{Lib.bst_ulong}()
     o = Ref{Ptr{Cfloat}}()
