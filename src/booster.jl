@@ -311,8 +311,7 @@ function predict(b::Booster, Xy::DMatrix;
                  ntree_lower_limit::Integer=0,
                  ntree_limit::Integer=0,  # 0 corresponds to no limit
                 )
-    type = isnothing(type) ? Int(margin) : type
-    opts = Dict("type"=>type,
+    opts = Dict("type"=>isnothing(type) ? Int(margin) : type ,
                 "iteration_begin"=>ntree_lower_limit,
                 "iteration_end"=>ntree_limit,
                 "strict_shape"=>false,
