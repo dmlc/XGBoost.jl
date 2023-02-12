@@ -305,14 +305,13 @@ ŷ = predict(b, X)
 ```
 """
 function predict(b::Booster, Xy::DMatrix;
-                 type::Integer=0,  # 0-normal, 1-margin, 2-contrib, 3-est. contrib,4-interact,5-est. interact, 6-leaf
+                 margin::Bool=false,  # output margin - maintains backward compatibility; affects when type not specified
+                 type::Union{Nothing,Integer}=nothing,  # 0-normal, 1-margin, 2-contrib, 3-est. contrib,4-interact,5-est. interact, 6-leaf
                  training::Bool=false,
                  ntree_lower_limit::Integer=0,
                  ntree_limit::Integer=0,  # 0 corresponds to no limit
                 )
-    if type<0 || type>6
-        type=0
-    end
+    type = isnothing(type) ? Int(margin) : type
     opts = Dict("type"=>type,
                 "iteration_begin"=>ntree_lower_limit,
                 "iteration_end"=>ntree_limit,
@@ -325,7 +324,7 @@ function predict(b::Booster, Xy::DMatrix;
     xgbcall(XGBoosterPredictFromDMatrix, b.handle, Xy.handle, opts, oshape, odim, o)
     dims = reverse(unsafe_wrap(Array, oshape[], odim[]))
     o = unsafe_wrap(Array, o[], tuple(dims...))
-    length(dims) > 1 ? permutedims(o, reverse(1:ndims(o))) : o
+    length(dims) > 1 ? permutedims(o, reverse(1:ndims(o))) : o  # permutedims to handle ndims>=3
 end
 predict(b::Booster, Xy; kw...) = predict(b, DMatrix(Xy); kw...)
 
