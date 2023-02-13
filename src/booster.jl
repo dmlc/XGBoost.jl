@@ -276,11 +276,48 @@ function deserialize(::Type{Booster}, buf::AbstractVector{UInt8}, data=DMatrix[]
 end
 
 
+# sadly this is type unstable because we might return a transpose
 """
-    predict(b::Booster, data; margin=false, type=nothing, training=false, ntree_limit=0)
-
+    predict(b::Booster, data; margin=false, training=false, ntree_limit=0)
 Use the model `b` to run predictions on `data`.  This will return a `Vector{Float32}` which can be compared
 to training or test target data.
+If `ntree_limit > 0` only the first `ntree_limit` trees will be used in prediction.
+## Examples
+```julia
+(X, y) = (randn(100,3), randn(100))
+b = xgboost((X, y), 10)
+ŷ = predict(b, X)
+```
+"""
+function predict(b::Booster, Xy::DMatrix;
+                 margin::Bool=false,  # whether to output margin
+                 training::Bool=false,
+                 ntree_lower_limit::Integer=0,
+                 ntree_limit::Integer=0,  # 0 corresponds to no limit
+                )
+    opts = Dict("type"=>(margin ? 1 : 0),
+                "iteration_begin"=>ntree_lower_limit,
+                "iteration_end"=>ntree_limit,
+                "strict_shape"=>false,
+                "training"=>training,
+               ) |> JSON3.write
+    oshape = Ref{Ptr{Lib.bst_ulong}}()
+    odim = Ref{Lib.bst_ulong}()
+    o = Ref{Ptr{Cfloat}}()
+    xgbcall(XGBoosterPredictFromDMatrix, b.handle, Xy.handle, opts, oshape, odim, o)
+    dims = reverse(unsafe_wrap(Array, oshape[], odim[]))
+    o = unsafe_wrap(Array, o[], tuple(dims...))
+    length(dims) > 1 ? transpose(o) : o
+end
+predict(b::Booster, Xy; kw...) = predict(b, DMatrix(Xy); kw...)
+
+
+"""
+    predictbytype(b::Booster, data::DMatrix; type=0, training=false, ntree_limit=0)
+
+Use the model `b` to run predictions on `data`. 
+
+This version of predict gives access to contribution and interaction values.
 
 If `ntree_limit > 0` only the first `ntree_limit` trees will be used in prediction.
 
@@ -301,17 +338,16 @@ The shape of returned data varies with 'type' option and certain objectives.
 (X, y) = (randn(100,3), randn(100))
 b = xgboost((X, y), 10)
 
-ŷ = predict(b, X)
+ŷ = predict(b, X, type=2)
 ```
 """
-function predict(b::Booster, Xy::DMatrix;
-                 margin::Bool=false,  # output margin - maintains backward compatibility; affects when type not specified
-                 type::Union{Nothing,Integer}=nothing,  # 0-normal, 1-margin, 2-contrib, 3-est. contrib,4-interact,5-est. interact, 6-leaf
+function predictbytype(b::Booster, Xy::DMatrix;
+                 type::Integer=0,  # 0-normal, 1-margin, 2-contrib, 3-est. contrib,4-interact,5-est. interact, 6-leaf
                  training::Bool=false,
                  ntree_lower_limit::Integer=0,
                  ntree_limit::Integer=0,  # 0 corresponds to no limit
                 )
-    opts = Dict("type"=>isnothing(type) ? Int(margin) : type ,
+    opts = Dict("type"=>type ,
                 "iteration_begin"=>ntree_lower_limit,
                 "iteration_end"=>ntree_limit,
                 "strict_shape"=>false,
@@ -325,7 +361,7 @@ function predict(b::Booster, Xy::DMatrix;
     o = unsafe_wrap(Array, o[], tuple(dims...))
     length(dims) > 1 ? permutedims(o, reverse(1:ndims(o))) : o  # permutedims to handle ndims>=3
 end
-predict(b::Booster, Xy; kw...) = predict(b, DMatrix(Xy); kw...)
+
 
 function evaliter(b::Booster, watch, n::Integer=1)
     o = Ref{Ptr{Int8}}()
