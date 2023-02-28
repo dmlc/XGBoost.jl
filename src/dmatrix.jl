@@ -184,33 +184,13 @@ function _dmatrix(x::AbstractMatrix{T}; missing_value::Float32=NaN32, kw...) whe
     DMatrix(o[]; kw...)
 end
 
-# sadly we have to copy CuArray because of incompatible column convention
-function _transposed_cuda_dmatrix(x::CuArray{T}; missing_value::Float32=NaN32, kw...) where {T<:Real}
-    o = Ref{DMatrixHandle}()
-    cfg = "{\"missing\": $missing_value}"
-    GC.@preserve x begin
-        info = numpy_json_info(x)
-        xgbcall(XGDMatrixCreateFromCudaArrayInterface, info, cfg, o)
-    end
-    DMatrix(o[]; is_gpu=true, kw...)
-end
-
-DMatrix(x::Transpose{T,<:CuArray}; kw...) where {T<:Real} = _transposed_cuda_dmatrix(parent(x); kw...)
-DMatrix(x::Adjoint{T,<:CuArray}; kw...) where {T<:Real} = _transposed_cuda_dmatrix(parent(x); kw...)
-
-function DMatrix(x::CuArray; kw...)
-    x′ = CuArray(transpose(x))
-    _transposed_cuda_dmatrix(x′; kw...)
-end
-
 function DMatrix(x::AbstractMatrix{T}; kw...) where {T<:Real}
     # sadly, this copying is unavoidable
-    _dmatrix(convert(Matrix{Float32}, transpose(x)); kw...)
+    _dmatrix(permutedims(x); kw...)
 end
 
 # ideally these would be recursive but can't be bothered
-DMatrix(x::Transpose{T}; kw...) where {T<:Real} = _dmatrix(parent(x); kw...)
-DMatrix(x::Adjoint{T}; kw...) where {T<:Real} = _dmatrix(parent(x); kw...)
+DMatrix(x::LinearAlgebra.AdjOrTransAbsMat{T}; kw...) where {T<:Real} = _dmatrix(parent(x); kw...)
 
 function DMatrix(x::AbstractMatrix{Union{Missing,T}}; kw...) where {T<:Real}
     # we try to make it so that we only have to copy once
@@ -270,12 +250,6 @@ DMatrix(Xy::Tuple; kw...) = DMatrix(Xy[1], Xy[2]; kw...)
 
 DMatrix(dm::DMatrix) = dm
 
-function _check_gpu_table(tbl)
-    cols = Tables.Columns(tbl)
-    isgpu = all(x -> x isa CuArray, cols)
-    (isgpu, cols)
-end
-
 function _dmatrix_gpu_table(cols::Tables.Columns; missing_value::Float32=NaN32, kw...)
     o = Ref{DMatrixHandle}()
     cfg = "{\"missing\": $missing_value}"
@@ -286,27 +260,31 @@ function _dmatrix_gpu_table(cols::Tables.Columns; missing_value::Float32=NaN32, 
     DMatrix(o[]; is_gpu=true, kw...)
 end
 
+isa_cuvector(x) = false
+
 function DMatrix(tbl;
-                 feature_names::AbstractVector{<:AbstractString}=collect(string.(Tables.columnnames(tbl))),
+                 feature_names::Union{Nothing,AbstractVector{<:AbstractString}}=nothing,
                  kw...
                 )
-    if !Tables.istable(tbl)
-        throw(ArgumentError("DMatrix requires either an AbstractMatrix or table satisfying the Tables.jl interface"))
+    cols = Tables.columns(tbl)
+    if feature_names === nothing
+        feature_names = [string(x) for x in Tables.columnnames(cols)]
     end
-    (isgpu, cols) = _check_gpu_table(tbl)
+    isgpu = all(isa_cuvector, cols)
     if isgpu
         _dmatrix_gpu_table(cols; feature_names, kw...)
     else
-        DMatrix(Tables.matrix(tbl); feature_names, kw...)
+        DMatrix(Tables.matrix(cols); feature_names, kw...)
     end
 end
 
 DMatrix(tbl, y::AbstractVector; kw...) = DMatrix(tbl; label=y, kw...)
 
 function DMatrix(tbl, ycol::Symbol; kw...)
-    Xcols = [n for n ∈ Tables.columnnames(tbl) if n ≠ ycol]
-    tbl′ = NamedTuple(n=>Tables.getcolumn(tbl, n) for n ∈ Xcols)
-    DMatrix(tbl′, Tables.getcolumn(tbl, ycol); kw...)
+    cols = Tables.columns(tbl)
+    Xcols = [n for n ∈ Tables.columnnames(cols) if n ≠ ycol]
+    tbl′ = NamedTuple(n=>Tables.getcolumn(cols, n) for n ∈ Xcols)
+    DMatrix(tbl′, Tables.getcolumn(cols, ycol); kw...)
 end
 
 """

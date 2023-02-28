@@ -8,8 +8,8 @@ CurrentModule = XGBoost
 ## Introspection
 
 ### Feature Importance
-This package contains a number of methods for inspecting the results of training and displaying the
-results in a legible way with [Term.jl](https://github.com/FedeClaudi/Term.jl).
+
+This package contains a number of methods for inspecting the results of training and displaying the results.
 
 Feature importances can be computed explicitly using [`importance`](@ref)
 
@@ -22,6 +22,7 @@ bst = xgboost(X, y)
 imp = DataFrame(importancetable(bst))
 ```
 
+XGBoost also supports rich terminal output with [Term.jl](https://github.com/FedeClaudi/Term.jl).
 A convenient visualization of this table can also be seen with [`importancereport`](@ref).  These
 will use assigned feature names, for example
 ```julia
@@ -41,7 +42,7 @@ julia> df = DataFrame(randn(10,3), ["kirk", "spock", "bones"])
    9 │ -1.26053   -1.60734     2.21421
   10 │  0.30378   -0.299256    0.384029
 
-julia> bst = xgboost((df, randn(10)), num_round=10)
+julia> bst = xgboost((df, randn(10)), num_round=10);
 [ Info: XGBoost: starting training.
 [ Info: [1]     train-rmse:0.57998637329114211
 [ Info: [2]     train-rmse:0.48232409595403752
@@ -54,6 +55,8 @@ julia> bst = xgboost((df, randn(10)), num_round=10)
 [ Info: [9]     train-rmse:0.15198720040980171
 [ Info: [10]    train-rmse:0.12906074380448287
 [ Info: Training rounds complete.
+
+julia> using Term; Panel(bst)
 ╭──── XGBoost.Booster ─────────────────────────────────────────────────────────────────╮
 │  Features: ["kirk", "spock", "bones"]                                                │
 │                                                                                      │
@@ -97,7 +100,7 @@ julia> ts = trees(bst)
  XGBoost.Node(split_feature="bones")
  XGBoost.Node(split_feature="bones")
 
-julia> ts[1]
+julia> using Term; Panel(ts[1])
 ╭──── XGBoost.Node (id=0, depth=0) ────────────────────────────────────────────────────╮
 │                                                                                      │
 │     split_condition     yes     no     nmissing        gain        cover             │
@@ -190,7 +193,7 @@ will fit a random forest according to a Poisson likelihood fit with 12 trees.
 
 ## GPU Support
 XGBoost supports GPU-assisted training on Nvidia GPU's with CUDA via
-[CUDA.jl](https://github.com/JuliaGPU/CUDA.jl).  To utilize the GPU, one has to construct a
+[CUDA.jl](https://github.com/JuliaGPU/CUDA.jl).  To utilize the GPU, one has to load CUDA and construct a
 `DMatrix` object from GPU arrays.  There are two ways of doing this:
 - Pass a `CuArray` as the training matrix (conventionally `X`, the first argument to `DMatrix`).
 - Pass a table with *all* columns as `CuVector`s.
@@ -210,6 +213,8 @@ normally directly to `xgboost` or `Booster`, as long as that data consists of `C
 
 ### Example
 ```julia
+using CUDA
+
 X = cu(randn(1000, 3))
 y = randn(1000)
 
