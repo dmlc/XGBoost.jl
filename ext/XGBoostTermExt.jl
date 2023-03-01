@@ -1,7 +1,6 @@
 module XGBoostTermExt
 
-using XGBoost
-using XGBoost: Node, OrderedDict, children, getnrounds, isgpu, nfeatures, nrows, ncols
+using XGBoost: XGBoost, OrderedDict, children
 import Term
 
 function _features_display_string(fs, n) 
@@ -13,7 +12,7 @@ function _features_display_string(fs, n)
     end
 end
 
-function Term.Panel(dm::DMatrix)
+function Term.Panel(dm::XGBoost.DMatrix)
     str = if !XGBoost.hasdata(dm)
         "{dim}(values not allocated){/dim}"
     else
@@ -35,43 +34,45 @@ function Term.Panel(dm::DMatrix)
         )
 end
 
-function Term.Panel(b::Booster)
-    info = isempty(b.params) ? () : (paramspanel(b.params),)
-    Term.Panel(_features_display_string(b.feature_names, nfeatures(b)),
+function Term.Panel(b::XGBoost.Booster)
+    info = if isempty(b.params)
+        ()
+    else
+        (paramspanel(b.params; header_style="bold green", columns_style=["bold yellow", "default"], box=:SIMPLE,),)
+    end
+    Term.Panel(_features_display_string(b.feature_names, XGBoost.nfeatures(b)),
           info...;
           style="magenta",
           title="XGBoost.Booster",
           title_style="bold cyan",
-          subtitle="boosted rounds: $(getnrounds(b))",
+          subtitle="boosted rounds: $(XGBoost.getnrounds(b))",
           subtitle_style="blue",
          )
 end
-function paramspanel(params::AbstractDict)
+function paramspanel(params::AbstractDict; kwargs...)
     names = sort!(collect(keys(params)))
     vals = map(k -> params[k], names)
-    Term.Table(OrderedDict(:Parameter=>names, :Value=>vals),
-               header_style="bold green",
-               columns_style=["bold yellow", "default"],
-               box=:SIMPLE,
-              )
+    Term.Table(OrderedDict(:Parameter=>names, :Value=>vals), kwargs...)
 end
 
-function Term.Tree(node::Node)
+function Term.Tree(
+    node::XGBoost.Node;
+    title="XGBoost Tree (from this node)",
+    title_style="bold green",
+    kwargs...,
+)
     td = isempty(children(node)) ? Dict(repr(node)=>"leaf") : _tree_display(node)
-    Term.Tree(td;
-              title="XGBoost Tree (from this node)",
-              title_style="bold green",
-             )
+    Term.Tree(td; title, title_style, kwargs...)
 end
 
-function Term.Panel(node::Node)
+function Term.Panel(node::XGBoost.Node)
     subtitle = if isempty(children(node))
         "{bold green}leaf{/bold green}"
     else
         string(length(children(node)), " children")
     end
 
-    Term.Panel(paramstable(node),
+    Term.Panel(paramstable(node; header_style="bold yellow", box=:SIMPLE),
           Term.Tree(node);
           style="magenta",
           title="XGBoost.Node {italic blue}(id=$(node.id), depth=$(node.depth)){/italic blue}",
@@ -80,30 +81,26 @@ function Term.Panel(node::Node)
           subtitle_style="blue",
          )
 end
-function paramstable(node::Node)
+function paramstable(node::XGBoost.Node; kwargs...)
     if isempty(children(node))
-        _paramstable(node, :cover, :leaf)
+        _paramstable(node, :cover, :leaf; kwargs...)
     else
-        _paramstable(node, :split_condition, :yes, :no, :nmissing, :gain, :cover)
+        _paramstable(node, :split_condition, :yes, :no, :nmissing, :gain, :cover; kwargs...)
     end
 end
-function _paramstable(node::Node, names::Symbol...)
+function _paramstable(node::XGBoost.Node, names::Symbol...; kwargs...)
     vals = mapreduce(Base.Fix1(getproperty, node), hcat, names)
-    Term.Table(vals;
-               header=map(string, names),
-               header_style="bold yellow",
-               box=:SIMPLE
-              )
+    Term.Table(vals; header=map(string, names), kwargs...)
 end
 
-function XGBoost.importancereport(b::Booster)
-    if getnrounds(b) == 0
+function XGBoost.importancereport(b::XGBoost.Booster)
+    if XGBoost.getnrounds(b) == 0
         Panel("{red}(booster not trained){/red}",
               title="XGBoost Feature Importance",
               style="magenta",
              )
     else
-        tbl = importancetable(b)
+        tbl = XGBoost.importancetable(b)
         tbl = OrderedDict(k=>_importance_number_string.(getproperty(tbl, k)) for k ∈ propertynames(tbl))
         Term.Table(tbl,
                    header_style="bold green",
@@ -115,20 +112,19 @@ end
 _importance_number_string(imp) = repr(imp, context=:compact=>true)
 _importance_number_string(::Missing) = "{dim}missing{/dim}"
 
-function _tree_display_branch_string(node, child_id::Integer)
-    if node.yes == child_id
-        string(node.split, " < ", round(node.split_condition, digits=3))
-    else
-        string(node.split, " ≥ ", round(node.split_condition, digits=3))
-    end
-end
-
-function _tree_display(node::Node)
+function _tree_display(node::XGBoost.Node)
     ch = children(node)
     if isempty(ch)
         repr(node; context=:compact=>true)
     else
         OrderedDict(_tree_display_branch_string(node, ch[j].id)=>_tree_display(ch[j]) for j ∈ 1:length(ch))
+    end
+end
+function _tree_display_branch_string(node, child_id::Integer)
+    if node.yes == child_id
+        string(node.split, " < ", round(node.split_condition, digits=3))
+    else
+        string(node.split, " ≥ ", round(node.split_condition, digits=3))
     end
 end
 
