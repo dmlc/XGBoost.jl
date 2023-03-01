@@ -47,7 +47,7 @@ include("introspection.jl")
 include("show.jl")
 include("defaultparams.jl")
 
-if !isdefined(Base, :get_extensions)
+if !isdefined(Base, :get_extension)
     include("../ext/XGBoostCUDAExt.jl")
     include("../ext/XGBoostTermExt.jl")
 end
