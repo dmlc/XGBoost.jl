@@ -9,8 +9,6 @@ using AbstractTrees
 using OrderedCollections
 using JSON3
 using Tables
-using Term
-using CUDA
 using Statistics: mean, std
 
 using Base: @propagate_inbounds
@@ -48,6 +46,5 @@ include("booster.jl")
 include("introspection.jl")
 include("show.jl")
 include("defaultparams.jl")
-
 
 end # module XGBoost
