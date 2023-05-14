@@ -1,5 +1,6 @@
 using XGBoost
 using CUDA: has_cuda, cu
+import Term
 using Random, SparseArrays
 using Test
 
@@ -160,7 +161,7 @@ end
     @test tbl.feature[1] == 29
     @test XGBoost.Tables.columnnames(tbl) == (:feature, :gain, :weight, :cover, :total_gain, :total_cover)
 
-    @test typeof(importancereport(bst)) <: XGBoost.Term.Tables.Table
+    @test typeof(importancereport(bst)) <: Term.Tables.Table
 end
 
 @testset "Booster Save/Load/Serialize" begin
