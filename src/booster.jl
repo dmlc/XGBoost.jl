@@ -430,7 +430,7 @@ All other keyword arguments are passed to [`Booster`](@ref).  With few exception
 training hyper-parameters, see [here](https://xgboost.readthedocs.io/en/stable/parameter.html) for
 a comprehensive list.
 
-A custom loss function can be privded via its first and second derivatives (`ℓ′` and `ℓ″` respectively).
+A custom loss function can be provided via its first and second derivatives (`ℓ′` and `ℓ″` respectively).
 See [`updateone!`](@ref) for more details.
 
 ## Examples
