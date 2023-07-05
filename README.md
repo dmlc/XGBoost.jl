@@ -28,4 +28,3 @@ the `xgboost` binaries (will be installed automatically).
 
 ## Preview
 ![](/assets/xgboost_demo_1.jpg)
-
