@@ -266,7 +266,7 @@ function DMatrix(tbl;
                  feature_names::Union{Nothing,AbstractVector{<:AbstractString}}=nothing,
                  kw...
                 )
-    cols = Tables.columns(tbl)
+    cols = Tables.Columns(tbl)
     if feature_names === nothing
         feature_names = [string(x) for x in Tables.columnnames(cols)]
     end

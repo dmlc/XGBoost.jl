@@ -164,6 +164,21 @@ end
     @test typeof(importancereport(bst)) <: Term.Tables.Table
 end
 
+# these just ensure we don't have any exceptions
+@testset "Term extension" begin
+    dtrain = XGBoost.load(DMatrix, testfilepath("agaricus.txt.train"))
+    dtest = XGBoost.load(DMatrix, testfilepath("agaricus.txt.test"))
+
+    bst = xgboost(dtrain, num_round=5,
+                  η=1.0, max_depth=2,
+                  objective="binary:logistic",
+                  watchlist=Dict(),
+                 )
+
+    @test Term.Panel(dtrain) isa Term.Panel
+    @test Term.Panel(bst) isa Term.Panel
+end
+
 @testset "Booster Save/Load/Serialize" begin
     dtrain = XGBoost.load(DMatrix, testfilepath("agaricus.txt.train"))
     dtest = XGBoost.load(DMatrix, testfilepath("agaricus.txt.test"))
