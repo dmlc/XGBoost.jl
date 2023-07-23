@@ -12,7 +12,7 @@ function _features_display_string(fs, n)
     end
 end
 
-function Term.Panel(dm::XGBoost.DMatrix)
+function Term.Panel(dm::XGBoost.DMatrix; kw...)
     str = if !XGBoost.hasdata(dm)
         "{dim}(values not allocated){/dim}"
     else
@@ -25,47 +25,53 @@ function Term.Panel(dm::XGBoost.DMatrix)
         end
     end
     Term.Panel(_features_display_string(XGBoost.getfeaturenames(dm), size(dm,2)),
-          str;
-          style="magenta",
-          title="XGBoost.DMatrix",
-          title_style="bold cyan",
-          subtitle,
-          subtitle_style="blue",
-        )
+               str;
+               style="magenta",
+               title="XGBoost.DMatrix",
+               title_style="bold cyan",
+               subtitle,
+               subtitle_style="blue",
+               kw...
+              )
 end
 
-function Term.Panel(b::XGBoost.Booster)
+Base.show(io::IO, m::MIME"text/plain", dm::XGBoost.DMatrix) = show(io, m, Term.Panel(dm))
+
+function Term.Panel(b::XGBoost.Booster; kw...)
     info = if isempty(b.params)
         ()
     else
         (paramspanel(b.params; header_style="bold green", columns_style=["bold yellow", "default"], box=:SIMPLE,),)
     end
     Term.Panel(_features_display_string(b.feature_names, XGBoost.nfeatures(b)),
-          info...;
-          style="magenta",
-          title="XGBoost.Booster",
-          title_style="bold cyan",
-          subtitle="boosted rounds: $(XGBoost.getnrounds(b))",
-          subtitle_style="blue",
-         )
+               info...;
+               style="magenta",
+               title="XGBoost.Booster",
+               title_style="bold cyan",
+               subtitle="boosted rounds: $(XGBoost.getnrounds(b))",
+               subtitle_style="blue",
+               kw...
+              )
 end
+
 function paramspanel(params::AbstractDict; kwargs...)
     names = sort!(collect(keys(params)))
     vals = map(k -> params[k], names)
-    Term.Table(OrderedDict(:Parameter=>names, :Value=>vals), kwargs...)
+    Term.Table(OrderedDict(:Parameter=>names, :Value=>vals); kwargs...)
 end
 
-function Term.Tree(
-    node::XGBoost.Node;
-    title="XGBoost Tree (from this node)",
-    title_style="bold green",
-    kwargs...,
-)
+Base.show(io::IO, m::MIME"text/plain", b::XGBoost.Booster) = show(io, m, Term.Panel(b))
+
+function Term.Tree(node::XGBoost.Node;
+                   title="XGBoost Tree (from this node)",
+                   title_style="bold green",
+                   kwargs...,
+                  )
     td = isempty(children(node)) ? Dict(repr(node)=>"leaf") : _tree_display(node)
     Term.Tree(td; title, title_style, kwargs...)
 end
 
-function Term.Panel(node::XGBoost.Node)
+function Term.Panel(node::XGBoost.Node; width::Union{Nothing,Int}=120, kw...)
     subtitle = if isempty(children(node))
         "{bold green}leaf{/bold green}"
     else
@@ -73,14 +79,19 @@ function Term.Panel(node::XGBoost.Node)
     end
 
     Term.Panel(paramstable(node; header_style="bold yellow", box=:SIMPLE),
-          Term.Tree(node);
-          style="magenta",
-          title="XGBoost.Node {italic blue}(id=$(node.id), depth=$(node.depth)){/italic blue}",
-          title_style="bold cyan",
-          subtitle,
-          subtitle_style="blue",
-         )
+               Term.Tree(node);
+               style="magenta",
+               title="XGBoost.Node {italic blue}(id=$(node.id), depth=$(node.depth)){/italic blue}",
+               title_style="bold cyan",
+               subtitle,
+               subtitle_style="blue",
+               width,
+               kw...
+              )
 end
+
+Base.show(io::IO, m::MIME"text/plain", node::XGBoost.Node) = show(io, m, Term.Panel(node))
+
 function paramstable(node::XGBoost.Node; kwargs...)
     if isempty(children(node))
         _paramstable(node, :cover, :leaf; kwargs...)
