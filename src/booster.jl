@@ -309,7 +309,8 @@ function predict(b::Booster, Xy::DMatrix;
     o = Ref{Ptr{Cfloat}}()
     xgbcall(XGBoosterPredictFromDMatrix, b.handle, Xy.handle, opts, oshape, odim, o)
     dims = reverse(unsafe_wrap(Array, oshape[], odim[]))
-    o = unsafe_wrap(Array, o[], tuple(dims...))
+    # this `copy` is needed because libxgboost re-uses the pointer
+    o = copy(unsafe_wrap(Array, o[], tuple(dims...)))
     length(dims) > 1 ? transpose(o) : o
 end
 predict(b::Booster, Xy; kw...) = predict(b, DMatrix(Xy); kw...)
