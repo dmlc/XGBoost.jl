@@ -220,11 +220,11 @@ end
 
     # libxgboost re-uses the prediction memory location,
     # so we are testing to make sure we don't do that
-    rng = Xoshiro(999)
+    rng = MersenneTwister(999)  # note that Xoshiro is not available on 1.6
     (X, y) = (randn(rng, 10,2), randn(rng, 10))
     b = xgboost((X, y))
     ŷ = predict(b, X)
-    @test predict(b, randn(Xoshiro(998), 10,2)) ≠ ŷ
+    @test predict(b, randn(MersenneTwister(998), 10,2)) ≠ ŷ
 end
 
 has_cuda() && @testset "cuda" begin
