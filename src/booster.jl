@@ -275,7 +275,36 @@ function deserialize(::Type{Booster}, buf::AbstractVector{UInt8}, data=DMatrix[]
     deserialize!(b, buf)
 end
 
-# sadly this is type unstable because we might return a transpose
+"""
+    predict_nocopy(b::Booster, data; kw...)
+
+Same as [`predict`](@ref), but the output array is not copied.  Data in the array output
+by this function may be overwritten by future calls to `predict_nocopy` or `predict`.
+"""
+function predict_nocopy(b::Booster, Xy::DMatrix;
+                        margin::Bool=false,  # whether to output margin
+                        training::Bool=false,
+                        ntree_lower_limit::Integer=0,
+                        ntree_limit::Integer=0,  # 0 corresponds to no limit
+                       )
+    opts = Dict("type"=>(margin ? 1 : 0),
+                "iteration_begin"=>ntree_lower_limit,
+                "iteration_end"=>ntree_limit,
+                "strict_shape"=>false,
+                "training"=>training,
+               ) |> JSON3.write
+    oshape = Ref{Ptr{Lib.bst_ulong}}()
+    odim = Ref{Lib.bst_ulong}()
+    o = Ref{Ptr{Cfloat}}()
+    xgbcall(XGBoosterPredictFromDMatrix, b.handle, Xy.handle, opts, oshape, odim, o)
+    dims = reverse(unsafe_wrap(Array, oshape[], odim[]))
+    # this `copy` is needed because libxgboost re-uses the pointer
+    o = unsafe_wrap(Array, o[], tuple(dims...))
+    length(dims) > 1 ? permutedims(o) : o
+end
+
+predict_nocopy(b::Booster, Xy; kw...) = predict_nocopy(b, DMatrix(Xy); kw...)
+
 """
     predict(b::Booster, data; margin=false, training=false, ntree_limit=0)
 
@@ -292,26 +321,8 @@ b = xgboost((X, y), 10)
 ŷ = predict(b, X)
 ```
 """
-function predict(b::Booster, Xy::DMatrix;
-                 margin::Bool=false,  # whether to output margin
-                 training::Bool=false,
-                 ntree_lower_limit::Integer=0,
-                 ntree_limit::Integer=0,  # 0 corresponds to no limit
-                )
-    opts = Dict("type"=>(margin ? 1 : 0),
-                "iteration_begin"=>ntree_lower_limit,
-                "iteration_end"=>ntree_limit,
-                "strict_shape"=>false,
-                "training"=>training,
-               ) |> JSON3.write
-    oshape = Ref{Ptr{Lib.bst_ulong}}()
-    odim = Ref{Lib.bst_ulong}()
-    o = Ref{Ptr{Cfloat}}()
-    xgbcall(XGBoosterPredictFromDMatrix, b.handle, Xy.handle, opts, oshape, odim, o)
-    dims = reverse(unsafe_wrap(Array, oshape[], odim[]))
-    o = unsafe_wrap(Array, o[], tuple(dims...))
-    length(dims) > 1 ? transpose(o) : o
-end
+predict(b::Booster, Xy::DMatrix; kw...) = copy(predict_nocopy(b, Xy; kw...))
+
 predict(b::Booster, Xy; kw...) = predict(b, DMatrix(Xy); kw...)
 
 function evaliter(b::Booster, watch, n::Integer=1)

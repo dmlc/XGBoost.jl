@@ -39,6 +39,7 @@ Booster
 updateone!
 update!
 predict
+predict_nocopy
 setparam!
 setparams!
 getnrounds

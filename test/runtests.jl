@@ -179,7 +179,7 @@ end
     @test Term.Panel(bst) isa Term.Panel
 end
 
-@testset "Booster Save/Load/Serialize" begin
+@testset "Booster" begin
     dtrain = XGBoost.load(DMatrix, testfilepath("agaricus.txt.train"))
     dtest = XGBoost.load(DMatrix, testfilepath("agaricus.txt.test"))
 
@@ -217,6 +217,14 @@ end
     bst2 = Booster(DMatrix[])
     XGBoost.deserialize!(bst2, bin)
     @test preds == predict(bst2, dtest)
+
+    # libxgboost re-uses the prediction memory location,
+    # so we are testing to make sure we don't do that
+    rng = MersenneTwister(999)  # note that Xoshiro is not available on 1.6
+    (X, y) = (randn(rng, 10,2), randn(rng, 10))
+    b = xgboost((X, y))
+    ŷ = predict(b, X)
+    @test predict(b, randn(MersenneTwister(998), 10,2)) ≠ ŷ
 end
 
 has_cuda() && @testset "cuda" begin
