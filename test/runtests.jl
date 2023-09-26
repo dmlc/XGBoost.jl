@@ -75,7 +75,7 @@ end
 
 @testset "DMatrix IO" begin
     for (fname, sz) ∈ [("agaricus.txt.train", (6513, 126)), ("agaricus.txt.test", (1611, 126))]
-        dm = XGBoost.load(DMatrix, testfilepath(fname))
+        dm = XGBoost.load(DMatrix, testfilepath(fname), format=:libsvm)
         @test size(dm) == sz
 
         (X, y) = readlibsvm(testfilepath(fname), sz)
@@ -86,15 +86,15 @@ end
     dm = DMatrix((X, y))
     fname = tempname()
     XGBoost.save(dm, fname)
-    dm′ = XGBoost.load(DMatrix, fname)
+    dm′ = XGBoost.load(DMatrix, fname, format=:binary)
     @test size(dm) == size(dm′)
     @test XGBoost.getlabel(dm) == XGBoost.getlabel(dm′)
     isfile(fname) && rm(fname)
 end
 
 @testset "Agaricus training" begin
-    dtrain = XGBoost.load(DMatrix, testfilepath("agaricus.txt.train"))
-    dtest = XGBoost.load(DMatrix, testfilepath("agaricus.txt.test"))
+    dtrain = XGBoost.load(DMatrix, testfilepath("agaricus.txt.train"), format=:libsvm)
+    dtest = XGBoost.load(DMatrix, testfilepath("agaricus.txt.test"), format=:libsvm)
     watchlist = Dict("eval"=>dtest, "train"=>dtrain)
 
     bst = @test_logs (:info, r"XGBoost") (:info, r"") (:info, r"") (:info, r"Training") begin
@@ -142,8 +142,8 @@ end
 end
 
 @testset "Feature importance" begin
-    dtrain = XGBoost.load(DMatrix, testfilepath("agaricus.txt.train"))
-    dtest = XGBoost.load(DMatrix, testfilepath("agaricus.txt.test"))
+    dtrain = XGBoost.load(DMatrix, testfilepath("agaricus.txt.train"), format=:libsvm)
+    dtest = XGBoost.load(DMatrix, testfilepath("agaricus.txt.test"), format=:libsvm)
 
     bst = xgboost(dtrain, num_round=5,
                   η=1.0, max_depth=2,
@@ -166,8 +166,8 @@ end
 
 # these just ensure we don't have any exceptions
 @testset "Term extension" begin
-    dtrain = XGBoost.load(DMatrix, testfilepath("agaricus.txt.train"))
-    dtest = XGBoost.load(DMatrix, testfilepath("agaricus.txt.test"))
+    dtrain = XGBoost.load(DMatrix, testfilepath("agaricus.txt.train"), format=:libsvm)
+    dtest = XGBoost.load(DMatrix, testfilepath("agaricus.txt.test"), format=:libsvm)
 
     bst = xgboost(dtrain, num_round=5,
                   η=1.0, max_depth=2,
@@ -180,8 +180,8 @@ end
 end
 
 @testset "Booster" begin
-    dtrain = XGBoost.load(DMatrix, testfilepath("agaricus.txt.train"))
-    dtest = XGBoost.load(DMatrix, testfilepath("agaricus.txt.test"))
+    dtrain = XGBoost.load(DMatrix, testfilepath("agaricus.txt.train"), format=:libsvm)
+    dtest = XGBoost.load(DMatrix, testfilepath("agaricus.txt.test"), format=:libsvm)
 
     (model_file, _) = mktemp()
 
@@ -228,6 +228,8 @@ end
 end
 
 has_cuda() && @testset "cuda" begin
+    @info("runing CUDA tests")
+
     X = randn(Float32, 4, 5)
     dm = DMatrix(cu(X))
     @test size(dm) == size(X)

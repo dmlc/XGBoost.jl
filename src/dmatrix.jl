@@ -163,16 +163,37 @@ function getinfo(dm::DMatrix, ::Type{T}, name::AbstractString) where {T<:Real}
 end
 getinfo(dm::DMatrix, t::Type, name::Symbol) = getinfo(dm, t, string(name))
 
+# see https://xgboost.readthedocs.io/en/stable/tutorials/input_format.html
+function _fileuri(fname::AbstractString, format::Symbol)
+    if '?' ∈ fname
+        throw(ArgumentError("file name strings passed to libxgboost cannot contain '?'"))
+    end
+    format == :binary && return fname
+    string(fname, "?format=", format)
+end
+
 """
-    load(DMatrix, fname; silent=true, kw...)
+    load(DMatrix, fname; silent=true, format=:libsvm, kw...)
 
 Load a `DMatrix` from file with name `fname`.  The matrix must have been serialized with a call to
 `save(::DMatrix, fname)`.  If `silent` the xgboost library will print logs to `stdout`.
 Additional keyword arguments are passed to the `DMatrix` on construction.
+Format describes the file format, valid options are `:binary`, `:csv` and `:libsvm`.
 """
-function load(::Type{DMatrix}, fname::AbstractString; silent::Bool=true, kw...)
+function load(::Type{DMatrix}, fname::AbstractString;
+              #TODO: would be better to have :binary as default, but would be breaking
+              format::Symbol=:libsvm,
+              silent::Bool=true,
+              kw...
+             )
     o = Ref{DMatrixHandle}()
-    xgbcall(XGDMatrixCreateFromFile, fname, silent, o)
+    cfg = Dict("uri"=>_fileuri(fname, format),
+               # gives runtime error if not int even though docs say bool
+               "silent"=>Int(silent),
+               # docs are inconsistent and don't explain this, so it's disabled
+               #"data_split_mode"=>string(data_split_mode),
+              )
+    xgbcall(XGDMatrixCreateFromURI, JSON3.write(cfg), o)
     DMatrix(o[], kw...)
 end
 
@@ -385,7 +406,8 @@ getweights(dm::DMatrix) = getinfo(dm, Float32, "weight")
     save(dm::DMatrix, fname; silent=true)
 
 Save the `DMatrix` to file `fname` in an opaque (xgboost-specific) serialization format.
-Will print logs to `stdout` unless `silent`.
+Will print logs to `stdout` unless `silent`.  Files created with this function can be loaded
+using `XGBoost.load(DMatrix, fname, format=:binary)`.
 """
 function save(dm::DMatrix, fname::AbstractString; silent::Bool=true)
     xgbcall(XGDMatrixSaveBinary, dm.handle, fname, convert(Cint, silent))
