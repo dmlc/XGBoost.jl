@@ -68,6 +68,10 @@ function XGDMatrixCreateFromFile(fname, silent, out)
     @ccall libxgboost.XGDMatrixCreateFromFile(fname::Ptr{Cchar}, silent::Cint, out::Ptr{DMatrixHandle})::Cint
 end
 
+function XGDMatrixCreateFromURI(config, out)
+    @ccall libxgboost.XGDMatrixCreateFromURI(config::Ptr{Cchar}, out::Ptr{DMatrixHandle})::Cint
+end
+
 function XGDMatrixCreateFromCSREx(indptr, indices, data, nindptr, nelem, num_col, out)
     @ccall libxgboost.XGDMatrixCreateFromCSREx(indptr::Ptr{Csize_t}, indices::Ptr{Cuint}, data::Ptr{Cfloat}, nindptr::Csize_t, nelem::Csize_t, num_col::Csize_t, out::Ptr{DMatrixHandle})::Cint
 end
@@ -78,6 +82,10 @@ end
 
 function XGDMatrixCreateFromDense(data, config, out)
     @ccall libxgboost.XGDMatrixCreateFromDense(data::Ptr{Cchar}, config::Ptr{Cchar}, out::Ptr{DMatrixHandle})::Cint
+end
+
+function XGDMatrixCreateFromCSC(indptr, indices, data, nrow, config, out)
+    @ccall libxgboost.XGDMatrixCreateFromCSC(indptr::Ptr{Cchar}, indices::Ptr{Cchar}, data::Ptr{Cchar}, nrow::bst_ulong, config::Ptr{Cchar}, out::Ptr{DMatrixHandle})::Cint
 end
 
 function XGDMatrixCreateFromCSCEx(col_ptr, indices, data, nindptr, nelem, num_row, out)
@@ -125,7 +133,7 @@ const XGBCallbackSetData = Cvoid
 const XGBCallbackDataIterNext = Cvoid
 
 function XGDMatrixCreateFromDataIter(data_handle, callback, cache_info, out)
-    @ccall libxgboost.XGDMatrixCreateFromDataIter(data_handle::DataIterHandle, callback::Ptr{Cvoid}, cache_info::Ptr{Cchar}, out::Ptr{DMatrixHandle})::Cint
+    @ccall libxgboost.XGDMatrixCreateFromDataIter(data_handle::DataIterHandle, callback::Ptr{XGBCallbackDataIterNext}, cache_info::Ptr{Cchar}, out::Ptr{DMatrixHandle})::Cint
 end
 
 function XGProxyDMatrixCreate(out)
@@ -139,15 +147,15 @@ const XGDMatrixCallbackNext = Cvoid
 const DataIterResetCallback = Cvoid
 
 function XGDMatrixCreateFromCallback(iter, proxy, reset, next, config, out)
-    @ccall libxgboost.XGDMatrixCreateFromCallback(iter::DataIterHandle, proxy::DMatrixHandle, reset::Ptr{Cvoid}, next::Ptr{Cvoid}, config::Ptr{Cchar}, out::Ptr{DMatrixHandle})::Cint
+    @ccall libxgboost.XGDMatrixCreateFromCallback(iter::DataIterHandle, proxy::DMatrixHandle, reset::Ptr{DataIterResetCallback}, next::Ptr{XGDMatrixCallbackNext}, config::Ptr{Cchar}, out::Ptr{DMatrixHandle})::Cint
 end
 
 function XGQuantileDMatrixCreateFromCallback(iter, proxy, ref, reset, next, config, out)
-    @ccall libxgboost.XGQuantileDMatrixCreateFromCallback(iter::DataIterHandle, proxy::DMatrixHandle, ref::DataIterHandle, reset::Ptr{Cvoid}, next::Ptr{Cvoid}, config::Ptr{Cchar}, out::Ptr{DMatrixHandle})::Cint
+    @ccall libxgboost.XGQuantileDMatrixCreateFromCallback(iter::DataIterHandle, proxy::DMatrixHandle, ref::DataIterHandle, reset::Ptr{DataIterResetCallback}, next::Ptr{XGDMatrixCallbackNext}, config::Ptr{Cchar}, out::Ptr{DMatrixHandle})::Cint
 end
 
 function XGDeviceQuantileDMatrixCreateFromCallback(iter, proxy, reset, next, missing, nthread, max_bin, out)
-    @ccall libxgboost.XGDeviceQuantileDMatrixCreateFromCallback(iter::DataIterHandle, proxy::DMatrixHandle, reset::Ptr{Cvoid}, next::Ptr{Cvoid}, missing::Cfloat, nthread::Cint, max_bin::Cint, out::Ptr{DMatrixHandle})::Cint
+    @ccall libxgboost.XGDeviceQuantileDMatrixCreateFromCallback(iter::DataIterHandle, proxy::DMatrixHandle, reset::Ptr{DataIterResetCallback}, next::Ptr{XGDMatrixCallbackNext}, missing::Cfloat, nthread::Cint, max_bin::Cint, out::Ptr{DMatrixHandle})::Cint
 end
 
 function XGProxyDMatrixSetDataCudaArrayInterface(handle, c_interface_str)
@@ -171,7 +179,7 @@ function XGImportArrowRecordBatch(data_handle, ptr_array, ptr_schema)
 end
 
 function XGDMatrixCreateFromArrowCallback(next, config, out)
-    @ccall libxgboost.XGDMatrixCreateFromArrowCallback(next::Ptr{Cvoid}, config::Ptr{Cchar}, out::Ptr{DMatrixHandle})::Cint
+    @ccall libxgboost.XGDMatrixCreateFromArrowCallback(next::Ptr{XGDMatrixCallbackNext}, config::Ptr{Cchar}, out::Ptr{DMatrixHandle})::Cint
 end
 
 function XGDMatrixSliceDMatrix(handle, idxset, len, out)
@@ -240,6 +248,10 @@ end
 
 function XGDMatrixGetDataAsCSR(handle, config, out_indptr, out_indices, out_data)
     @ccall libxgboost.XGDMatrixGetDataAsCSR(handle::DMatrixHandle, config::Ptr{Cchar}, out_indptr::Ptr{bst_ulong}, out_indices::Ptr{Cuint}, out_data::Ptr{Cfloat})::Cint
+end
+
+function XGDMatrixGetQuantileCut(handle, config, out_indptr, out_data)
+    @ccall libxgboost.XGDMatrixGetQuantileCut(handle::DMatrixHandle, config::Ptr{Cchar}, out_indptr::Ptr{Ptr{Cchar}}, out_data::Ptr{Ptr{Cchar}})::Cint
 end
 
 function XGBoosterCreate(dmats, len, out)

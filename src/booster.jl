@@ -173,16 +173,20 @@ load(::Type{Booster}, fname::AbstractString) = Booster(DMatrix[], model_file=fna
 load(::Type{Booster}, io) = Booster(DMatrix[], model_buffer=io)
 
 """
-    save(b::Booster, fname)
+    save(b::Booster, fname; format="json")
     save(b::Booster, Vector{UInt8}; format="json")
     save(b::Booster, io::IO; format="json")
 
 Save the [`Booster`](@ref) object.  This saves to formats which are intended to be stored
 on disk but the formats used are a lot zanier than those used by `deserialize`.
 A model saved with this function can be retrieved with [`load`](@ref) or [`load!`](@ref).
+Valid formats are `"json"` and `"ubj"` (universal binary JSON).
 """
-function save(b::Booster, fname::AbstractString)
-    xgbcall(XGBoosterSaveModel, b.handle, fname)
+function save(b::Booster, fname::AbstractString; kw...)
+    # note that XGBoosterSaveModel seems to be deprecated
+    open(fname, write=true, create=true) do io
+        save(b, io; kw...)
+    end
     fname
 end
 function save(b::Booster, ::Type{Vector{UInt8}}; format::AbstractString="json")
