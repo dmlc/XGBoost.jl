@@ -504,7 +504,6 @@ function xgboost(dm::DMatrix, a...;
                  maximize=false,
                  kw...
                 )
-    println("Running DEV Version: 5")
     Xy = DMatrix(dm)
     b = Booster(Xy; kw...)
     isempty(watchlist) || @info("XGBoost: starting training.")
