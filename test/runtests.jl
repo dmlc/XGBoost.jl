@@ -130,6 +130,41 @@ end
     end
 end
 
+
+@testset "Early Stopping rounds" begin
+
+    dtrain = XGBoost.load(DMatrix, testfilepath("agaricus.txt.train"), format=:libsvm)
+    dtest = XGBoost.load(DMatrix, testfilepath("agaricus.txt.test"), format=:libsvm)
+    watchlist = Dict("eval"=>dtest, "train"=>dtrain)
+    
+    bst = xgboost(dtrain, 
+        num_round=30,
+        watchlist=watchlist,
+        η=1,
+        objective="binary:logistic",
+        eval_metric=["rmsle","rmse"]
+        )
+
+    bst_early_stopping = xgboost(dtrain,
+        num_round=30,
+        watchlist=watchlist,
+        η=1,
+        objective="binary:logistic",
+        eval_metric=["rmsle","rmse"],
+        early_stopping_rounds = 2
+        )
+
+        nrounds_bst = XGBoost.getnrounds(bst) 
+        nrounds_bst_early_stopping = XGBoost.getnrounds(bst_early_stopping) 
+        # Check to see that running with early stopping results in less rounds
+        @test nrounds_bst_early_stopping < nrounds_bst
+
+        # Check number of rounds > early stopping rounds
+        @test nrounds_bst_early_stopping > 2
+end
+
+
+
 @testset "Blobs training" begin
     (X, y) = load_classification()
 
