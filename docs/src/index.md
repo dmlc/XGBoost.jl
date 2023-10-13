@@ -22,10 +22,13 @@ ŷ = predict(bst, X)
 
 
 using DataFrames
-df = DataFrame(randn(100,3), [:a, :b, :y])
+df = DataFrame(randn(200,3), [:a, :b, :y])
+
+train = DMatrix(df[1:150, [:a, :b]], df[1:150, :y])
+test = DMatrix(df[151:end, [:a, :b]], df[151:end, :y])
 
 # can accept tabular data, will keep feature names
-bst = xgboost((df[!, [:a, :b]], df.y))
+bst = xgboost(train, watchlist=Dict("train"=>train, "test"=>test), num_round=10, max_depth=3, η=0.1, objective="reg:squarederror")
 
 # display importance statistics retaining feature names
 importancereport(bst)
@@ -57,15 +60,13 @@ X = [0 missing 1
 isequal(DMatrix(X), x)  # nullity is preserved
 ```
 
-!!! note
-
-    `DMatrix` must allocate new arrays when fetching values from it.  One therefore should avoid
-    using `DMatrix` directly except with `XGBoost`; retrieving values from this object should be
-    considered useful mostly only for verification.
+`DMatrix` must allocate new arrays when fetching values from it.  One therefore should avoid
+using `DMatrix` directly except with `XGBoost`; retrieving values from this object should be
+considered useful mostly only for verification.
 
 
 ### Feature Naming and Tabular Data
-Xgboost supports the naming of features (i.e. columns of the feature matrix).  This can be useful
+XGBoost supports feature naming (i.e. names of columns of the feature matrix).  This can be useful
 for inspecting trained models.
 ```julia
 X = randn(10,3)
@@ -80,14 +81,9 @@ XGBoost.setfeaturenames!(dm, ["a", "b", "c"])  # can also set after construction
 `AbstractVector`s or a `DataFrame`).
 ```julia
 using DataFrames
-df = DataFrame(randn(10,3), [:a, :b, :c])
 
-y = randn(10)
-
-DMatrix(df, y)
-
-df[!, :y] = y
-DMatrix(df, :y)  # equivalent to DMatrix(df, y)
+df = DataFrame(randn(10,4), [:a, :b, :c, :y])
+dm = DMatrix(df, :y)  # equivalent to DMatrix(df[!, Not(:y)], df[!, :y])
 ```
 
 When constructing a `DMatrix` from a table the feature names will automatically be set to the names
@@ -134,7 +130,7 @@ this is always a `DMatrix` but arguments will be automatically converted.
 ### [Parameters](https://xgboost.readthedocs.io/en/stable/parameter.html)
 Keyword arguments to `Booster` are xgboost model parameters.  These are described in detail
 [here](https://xgboost.readthedocs.io/en/stable/parameter.html) and should all be passed exactly as
-they are described in the main xgbosot documentation (in a few cases such as Greek letters we also
+they are described in the main xgboost documentation (in a few cases such as Greek letters we also
 allow unicode equivalents).
 
 !!! note
@@ -162,7 +158,7 @@ using Statistics
 mean(ŷ - y)/std(y)
 ```
 
-Xgboost expects `Booster`s to be initialized with training data, therefore there is usually no need
+XGBoost expects `Booster`s to be initialized with training data, therefore there is usually no need
 to define `Booster` separate from training.  A shorthand for the above, provided by
 [`xgboost`](@ref) is
 ```julia

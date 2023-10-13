@@ -434,14 +434,14 @@ end
     xgboost(data; num_round=10, watchlist=Dict(), kw...)
     xgboost(data, ℓ′, ℓ″; kw...)
 
-Creates an xgboost gradient booster object on training data `data` and runs `nrounds` of training.
+Creates an xgboost gradient booster object on training data `data` and runs `num_round` of training.
 This is essentially an alias for constructing a [`Booster`](@ref) with `data` and keyword arguments
-followed by [`update!`](@ref) for `nrounds`.
+followed by [`update!`](@ref) for `num_round`.
 
-`watchlist` is a dict the keys of which are strings giving the name of the data to watch
-and the values of which are [`DMatrix`](@ref) objects containing the data.
+`watchlist` is a Dict of form key=>[`DMatrix`](@ref) and is used to specify a data to evaluate a model on.
+If omitted `watchlist` will be initialized with the training data.
 
-All other keyword arguments are passed to [`Booster`](@ref).  With few exceptions these are model
+All other keyword arguments are passed to [`Booster`](@ref). With few exceptions these are model
 training hyper-parameters, see [here](https://xgboost.readthedocs.io/en/stable/parameter.html) for
 a comprehensive list.
 
@@ -450,9 +450,10 @@ See [`updateone!`](@ref) for more details.
 
 ## Examples
 ```julia
-(X, y) = (randn(100,3), randn(100))
+train = DMatrix(randn(100,3), randn(100))
+test = DMatrix(randn(100,3), randn(100))
 
-b = xgboost((X, y), 10, max_depth=10, η=0.1)
+b = xgboost(train, watchlist=Dict("train"=>train, "test"=>test), num_round=10, max_depth=5, η=0.1)
 
 ŷ = predict(b, X)
 ```
