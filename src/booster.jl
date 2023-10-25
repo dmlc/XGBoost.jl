@@ -440,7 +440,7 @@ function update!(b::Booster, data, a...;
 
     for j ∈ 1:num_round
         round_number = getnrounds(b) + 1
-        b, msg = updateone!(b, data, a...; round_number, kw...)
+        b, msg = updateone!(b, data, a...; round_number, watchlist, kw...)
         if !isempty(watchlist) && early_stopping_rounds > 0
             score, dataset, metric = extract_metric_value(msg)
             if (maximize && score > best_score || (!maximize && score < best_score))
@@ -495,7 +495,7 @@ function extract_metric_value(msg, dataset=nothing, metric=nothing)
     end
 
     if isnothing(metric)
-            # Find the first mentioned metric
+            # Find the last mentioned metric
             metrics = Set([m.match for m in eachmatch(r"(?<=-)\w+", msg)])
             metric = last(collect(metrics))
     end

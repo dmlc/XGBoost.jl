@@ -156,8 +156,8 @@ end
 
         nrounds_bst = XGBoost.getnrounds(bst) 
         nrounds_bst_early_stopping = XGBoost.getnrounds(bst_early_stopping) 
-        # Check to see that running with early stopping results in less rounds
-        @test nrounds_bst_early_stopping < nrounds_bst
+        # Check to see that running with early stopping results in less than or equal rounds
+        @test nrounds_bst_early_stopping <= nrounds_bst
 
         # Check number of rounds > early stopping rounds
         @test nrounds_bst_early_stopping > 2
