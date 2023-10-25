@@ -103,7 +103,7 @@ function Booster(cache::AbstractVector{<:DMatrix};
                  model_file::AbstractString="",
                  tree_method::Union{Nothing,AbstractString}=nothing,
                  validate_parameters::Bool=true,
-                 thread=Threads.nthreads(),
+                 nthread=Threads.nthreads(),
                  kw...
                 )
     o = Ref{BoosterHandle}()
@@ -120,7 +120,7 @@ function Booster(cache::AbstractVector{<:DMatrix};
     else
         (tree_method=tree_method,)
     end
-    setparams!(b; validate_parameters, thread, tm..., kw...)
+    setparams!(b; validate_parameters, nthread, tm..., kw...)
     b
 end
 Booster(dm::DMatrix; kw...) = Booster([dm]; kw...)
