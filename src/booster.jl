@@ -120,7 +120,7 @@ function Booster(cache::AbstractVector{<:DMatrix};
     else
         (tree_method=tree_method,)
     end
-    setparams!(b; validate_parameters, thread=thread, tm..., kw...)
+    setparams!(b; validate_parameters, thread, tm..., kw...)
     b
 end
 Booster(dm::DMatrix; kw...) = Booster([dm]; kw...)
