@@ -244,17 +244,6 @@ end
     
         @test XGBoost.getnrounds(bst_empty_watchlist) == nrounds_bst
 
-    # test the functionality of utilising the best model iteration
-    bst_early_stopping = xgboost(dtrain,
-        num_round=30,
-        η=1,
-        objective="binary:logistic",
-        eval_metric=["rmsle","rmse"],
-        early_stopping_rounds = 2
-        )
-
-   
-
 end
 
 
