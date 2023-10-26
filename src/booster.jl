@@ -49,10 +49,16 @@ mutable struct Booster
     # out what the hell is happening, it's never used for program logic
     params::Dict{Symbol,Any}
 
-    function Booster(h::BoosterHandle, fsn::AbstractVector{<:AbstractString}=String[], params::AbstractDict=Dict())
+    # store early stopping information
+    best_iteration::Union{Int64, Missing}
+    best_score::Union{Float64, Missing}
+
+    function Booster(h::BoosterHandle, fsn::AbstractVector{<:AbstractString}=String[], params::AbstractDict=Dict(), best_iteration::Union{Int64, Missing}=missing, 
+        best_score::Union{Float64, Missing}=missing)
         finalizer(x -> xgbcall(XGBoosterFree, x.handle), new(h, fsn, params))
     end
 end
+
 
 """
     setparam!(b::Booster, name, val)
@@ -462,7 +468,10 @@ function update!(b::Booster, data, a...;
                 @info(
                     "Xgboost: Stopping. \n\tBest iteration: $best_round. \n\tNo improvement in $dataset-$metric result in $early_stopping_rounds rounds."
                 )
-            return (b)
+                # add additional fields to record the best iteration
+                b.best_iteration = best_round
+                b.best_score = best_score
+                return b
             end
         end
     end
@@ -540,7 +549,7 @@ when utilising early_stopping_rounds to ensure XGBoost uses the correct and inte
 `early_stopping_rounds` activates early stopping if set to > 0. Validation metric needs to improve at 
 least once in every k rounds. If `watchlist` is not explicitly provided, it will use the training dataset 
 to evaluate the stopping criterion. Otherwise, it will use the last data element in `watchlist` and the
-last metric in `eval_metric` (if more than one).
+last metric in `eval_metric` (if more than one). Note that early stopping is ignored if `watchlist` is empty.
 
 `maximize` If early_stopping_rounds is set, then this parameter must be set as well.
 When it is false, it means the smaller the evaluation score the better. When set to true,
@@ -570,7 +579,8 @@ watchlist = OrderedDict(["train" => dtrain, "valid" => dvalid])
 
 b = xgboost(dtrain, num_round=10, early_stopping_rounds = 2, watchlist = watchlist, max_depth=10, η=0.1)
 
-ŷ = predict(b, X)
+# note that ntree_limit in the predict function helps assign the upper bound for iteration_range in the XGBoost API 1.4+
+ŷ = predict(b, dvalid, ntree_limit = b.best_iteration)
 ```
 """
 function xgboost(dm::DMatrix, a...;
@@ -589,6 +599,10 @@ function xgboost(dm::DMatrix, a...;
         if early_stopping_rounds > 0 && length(watchlist) > 1
             @warn "Early stopping rounds activated whilst watchlist has more than 1 element. Recommended to provide watchlist as an OrderedDict to ensure deterministic behaviour."
         end
+    end
+
+    if isempty(watchlist) && early_stopping_rounds > 0
+        @warn "Early stopping is ignored as provided watchlist is empty."
     end
     
     isempty(watchlist) || @info("XGBoost: starting training.")
