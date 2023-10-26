@@ -6,6 +6,7 @@ using Test
 
 include("utils.jl")
 
+
 @testset "XGBoost" begin
 
 # note that non-Float32 matrices will get truncated and `==` may not hold
@@ -135,6 +136,7 @@ end
 
     dtrain = XGBoost.load(DMatrix, testfilepath("agaricus.txt.train"), format=:libsvm)
     dtest = XGBoost.load(DMatrix, testfilepath("agaricus.txt.test"), format=:libsvm)
+    # test the early stopping rounds interface with a Dict data type in the watchlist
     watchlist = Dict("eval"=>dtest, "train"=>dtrain)
     
     bst = xgboost(dtrain, 
@@ -161,8 +163,47 @@ end
 
         # Check number of rounds > early stopping rounds
         @test nrounds_bst_early_stopping > 2
-end
 
+    # test the early stopping rounds interface with an OrderedDict data type in the watchlist
+    watchlist_ordered = OrderedDict("eval"=>dtest, "train"=>dtrain)
+
+    bst_early_stopping = xgboost(dtrain,
+        num_round=30,
+        watchlist=watchlist_ordered,
+        η=1,
+        objective="binary:logistic",
+        eval_metric=["rmsle","rmse"],
+        early_stopping_rounds = 2
+        )
+
+    @test XGBoost.getnrounds(bst_early_stopping) > 2
+    @test XGBoost.getnrounds(bst_early_stopping) <= nrounds_bst
+
+    # test the interface with no watchlist provided (defaults to the training dataset)
+    bst_early_stopping = xgboost(dtrain,
+        num_round=30,
+        η=1,
+        objective="binary:logistic",
+        eval_metric=["rmsle","rmse"],
+        early_stopping_rounds = 2
+        )
+
+        @test XGBoost.getnrounds(bst_early_stopping) > 2
+        @test XGBoost.getnrounds(bst_early_stopping) <= nrounds_bst
+
+    # test the interface with an empty watchlist (no output)
+    # this should trigger no early stopping rounds
+    bst_empty_watchlist = xgboost(dtrain,
+        num_round=30,
+        η=1,
+        watchlist = Dict(),
+        objective="binary:logistic",
+        eval_metric=["rmsle","rmse"],
+        early_stopping_rounds = 2  # this should be ignored
+        )
+    
+        @test XGBoost.getnrounds(bst_empty_watchlist) == nrounds_bst
+end
 
 
 @testset "Blobs training" begin
