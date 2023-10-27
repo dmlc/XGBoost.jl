@@ -188,7 +188,7 @@ update!(bst, (X, y), num_round=10)
 To help prevent overfitting to the training set, it is helpful to use a validation set to evaluate against to ensure that the XGBoost iterations continue to generalise outside training loss reduction. Early stopping provides a convenient way to automatically stop the
 boosting process if it's observed that the generalisation capability of the model does not improve for `k` rounds.
 
-If there is more than one element in watchlist, by default the last element will be used. This makes it important to use an ordered data structure (OrderedDict) compared to a standard unordered dictionary; as you might not be guaranteed deterministic behaviour. There will be
+If there is more than one element in watchlist, by default the last element will be used. This makes it important to use an ordered data structure (`OrderedDict`) compared to a standard unordered dictionary; as you might not be guaranteed deterministic behaviour. There will be
 a warning if you want to execute early stopping mechanism (`early_stopping_rounds > 0`) but have provided a watchlist with type `Dict` with
 more than 1 element.
 
