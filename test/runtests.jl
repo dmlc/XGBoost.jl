@@ -3,6 +3,7 @@ using CUDA: has_cuda, cu
 import Term
 using Random, SparseArrays
 using Test
+using OrderedCollections
 
 include("utils.jl")
 
