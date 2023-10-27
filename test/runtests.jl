@@ -155,13 +155,13 @@ end
         early_stopping_rounds = 2
         )
 
-        nrounds_bst = XGBoost.getnrounds(bst) 
-        nrounds_bst_early_stopping = XGBoost.getnrounds(bst_early_stopping) 
-        # Check to see that running with early stopping results in less than or equal rounds
-        @test nrounds_bst_early_stopping <= nrounds_bst
+    nrounds_bst = XGBoost.getnrounds(bst) 
+    nrounds_bst_early_stopping = XGBoost.getnrounds(bst_early_stopping) 
+    # Check to see that running with early stopping results in less than or equal rounds
+    @test nrounds_bst_early_stopping <= nrounds_bst
 
-        # Check number of rounds > early stopping rounds
-        @test nrounds_bst_early_stopping > 2
+    # Check number of rounds > early stopping rounds
+    @test nrounds_bst_early_stopping > 2
 
     # test the early stopping rounds interface with an OrderedDict data type in the watchlist
     watchlist_ordered = OrderedDict("train"=>dtrain, "eval"=>dtest)
@@ -228,8 +228,8 @@ end
         early_stopping_rounds = 2
         )
 
-        @test XGBoost.getnrounds(bst_early_stopping) > 2
-        @test XGBoost.getnrounds(bst_early_stopping) <= nrounds_bst
+    @test XGBoost.getnrounds(bst_early_stopping) > 2
+    @test XGBoost.getnrounds(bst_early_stopping) <= nrounds_bst
 
     # test the interface with an empty watchlist (no output)
     # this should trigger no early stopping rounds
@@ -241,8 +241,8 @@ end
         eval_metric=["rmsle","rmse"],
         early_stopping_rounds = 2  # this should be ignored
         )
-    
-        @test XGBoost.getnrounds(bst_empty_watchlist) == nrounds_bst
+
+    @test XGBoost.getnrounds(bst_empty_watchlist) == nrounds_bst
 
 end
 
