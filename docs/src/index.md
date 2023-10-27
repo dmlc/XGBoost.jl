@@ -127,6 +127,7 @@ Unlike feature data, label data can be extracted after construction of the `DMat
 [`XGBoost.getlabel`](@ref).
 
 
+
 ## Booster
 The [`Booster`](@ref) object holds model data.  They are created with training data.  Internally
 this is always a `DMatrix` but arguments will be automatically converted.
@@ -181,4 +182,44 @@ is equivalent to
 ```julia
 bst = xgboost((X, y), num_round=10)
 update!(bst, (X, y), num_round=10)
+```
+
+### Early Stopping
+To help prevent overfitting to the training set, it is helpful to use a validation set to evaluate against to ensure that the XGBoost iterations continue to generalise outside training loss reduction. Early stopping provides a convenient way to automatically stop the
+boosting process if it's observed that the generalisation capability of the model does not improve for `k` rounds.
+
+If there is more than one element in watchlist, by default the last element will be used. This makes it important to use an ordered data structure (`OrderedDict`) compared to a standard unordered dictionary; as you might not be guaranteed deterministic behaviour. There will be
+a warning if you want to execute early stopping mechanism (`early_stopping_rounds > 0`) but have provided a watchlist with type `Dict` with
+more than 1 element.
+
+Similarly, if there is more than one element in eval_metric, by default the last element will be used.
+
+For example:
+
+```julia
+using LinearAlgebra
+using OrderedCollections
+
+𝒻(x) = 2norm(x)^2 - norm(x)
+
+X = randn(100,3)
+y = 𝒻.(eachrow(X))
+
+dtrain = DMatrix((X, y))
+
+X_valid = randn(50,3)
+y_valid = 𝒻.(eachrow(X_valid))
+
+dvalid = DMatrix((X_valid, y_valid))
+
+bst = xgboost(dtrain, num_round = 100, eval_metric = "rmse", watchlist = OrderedDict(["train" => dtrain, "eval" => dvalid]), early_stopping_rounds = 5, max_depth=6, η=0.3)
+
+# get the best iteration and use it for prediction
+ŷ = predict(bst, X_valid, ntree_limit = bst.best_iteration)
+
+using Statistics
+println("RMSE from model prediction $(round((mean((ŷ - y_valid).^2).^0.5), digits = 8)).")
+
+# we can also retain / use the best score (based on eval_metric) which is stored in the booster
+println("Best RMSE from model training $(round((bst.best_score), digits = 8)).")
 ```
