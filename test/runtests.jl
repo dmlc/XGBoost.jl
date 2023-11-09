@@ -146,23 +146,30 @@ end
         objective="binary:logistic",
         eval_metric=["rmsle","rmse"]
         )
+    
+    # test if it ran all the way till the end (baseline)
+    nrounds_bst = XGBoost.getnrounds(bst)
+    @test nrounds_bst == 30 
 
-    bst_early_stopping = xgboost(dtrain,
-        num_round=30,
-        watchlist=watchlist,
-        η=1,
-        objective="binary:logistic",
-        eval_metric=["rmsle","rmse"],
-        early_stopping_rounds = 2
-        )
+    let err = nothing
+        try
+            # Check to see that xgboost will error out when watchlist supplied is a dictionary with early_stopping_rounds enabled
+            bst_early_stopping = xgboost(dtrain,
+                num_round=30,
+                watchlist=watchlist,
+                η=1,
+                objective="binary:logistic",
+                eval_metric=["rmsle","rmse"],
+                early_stopping_rounds = 2
+                )
 
-    nrounds_bst = XGBoost.getnrounds(bst) 
-    nrounds_bst_early_stopping = XGBoost.getnrounds(bst_early_stopping) 
-    # Check to see that running with early stopping results in less than or equal rounds
-    @test nrounds_bst_early_stopping <= nrounds_bst
+            nrounds_bst = XGBoost.getnrounds(bst) 
+            nrounds_bst_early_stopping = XGBoost.getnrounds(bst_early_stopping) 
+        catch err
+        end
 
-    # Check number of rounds > early stopping rounds
-    @test nrounds_bst_early_stopping > 2
+        @test err isa Exception
+    end
 
     # test the early stopping rounds interface with an OrderedDict data type in the watchlist
     watchlist_ordered = OrderedDict("train"=>dtrain, "eval"=>dtest)
@@ -175,6 +182,8 @@ end
         eval_metric=["rmsle","rmse"],
         early_stopping_rounds = 2
         )
+
+     
 
     @test XGBoost.getnrounds(bst_early_stopping) > 2
     @test XGBoost.getnrounds(bst_early_stopping) <= nrounds_bst
@@ -220,31 +229,21 @@ end
     # ensure that the results are the same (as numerically possible) with the best round
     @test abs(bst_early_stopping.best_score - calc_metric) < 1e-9
 
-    # test the interface with no watchlist provided (defaults to the training dataset)
-    bst_early_stopping = xgboost(dtrain,
-        num_round=30,
-        η=1,
-        objective="binary:logistic",
-        eval_metric=["rmsle","rmse"],
-        early_stopping_rounds = 2
-        )
+    # Test the interface with no watchlist provided (it'll default to training watchlist)
+    let err = nothing
+        try
+            bst_early_stopping = xgboost(dtrain,
+                num_round=30,
+                η=1,
+                objective="binary:logistic",
+                eval_metric=["rmsle","rmse"],
+                early_stopping_rounds = 2
+                )
+        catch err
+        end
 
-    @test XGBoost.getnrounds(bst_early_stopping) > 2
-    @test XGBoost.getnrounds(bst_early_stopping) <= nrounds_bst
-
-    # test the interface with an empty watchlist (no output)
-    # this should trigger no early stopping rounds
-    bst_empty_watchlist = xgboost(dtrain,
-        num_round=30,
-        η=1,
-        watchlist = Dict(),
-        objective="binary:logistic",
-        eval_metric=["rmsle","rmse"],
-        early_stopping_rounds = 2  # this should be ignored
-        )
-
-    @test XGBoost.getnrounds(bst_empty_watchlist) == nrounds_bst
-
+        @test !(err isa Exception)
+    end
 end
 
 

@@ -587,12 +587,12 @@ function xgboost(dm::DMatrix, a...;
     # We have a watchlist - give a warning if early stopping is provided and watchlist is a Dict type with length > 1
     if isa(watchlist, Dict)
         if early_stopping_rounds > 0 && length(watchlist) > 1
-            @error "You must supply an OrderedDict type for watchlist if early stopping rounds is enabled."
+            error("You must supply an OrderedDict type for watchlist if early stopping rounds is enabled.")
         end
     end
 
     if isempty(watchlist) && early_stopping_rounds > 0
-        @error "Watchlist must be supplied if early_stopping_rounds is enabled."
+        error("Watchlist must be supplied if early_stopping_rounds is enabled.")
     end
     
     isempty(watchlist) || @info("XGBoost: starting training.")
