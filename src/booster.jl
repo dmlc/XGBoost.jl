@@ -518,10 +518,10 @@ function extract_metric_value(msg, dataset=nothing, metric=nothing)
     if match_result != nothing
             parsed_value = parse(Float64, match_result.captures[1])
             return parsed_value, dataset, metric
-    else
-            @warn "No match found for pattern: $dataset-$metric in message: $msg"
-            return nothing
     end
+
+    # there was no match result - should error out
+    error("No match found for pattern: $dataset-$metric in message: $msg")
 end
 
 """
