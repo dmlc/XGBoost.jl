@@ -533,13 +533,15 @@ This is essentially an alias for constructing a [`Booster`](@ref) with `data` an
 followed by [`update!`](@ref) for `nrounds`.
 
 `watchlist` is a dict the keys of which are strings giving the name of the data to watch
-and the values of which are [`DMatrix`](@ref) objects containing the data. It is critical to use an OrderedDict
-when utilising early_stopping_rounds to ensure XGBoost uses the correct and intended dataset to perform early stop.
+and the values of which are [`DMatrix`](@ref) objects containing the data. It is mandatory to use an OrderedDict
+when utilising early_stopping_rounds and there is more than 1 element in watchlist to ensure XGBoost uses the 
+correct and intended dataset to perform early stop.
 
 `early_stopping_rounds` activates early stopping if set to > 0. Validation metric needs to improve at 
 least once in every k rounds. If `watchlist` is not explicitly provided, it will use the training dataset 
 to evaluate the stopping criterion. Otherwise, it will use the last data element in `watchlist` and the
-last metric in `eval_metric` (if more than one). Note that early stopping is ignored if `watchlist` is empty.
+last metric in `eval_metric` (if more than one). Note that `watchlist` cannot be empty if 
+`early_stopping_rounds` is enabled.
 
 `maximize` If early_stopping_rounds is set, then this parameter must be set as well.
 When it is false, it means the smaller the evaluation score the better. When set to true,
@@ -587,7 +589,7 @@ function xgboost(dm::DMatrix, a...;
     # We have a watchlist - give a warning if early stopping is provided and watchlist is a Dict type with length > 1
     if isa(watchlist, Dict)
         if early_stopping_rounds > 0 && length(watchlist) > 1
-            error("You must supply an OrderedDict type for watchlist if early stopping rounds is enabled.")
+            error("You must supply an OrderedDict type for watchlist if early stopping rounds is enabled and there is more than one element in watchlist.")
         end
     end
 
