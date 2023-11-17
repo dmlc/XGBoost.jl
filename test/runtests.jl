@@ -3,6 +3,7 @@ using CUDA: has_cuda, cu
 import Term
 using Random, SparseArrays
 using Test
+using OrderedCollections
 
 include("utils.jl")
 
@@ -129,6 +130,122 @@ end
         @test length(trees(bst)) == 3
     end
 end
+
+
+@testset "Early Stopping rounds" begin
+
+    dtrain = XGBoost.load(DMatrix, testfilepath("agaricus.txt.train"), format=:libsvm)
+    dtest = XGBoost.load(DMatrix, testfilepath("agaricus.txt.test"), format=:libsvm)
+    # test the early stopping rounds interface with a Dict data type in the watchlist
+    watchlist = Dict("eval"=>dtest, "train"=>dtrain)
+    
+    bst = xgboost(dtrain, 
+        num_round=30,
+        watchlist=watchlist,
+        η=1,
+        objective="binary:logistic",
+        eval_metric=["rmsle","rmse"]
+        )
+    
+    # test if it ran all the way till the end (baseline)
+    nrounds_bst = XGBoost.getnrounds(bst)
+    @test nrounds_bst == 30 
+
+    let err = nothing
+        try
+            # Check to see that xgboost will error out when watchlist supplied is a dictionary with early_stopping_rounds enabled
+            bst_early_stopping = xgboost(dtrain,
+                num_round=30,
+                watchlist=watchlist,
+                η=1,
+                objective="binary:logistic",
+                eval_metric=["rmsle","rmse"],
+                early_stopping_rounds = 2
+                )
+
+            nrounds_bst = XGBoost.getnrounds(bst) 
+            nrounds_bst_early_stopping = XGBoost.getnrounds(bst_early_stopping) 
+        catch err
+        end
+
+        @test err isa Exception
+    end
+
+    # test the early stopping rounds interface with an OrderedDict data type in the watchlist
+    watchlist_ordered = OrderedDict("train"=>dtrain, "eval"=>dtest)
+
+    bst_early_stopping = xgboost(dtrain,
+        num_round=30,
+        watchlist=watchlist_ordered,
+        η=1,
+        objective="binary:logistic",
+        eval_metric=["rmsle","rmse"],
+        early_stopping_rounds = 2
+        )
+
+     
+
+    @test XGBoost.getnrounds(bst_early_stopping) > 2
+    @test XGBoost.getnrounds(bst_early_stopping) <= nrounds_bst
+
+    # get the rmse difference for the dtest
+    ŷ = predict(bst_early_stopping, dtest, ntree_limit = bst_early_stopping.best_iteration)
+
+    filename = "agaricus.txt.test"
+    lines = readlines(testfilepath(filename))
+    y = [parse(Float64,split(s)[1]) for s in lines]
+
+    function calc_rmse(y_true::Vector{T}, y_pred::Vector{T}) where T <: Float64
+        return sqrt(sum((y_true .- y_pred).^2)/length(y_true))
+    end
+
+    calc_metric = calc_rmse(Float64.(y), Float64.(ŷ))
+
+    # ensure that the results are the same (as numerically possible) with the best round
+    @test abs(bst_early_stopping.best_score - calc_metric) < 1e-9
+
+    # test the early stopping rounds interface with an OrderedDict data type in the watchlist using num_parallel_tree parameter
+    # this will test the XGBoost API for iteration_range is being utilised properly
+    watchlist_ordered = OrderedDict("train"=>dtrain, "eval"=>dtest)
+
+    bst_early_stopping = xgboost(dtrain,
+        num_round=30,
+        watchlist=watchlist_ordered,
+        η=1,
+        objective="binary:logistic",
+        eval_metric=["rmsle","rmse"],
+        early_stopping_rounds = 2,
+        num_parallel_tree = 10,
+        colsample_bylevel = 0.5
+        )
+
+    @test XGBoost.getnrounds(bst_early_stopping) > 2
+    @test XGBoost.getnrounds(bst_early_stopping) <= nrounds_bst
+
+    # get the rmse difference for the dtest
+    ŷ = predict(bst_early_stopping, dtest, ntree_limit = bst_early_stopping.best_iteration)
+    calc_metric = calc_rmse(Float64.(y), Float64.(ŷ))
+
+    # ensure that the results are the same (as numerically possible) with the best round
+    @test abs(bst_early_stopping.best_score - calc_metric) < 1e-9
+
+    # Test the interface with no watchlist provided (it'll default to training watchlist)
+    let err = nothing
+        try
+            bst_early_stopping = xgboost(dtrain,
+                num_round=30,
+                η=1,
+                objective="binary:logistic",
+                eval_metric=["rmsle","rmse"],
+                early_stopping_rounds = 2
+                )
+        catch err
+        end
+
+        @test !(err isa Exception)
+    end
+end
+
 
 @testset "Blobs training" begin
     (X, y) = load_classification()
