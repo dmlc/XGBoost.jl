@@ -67,4 +67,28 @@ mean(ŷ - y)/std(y)</code></pre><p>Xgboost expects <code>Booster</code>s to be 
 
 # feature names can also be set here
 bst = xgboost((X, y), num_round=20, feature_names=[&quot;a&quot;, &quot;b&quot;], max_depth=8, η=0.5)</code></pre><p>Note that <code>Booster</code>s can still be boosted with <code>update!</code> after they are create with <code>xgboost</code> or otherwise.  For example</p><pre><code class="language-julia hljs">bst = xgboost((X, y), num_round=20)</code></pre><p>is equivalent to</p><pre><code class="language-julia hljs">bst = xgboost((X, y), num_round=10)
-update!(bst, (X, y), num_round=10)</code></pre></article><nav class="docs-footer"><a class="docs-footer-nextpage" href="features/">Additional Features »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.25 on <span class="colophon-date" title="Friday 13 October 2023 14:14">Friday 13 October 2023</span>. Using Julia version 1.9.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+update!(bst, (X, y), num_round=10)</code></pre><h3 id="Early-Stopping"><a class="docs-heading-anchor" href="#Early-Stopping">Early Stopping</a><a id="Early-Stopping-1"></a><a class="docs-heading-anchor-permalink" href="#Early-Stopping" title="Permalink"></a></h3><p>To help prevent overfitting to the training set, it is helpful to use a validation set to evaluate against to ensure that the XGBoost iterations continue to generalise outside training loss reduction. Early stopping provides a convenient way to automatically stop the boosting process if it&#39;s observed that the generalisation capability of the model does not improve for <code>k</code> rounds.</p><p>If there is more than one element in watchlist, by default the last element will be used. In this case, you must use an ordered data structure (<code>OrderedDict</code>) compared to a standard unordered dictionary otherwise an exception will be generated. There will be a warning if you want to execute early stopping mechanism (<code>early_stopping_rounds &gt; 0</code>) but have provided a watchlist with type <code>Dict</code> with more than 1 element.</p><p>Similarly, if there is more than one element in eval_metric, by default the last element will be used.</p><p>For example:</p><pre><code class="language-julia hljs">using LinearAlgebra
+using OrderedCollections
+
+𝒻(x) = 2norm(x)^2 - norm(x)
+
+X = randn(100,3)
+y = 𝒻.(eachrow(X))
+
+dtrain = DMatrix((X, y))
+
+X_valid = randn(50,3)
+y_valid = 𝒻.(eachrow(X_valid))
+
+dvalid = DMatrix((X_valid, y_valid))
+
+bst = xgboost(dtrain, num_round = 100, eval_metric = &quot;rmse&quot;, watchlist = OrderedDict([&quot;train&quot; =&gt; dtrain, &quot;eval&quot; =&gt; dvalid]), early_stopping_rounds = 5, max_depth=6, η=0.3)
+
+# get the best iteration and use it for prediction
+ŷ = predict(bst, X_valid, ntree_limit = bst.best_iteration)
+
+using Statistics
+println(&quot;RMSE from model prediction $(round((mean((ŷ - y_valid).^2).^0.5), digits = 8)).&quot;)
+
+# we can also retain / use the best score (based on eval_metric) which is stored in the booster
+println(&quot;Best RMSE from model training $(round((bst.best_score), digits = 8)).&quot;)</code></pre></article><nav class="docs-footer"><a class="docs-footer-nextpage" href="features/">Additional Features »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.25 on <span class="colophon-date" title="Friday 17 November 2023 19:23">Friday 17 November 2023</span>. Using Julia version 1.9.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
