@@ -23,7 +23,6 @@ include("Lib.jl")
 using .Lib
 using .Lib: DMatrixHandle, BoosterHandle
 
-
 const LOG_LEVEL_REGEX = r"\[.*\] (\D*): "
 
 function xgblog(s::Cstring)

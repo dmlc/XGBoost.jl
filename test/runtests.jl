@@ -183,7 +183,16 @@ end
         early_stopping_rounds = 2
         )
 
+    watchlist_nt = (train=dtrain, eval=dtest)
      
+    bst_early_stopping = xgboost(dtrain,
+        num_round=30,
+        watchlist=watchlist_nt,
+        η=1,
+        objective="binary:logistic",
+        eval_metric=["rmsle","rmse"],
+        early_stopping_rounds = 2
+        )
 
     @test XGBoost.getnrounds(bst_early_stopping) > 2
     @test XGBoost.getnrounds(bst_early_stopping) <= nrounds_bst
