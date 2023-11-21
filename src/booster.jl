@@ -428,7 +428,7 @@ for custom loss.
 """
 function update!(b::Booster, data, a...;
                  num_round::Integer=1, 
-                 watchlist::Any = Dict("train" => data), 
+                 watchlist=Dict("train" => data), 
                  early_stopping_rounds::Integer=0,
                  maximize=false,
                  kw...,
@@ -578,7 +578,7 @@ ŷ = predict(b, dvalid, ntree_limit = b.best_iteration)
 """
 function xgboost(dm::DMatrix, a...;
                 num_round::Integer=10,
-                watchlist::AbstractDict = Dict("train" => dm),
+                watchlist=Dict("train" => dm),
                 early_stopping_rounds::Integer=0, 
                 maximize=false,
                 kw...
@@ -590,7 +590,7 @@ function xgboost(dm::DMatrix, a...;
     # We have a watchlist - give a warning if early stopping is provided and watchlist is a Dict type with length > 1
     if isa(watchlist, Dict)
         if early_stopping_rounds > 0 && length(watchlist) > 1
-            error("You must supply an OrderedDict type for watchlist if early stopping rounds is enabled and there is more than one element in watchlist.")
+            error("You must supply an OrderedDict or NamedTuple type for watchlist if early stopping rounds is enabled and there is more than one element in watchlist.")
         end
     end
 
