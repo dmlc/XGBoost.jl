@@ -1,0 +1,47 @@
+name: IntegrationTest
+
+on:
+  pull_request:
+  push:
+    branches: [master, main]
+
+jobs:
+  test:
+    name: ${{ matrix.package.repo }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package:
+          - {user: JuliaAI, repo: MLJXGBoostInterface.jl, ref: master}
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: julia-actions/setup-julia@v1
+        with:
+          version: '1'
+      - uses: julia-actions/julia-buildpkg@v1
+      - name: Clone Downstream
+        uses: actions/checkout@v2
+        with:
+          repository: ${{ matrix.package.user }}/${{ matrix.package.repo }}
+          ref: ${{ matrix.package.ref }}
+          path: downstream
+      - name: Load this and run the downstream tests
+        shell: julia --color=yes --project=downstream {0}
+        run: |
+          using Pkg
+          try
+            Pkg.develop(PackageSpec(path="."))
+            Pkg.update()
+            Pkg.test()
+          catch err
+            xgboost_is_breaking_version = err isa Pkg.Resolve.ResolverError
+            if xgboost_is_breaking_version
+              @info "Not compatible with this release." exception=err
+              success = 0
+              exit(success)
+            else
+              rethrow()
+            end
+          end
