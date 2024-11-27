@@ -28,8 +28,8 @@ will use assigned feature names, for example
 ```julia
 julia> df = DataFrame(randn(10,3), ["kirk", "spock", "bones"])
 10×3 DataFrame
- Row │ kirk       spock       bones      
-     │ Float64    Float64     Float64    
+ Row │ kirk       spock       bones
+     │ Float64    Float64     Float64
 ─────┼───────────────────────────────────
    1 │  0.663934  -0.419345   -0.489801
    2 │  1.19064    0.420935   -0.321852
@@ -225,5 +225,5 @@ X = (x1=cu(randn(1000)), x2=cu(randn(1000)))
 dm = DMatrix(X, y)
 XGBoost.isgpu(dm)  # true
 
-xgboost((X, y), num_rounds=10)  # no need to use `DMatrix`
+xgboost((X, y), num_round=10)  # no need to use `DMatrix`
 ```
