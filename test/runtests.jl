@@ -355,7 +355,7 @@ end
 end
 
 # only test GPU cababilities if an appropriate artifact is available
-XGBoost_GPU_jll.is_available() && @testset "cuda" begin
+has_cuda() && @testset "cuda" begin
     @info("runing CUDA tests")
 
     X = randn(Float32, 4, 5)
