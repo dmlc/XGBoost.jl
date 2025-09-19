@@ -1,10 +1,17 @@
 module Lib
 
 using XGBoost_jll
-export XGBoost_jll
+using XGBoost_GPU_jll
 
 using CEnum
 
+# only enable GPU support if there is a valid binary compatible with this system
+# should we place a warning here?
+const libxgboost = @static if XGBoost_GPU_jll.is_available()
+    XGBoost_GPU_jll.libxgboost
+else
+    XGBoost_jll.libxgboost
+end
 
 struct XGBoostError <: Exception
     caller

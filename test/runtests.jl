@@ -1,4 +1,5 @@
 using XGBoost
+using XGBoost_GPU_jll
 using CUDA: has_cuda, cu
 import Term
 using Random, SparseArrays
@@ -353,6 +354,7 @@ end
     @test predict(b, randn(MersenneTwister(998), 10,2)) ≠ ŷ
 end
 
+# only test GPU cababilities if an appropriate artifact is available
 has_cuda() && @testset "cuda" begin
     @info("runing CUDA tests")
 
