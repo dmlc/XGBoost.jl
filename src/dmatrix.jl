@@ -193,7 +193,7 @@ function load(::Type{DMatrix}, fname::AbstractString;
                # docs are inconsistent and don't explain this, so it's disabled
                #"data_split_mode"=>string(data_split_mode),
               )
-    xgbcall(XGDMatrixCreateFromURI, JSON3.write(cfg), o)
+    xgbcall(XGDMatrixCreateFromURI, JSON.json(cfg), o)
     DMatrix(o[], kw...)
 end
 
@@ -361,7 +361,7 @@ function getdata(dm::DMatrix)
     rowptr = Vector{UInt64}(undef, m+1)
     colval = Vector{UInt32}(undef, nnonmissing(dm))
     data = Vector{Float32}(undef, nnonmissing(dm))
-    cfg = JSON3.write(Dict())
+    cfg = JSON.json(Dict())
     xgbcall(XGDMatrixGetDataAsCSR, dm.handle, cfg, rowptr, colval, data)
     SparseMatrixCSR{0}(m, n, rowptr, UInt64.(colval), data)
 end
@@ -496,9 +496,9 @@ function numpy_json_dict(x::AbstractArray; read_only::Bool=false)
         )
 end
 
-numpy_json_info(x::AbstractArray; kw...) = JSON3.write(numpy_json_dict(x; kw...))
+numpy_json_info(x::AbstractArray; kw...) = JSON.json(numpy_json_dict(x; kw...))
 
-numpy_json_infos(cols::Tables.Columns; kw...) = JSON3.write(map(x -> numpy_json_dict(x; kw...), cols))
+numpy_json_infos(cols::Tables.Columns; kw...) = JSON.json(map(x -> numpy_json_dict(x; kw...), cols))
 
 #TODO: still a little worried about ownership here
 #TODO: sparse data for iterator and proper missings handling
@@ -597,7 +597,7 @@ function _dmatrix_caching_config_json(;cache_prefix::AbstractString,
         repr(missing_value)
     end
     # xgboost allows nan and inf which JSON3 thinks is invalid
-    replace(JSON3.write(d), "\"__NAN_STR__\""=>nanstr)
+    replace(JSON.json(d), "\"__NAN_STR__\""=>nanstr)
 end
 
 function DMatrix(itr::DataIterator;

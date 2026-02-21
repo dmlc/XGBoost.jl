@@ -17,6 +17,7 @@ makedocs(;
         "Additional Features" => "features.md",
         "API" => "api.md",
        ],
+    warnonly = [:missing_docs, :autodocs_block, :docs_block, :cross_references]
    )
 
 deploydocs(repo="github.com/dmlc/XGBoost.jl.git", devbranch="master")

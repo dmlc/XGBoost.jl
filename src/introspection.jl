@@ -28,7 +28,7 @@ importances and [`importancereport`](@ref) for a convenient text display of it.
 function importance(b::Booster, type::AbstractString="gain")
     getnrounds(b) == 0 && return OrderedDict{String,Vector{Float32}}()
 
-    cfg = JSON3.write(Dict("importance_type"=>type))
+    cfg = JSON.json(Dict("importance_type"=>type))
 
     olen_fnames = Ref{Lib.bst_ulong}()
     o_fnames = Ref{Ptr{Ptr{Cchar}}}()

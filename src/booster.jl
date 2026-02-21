@@ -196,7 +196,7 @@ function save(b::Booster, fname::AbstractString; kw...)
     fname
 end
 function save(b::Booster, ::Type{Vector{UInt8}}; format::AbstractString="json")
-    cfg = JSON3.write(Dict("format"=>format))
+    cfg = JSON.json(Dict("format"=>format))
     olen = Ref{Lib.bst_ulong}()
     o = Ref{Ptr{Int8}}()
     xgbcall(XGBoosterSaveModelToBuffer, b.handle, cfg, olen, o)
@@ -234,7 +234,7 @@ function dump(b::Booster;
               with_stats::Bool=false,
              )
     strs = dumpraw(b; fmap, with_stats)
-    JSON3.read.(strs)
+    JSON.parse.(strs)
 end
 
 """
@@ -302,7 +302,7 @@ function predict_nocopy(b::Booster, Xy::DMatrix;
                 "iteration_end"=>ntree_limit,
                 "strict_shape"=>false,
                 "training"=>training,
-               ) |> JSON3.write
+               ) |> JSON.json
     oshape = Ref{Ptr{Lib.bst_ulong}}()
     odim = Ref{Lib.bst_ulong}()
     o = Ref{Ptr{Cfloat}}()

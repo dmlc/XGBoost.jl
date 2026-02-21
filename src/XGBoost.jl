@@ -7,7 +7,7 @@ import SparseMatricesCSR
 using SparseMatricesCSR: SparseMatrixCSR
 using AbstractTrees
 using OrderedCollections
-using JSON3
+using JSON
 using Tables
 using Statistics: mean, std
 

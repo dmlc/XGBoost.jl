@@ -1,4 +1,4 @@
-using JSON3
+using JSON
 
 
 function testfilepath(name::AbstractString) 
@@ -27,7 +27,7 @@ end
 
 function load_classification()
     fname = joinpath(@__DIR__,"..","assets","data","blobs.json")
-    o = JSON3.read(String(open(read, fname)))
+    o = JSON.parse(String(open(read, fname)))
     X = Matrix{Float32}([o[:X1] o[:X2] o[:X3]])
     y = o[:y]
     (X, y)
