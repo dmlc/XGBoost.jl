@@ -198,7 +198,7 @@ end
 function save(b::Booster, ::Type{Vector{UInt8}}; format::AbstractString="json")
     cfg = JSON.json(Dict("format"=>format))
     olen = Ref{Lib.bst_ulong}()
-    o = Ref{Ptr{Int8}}()
+    o = Ref{Ptr{Cchar}}()
     xgbcall(XGBoosterSaveModelToBuffer, b.handle, cfg, olen, o)
     unsafe_wrap(Array, convert(Ptr{UInt8}, o[]), olen[])
 end
@@ -245,7 +245,7 @@ The output of this function can be loaded with [`deserialize`](@ref).
 """
 function serialize(b::Booster)
     olen = Ref{Lib.bst_ulong}()
-    o = Ref{Ptr{Int8}}()  # don't know why it insists on Int8
+    o = Ref{Ptr{Cchar}}()  # don't know why it insists on Cchar
     xgbcall(XGBoosterSerializeToBuffer, b.handle, olen, o)
     unsafe_wrap(Array, convert(Ptr{UInt8}, o[]), olen[])
 end
@@ -336,7 +336,7 @@ predict(b::Booster, Xy::DMatrix; kw...) = copy(predict_nocopy(b, Xy; kw...))
 predict(b::Booster, Xy; kw...) = predict(b, DMatrix(Xy); kw...)
 
 function evaliter(b::Booster, watch, n::Integer=1)
-    o = Ref{Ptr{Int8}}()
+    o = Ref{Ptr{Cchar}}()
     names = collect(Iterators.map(string, keys(watch)))
     watch = collect(Iterators.map(x -> x.handle, values(watch)))
     xgbcall(XGBoosterEvalOneIter, b.handle, n, watch, names, length(watch), o)
