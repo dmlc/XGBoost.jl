@@ -16,13 +16,13 @@ jobs:
           - {user: JuliaAI, repo: MLJXGBoostInterface.jl, ref: master}
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v7
       - uses: julia-actions/setup-julia@v1
         with:
           version: '1'
       - uses: julia-actions/julia-buildpkg@v1
       - name: Clone Downstream
-        uses: actions/checkout@v2
+        uses: actions/checkout@v7
         with:
           repository: ${{ matrix.package.user }}/${{ matrix.package.repo }}
           ref: ${{ matrix.package.ref }}
